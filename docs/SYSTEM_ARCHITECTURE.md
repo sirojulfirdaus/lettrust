@@ -725,10 +725,10 @@ documentContent
 | Aspek | Ketentuan |
 | ----- | ----- |
 | Client | SDK `openai` Python dengan `base_url` dapat dikonfigurasi. |
-| Provider utama | Groq (`https://api.groq.com/openai/v1`). |
-| Provider cadangan | Endpoint OpenAI-compatible lain melalui konfigurasi, hanya data sintetis. |
-| Model | `LLM_MODEL`; kandidat `openai/gpt-oss-120b` dan `qwen/qwen3.8-27b`, dipilih melalui dev set (OI-01). |
-| Parameter | `temperature=0`, `response_format={"type":"json_object"}`, `max_tokens` dibatasi, `reasoning_effort` opsional melalui `LLM_REASONING_EFFORT` apabila didukung model. |
+| Provider | Penyedia API OpenAI-compatible free tier, dipilih PIC AI melalui `LLM_BASE_URL` dan `LLM_API_KEY`. Default konfigurasi: Groq (`https://api.groq.com/openai/v1`). Penggantian provider hanya mengubah konfigurasi, tanpa perubahan kode. |
+| Syarat provider dan model | Gratis untuk seluruh anggota; mendukung JSON mode; konteks memadai untuk `AI_MAX_CHARS` ditambah instruksi; kuat dalam bahasa Indonesia; hanya data sintetis yang dikirim. Seluruh anggota memakai provider dan model yang sama dengan kunci masing-masing. |
+| Model | `LLM_MODEL`; kandidat awal `openai/gpt-oss-120b` dan `qwen/qwen3.8-27b`. PIC AI boleh mengganti kandidat atau provider selama memenuhi syarat di atas; pilihan final ditetapkan melalui dev set (OI-01). |
+| Parameter | `temperature=0`, `response_format={"type":"json_object"}`, `max_tokens` dibatasi, `reasoning_effort` opsional melalui `LLM_REASONING_EFFORT` apabila didukung model. Nama provider, URL, model, dan parameter khusus model tidak ditulis langsung di kode selain sebagai nilai default konfigurasi. |
 | Timeout | `LLM_REQUEST_TIMEOUT_SECONDS` |
 | Retry | Hanya satu kali untuk output tidak valid. Tidak ada retry untuk 429/kuota. |
 | Kegagalan | 429 → `AI_QUOTA_EXCEEDED`; timeout → `AI_TIMEOUT`; error lain → `AI_PROVIDER_ERROR` |
@@ -1645,7 +1645,7 @@ Ketiga modul pertama diuji dengan Vitest menggunakan `contracts/examples/*.json`
 | OCR | Tesseract (`tesseract-ocr`, `-ind`, `-eng`) via pytesseract | Baseline |
 | Fuzzy matching | rapidfuzz | Baseline |
 | LLM client | openai (Python SDK) dengan `base_url` | Baseline |
-| LLM provider | Groq free tier (utama) | Baseline |
+| LLM provider | API OpenAI-compatible free tier (default Groq; final melalui OI-01) | Baseline |
 | Generator dataset | reportlab, Pillow | Baseline |
 | Backend test | pytest | Baseline |
 | Container | Docker, Docker Compose v2 | Baseline |
@@ -1792,9 +1792,9 @@ Direktori dibuat saat dibutuhkan, bukan sebagai folder kosong.
 | `SEED_ADMIN_PASSWORD` | backend | `Admin#Demo2026` | Ya (lokal) |
 | `SEED_HR_PASSWORD` | backend | `Hr#Demo2026` | Ya (lokal) |
 | `LLM_PROVIDER` | ai-service | `openai_compatible` (`mock` hanya `APP_ENV=test`) | Tidak |
-| `LLM_BASE_URL` | ai-service | `https://api.groq.com/openai/v1` | Tidak |
+| `LLM_BASE_URL` | ai-service | `https://api.groq.com/openai/v1` (default; disesuaikan dengan provider terpilih) | Tidak |
 | `LLM_API_KEY` | ai-service | kosong (diisi anggota) | Ya |
-| `LLM_MODEL` | ai-service | `openai/gpt-oss-120b` (sementara, OI-01) | Tidak |
+| `LLM_MODEL` | ai-service | `openai/gpt-oss-120b` (default sementara, OI-01) | Tidak |
 | `LLM_REASONING_EFFORT` | ai-service | kosong / `low` | Tidak |
 | `LLM_REQUEST_TIMEOUT_SECONDS` | ai-service | `40` | Tidak |
 | `LLM_MAX_OUTPUT_TOKENS` | ai-service | `900` | Tidak |
@@ -2007,7 +2007,7 @@ Sebelum PR digabungkan, penulis menjalankan `python scripts/dev.py test` untuk l
 | AD-05 | Satu signer registrar; otorisasi off-chain; pemeriksaan `issuerRef` di contract. | Kesederhanaan dan kesesuaian Tabel 2.22 D2; batas kepercayaan dinyatakan (OI-10). | Baseline |
 | AD-06 | Data on-chain minimal; `referenceCode` dan alasan pencabutan off-chain. | Privasi (BR-02.06). | Baseline |
 | AD-07 | Registry sebagai sumber kebenaran; pemetaan kode hanya untuk bukti final. | Konsistensi dan kejujuran status (BR-02.10). | Baseline |
-| AD-08 | Model bahasa pra-latih melalui API OpenAI-compatible, Groq free tier sebagai utama. | Tanpa GPU dan tanpa biaya; dapat diganti melalui konfigurasi. | Baseline |
+| AD-08 | Model bahasa pra-latih melalui API OpenAI-compatible free tier; provider dan model dipilih melalui OI-01 (default Groq). | Tanpa GPU dan tanpa biaya; dapat diganti melalui konfigurasi. | Baseline |
 | AD-09 | Taksonomi tertutup, validasi kutipan, skoring deterministik, rekomendasi berbasis template. | Keterjelasan, konsistensi, dan ketahanan terhadap halusinasi/injection. | Baseline |
 | AD-10 | pdfplumber + pypdfium2 + Tesseract (`ind+eng`) di CPU. | OCR lokal tanpa GPU; kontrak API-08 tetap teks. | Baseline |
 | AD-11 | Ekstraksi sebagai endpoint internal ai-service. | Kepemilikan AI Engineer; API-08 tetap sesuai D2 (DLT-06). | Baseline |
@@ -2033,7 +2033,7 @@ Coding agent tidak boleh mengganti keputusan di atas tanpa pembaruan dokumen yan
 | TOI-01 | Perilaku `anvil --state` dan `--state-interval` saat `docker compose stop` | Tervalidasi saat scaffold (`stop_signal: SIGINT`, SCAFFOLD_REPORT §5 dan D-03); diuji ulang pada SCN-20 | M1 (selesai) | NFR-04.05 |
 | TOI-02 | Ketersediaan image `arm64` (Foundry, Python, Node) | Tidak diuji: tidak ada perangkat Apple Silicon di tim; SCN-21 memakai Windows dan Linux | — | OI-06 |
 | TOI-03 | Batas body Next.js Route Handler untuk unggahan 5 MB | Uji unggah FX-09 dan berkas 5 MB setelah BFF diimplementasikan | M3 | FR-02.07 |
-| TOI-04 | Dukungan JSON mode untuk model terpilih di Groq | Bake-off dev set | M2 | OI-01 |
+| TOI-04 | Dukungan JSON mode untuk provider dan model terpilih | Bake-off dev set | M2 | OI-01 |
 | TOI-05 | Base URL dan parameter (`reasoning_effort`) per provider | Uji panggilan nyata | M2 | AD-08 |
 | TOI-06 | Ambang OCR dan DPI | Dev set scan | M2 | OI-03 |
 | TOI-07 | Ambang fuzzy kutipan | Dev set scan | M2 | MET-14 |
@@ -2165,7 +2165,7 @@ Arsitektur memenuhi kebutuhan apabila:
 | pdfplumber | https://github.com/jsvine/pdfplumber |
 | pypdfium2 | https://pypdfium2.readthedocs.io/ |
 | Tesseract OCR | https://tesseract-ocr.github.io/ |
-| Groq API | https://console.groq.com/docs |
+| Groq API (provider default) | https://console.groq.com/docs |
 | OpenAI Python SDK | https://github.com/openai/openai-python |
 | RapidFuzz | https://rapidfuzz.github.io/RapidFuzz/ |
 | ReportLab | https://docs.reportlab.com/ |
@@ -2194,6 +2194,6 @@ SYSTEM_ARCHITECTURE v1.2 menjadi baseline teknis pengembangan Lettrust bersama P
 | ----- | ----- | ----- |
 | 1.0 | 21 November 2026 | Baseline arsitektur D3. |
 | 1.1 | 21 November 2026 | Jadwal §20.1 mengikuti PRD v1.1; status TOI-01/02/03/09/10 diperbarui dari hasil scaffold; kepemilikan dan lokasi mock (§4.1, §13.1, §18.2) serta rujukan `docs/MOCKS.md`; perintah integrasi `real_registry` (§18.1); errata contoh (`reviewedBy`, `reasonDetail`, catatan contoh disingkat di §10.1). |
-| 1.2 | 21 November 2026 | Rincian M2 §20.1 diselaraskan dengan PLAN.md dan PRD v1.2. |
+| 1.2 | 21 November 2026 | Rincian M2 §20.1 diselaraskan dengan PLAN.md dan PRD v1.2. Provider LLM dinetralkan: API OpenAI-compatible free tier dipilih PIC AI melalui OI-01 dengan syarat §7.4.1; Groq menjadi default konfigurasi (§7.4.1, §12, §14.2, AD-08, TOI-04). |
 
 **End of Document**
