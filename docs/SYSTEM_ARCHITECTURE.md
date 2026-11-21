@@ -4,7 +4,7 @@
 
 | Atribut | Keterangan |
 | ----- | ----- |
-| Version | 1.0 |
+| Version | 1.1 |
 | Date | 21 November 2026 |
 | Status | D3 Architecture Baseline |
 | Architecture Style | Modular monolith backend dengan layanan AI terpisah, dua aplikasi web, dan registry smart contract lokal |
@@ -13,7 +13,7 @@
 | Deployment | Lokal melalui Docker Compose dengan launcher lintas OS |
 | Development Decision | GO — prototipe D3 |
 | Production Readiness | Not Ready (di luar cakupan) |
-| Document Reference | Lettrust PRD v1.0 (`docs/prd/`) |
+| Document Reference | Lettrust PRD v1.1 (`docs/prd/`) |
 
 # 1. Architecture Overview
 
@@ -110,7 +110,7 @@ Di luar cakupan: billing, integrasi job portal nyata, KYC nyata, hosting publik,
 | Untrusted Content | Isi dokumen dan output model diperlakukan sebagai data tidak tepercaya. |
 | Server-Side Secrets | Secret hanya di environment backend, layanan AI, atau server portal. |
 | Synchronous by Design | Seluruh operasi request–response sinkron sesuai D2; tidak ada polling atau queue. |
-| Real over Mock | Mock hanya untuk unit test; skenario dan demo memakai registry dan model nyata. |
+| Real over Mock | Mock hanya untuk test; skenario dan demo memakai registry dan model nyata (`docs/MOCKS.md`). |
 | Proportional Engineering | Tidak menambahkan abstraksi, dependency, atau layanan tanpa kebutuhan nyata. |
 
 ## 2.3 Development Boundary
@@ -243,7 +243,8 @@ Catatan:
 | `services/ai-service/` | SVC-04, ekstraksi, OCR | B (PIC 5) | Dws |
 | `blockchain/` | Contract, test, deploy script | Sat | — |
 | `ai-eval/`, `fixtures/` | Dataset, evaluasi, fixture | B | Seluruh anggota (peninjau label) |
-| `contracts/` | OpenAPI dan contoh respons | Dws | Zan, B |
+| `contracts/` | OpenAPI, contoh respons, dan `examples/index.json` | Dws | Zan, B |
+| `registry/mock.py`, `ai-service/app/analysis/mock_provider.py`, `services/backend/tests/fakes/`, `services/backend/tests/conformance/` | Mock, fake, dan suite conformance bersama (`docs/MOCKS.md`) | Dws | Sat, Zan, B (provider) |
 | `compose.yaml`, `scripts/dev.py`, Dockerfile | Deployment lokal | Dws | Sat (chain), B (ai-service) |
 | `docs/testing/` | Test case dan bukti | Pash (koordinasi) | Seluruh anggota |
 
@@ -697,7 +698,8 @@ Respons ekstraksi:
   "pagesTotal": 2,
   "pagesProcessed": 2,
   "truncated": false,
-  "language": null
+  "language": null,
+  "reasonDetail": null
 }
 ```
 
@@ -1040,6 +1042,7 @@ Seluruh password HR seed menggunakan `SEED_HR_PASSWORD`. Domain `.test` dan nama
 | Validasi | Error validasi FastAPI (default 422) diubah menjadi 400 `VALIDATION_ERROR` agar sesuai D2 |
 | Koleksi | `{ "items": [...], "total": n }`, parameter `limit` (default 50, maks 100) dan `offset` |
 | Kontrak | OpenAPI dihasilkan backend: `python -m app.cli export-openapi > contracts/openapi.json` |
+| Contoh | Contoh JSON di dokumen ini ilustratif dan dapat disingkat (`…`). Contoh normatif yang tervalidasi skema berada di `contracts/examples/` (pemetaan di `index.json`). |
 
 ## 10.2 Error Envelope
 
@@ -1222,7 +1225,7 @@ Response 200 (Admin):
   "issuerStatus": "VERIFIED",
   "evidenceRef": "EVD-DEMO-001",
   "reviewNote": null,
-  "reviewedBy": "USR-ADMIN001",
+  "reviewedBy": "USR-ADM9N7Q2",
   "reviewedAt": "2026-11-22T03:00:00Z",
   "createdAt": "2026-11-22T02:10:00Z",
   "members": [
@@ -1251,7 +1254,7 @@ Request:
 Response 200:
 
 ```json
-{ "issuerId": "ISS-4D8N2P6R", "issuerStatus": "VERIFIED", "reviewedBy": "USR-ADMIN001", "reviewedAt": "2026-11-22T03:00:00Z" }
+{ "issuerId": "ISS-4D8N2P6R", "issuerStatus": "VERIFIED", "reviewedBy": "USR-ADM9N7Q2", "reviewedAt": "2026-11-22T03:00:00Z" }
 ```
 
 ### API-03 authorizeHR
@@ -1674,6 +1677,7 @@ lettrust/
 │   └── partner-portal/              # Pash
 │       ├── src/app/ …               # routes §11.3.1, app/api/verify/route.ts
 │       ├── src/lib/verification/    # labels, guidance, reference-code, consent
+│       ├── src/fixtures/api/        # generated dari contracts/examples (dev.py openapi)
 │       ├── Dockerfile
 │       └── package.json
 ├── services/
@@ -1686,11 +1690,11 @@ lettrust/
 │   │   │       ├── auth/            # Zan
 │   │   │       ├── issuers/         # Zan
 │   │   │       ├── proofs/          # Zan
-│   │   │       ├── registry/        # Sat (adapter.py, codec.py, abi/)
+│   │   │       ├── registry/        # Sat (adapter.py, codec.py, abi/); mock.py: Dws
 │   │   │       ├── verifications/   # Dws (router, schemas, orchestrator, ai_client, integrity)
 │   │   │       ├── partners/        # Dws
 │   │   │       └── health/          # Dws
-│   │   ├── tests/                   # per modul; integration/ (Anvil nyata)
+│   │   ├── tests/                   # per modul; conformance/, fakes/ (Dws); integration/ (Anvil nyata)
 │   │   ├── requirements.txt
 │   │   ├── requirements-dev.txt
 │   │   ├── pyproject.toml           # konfigurasi pytest/ruff
@@ -1700,7 +1704,7 @@ lettrust/
 │       │   ├── main.py
 │       │   ├── core/                # config, errors, logging, auth internal
 │       │   ├── extraction/          # pdf_text.py, ocr.py, service.py
-│       │   ├── analysis/            # taxonomy.py, prompt.py, provider.py, validator.py, scoring.py, compose.py
+│       │   ├── analysis/            # taxonomy.py, prompt.py, provider.py, validator.py, scoring.py, compose.py; mock_provider.py: Dws
 │       │   └── routers/
 │       ├── tests/
 │       ├── requirements.txt
@@ -1716,7 +1720,7 @@ lettrust/
 ├── fixtures/                        # FX-01–FX-10 (dihasilkan ai-eval)
 ├── contracts/
 │   ├── openapi.json                 # Dws
-│   └── examples/                    # contoh respons kontrak
+│   └── examples/                    # contoh respons kontrak, index.json, internal/
 ├── scripts/
 │   ├── dev.py                       # Dws
 │   ├── export_abi.py                # Sat
@@ -1725,6 +1729,8 @@ lettrust/
 │   ├── prd/01–12
 │   ├── SYSTEM_ARCHITECTURE.md
 │   ├── PLAN.md
+│   ├── MOCKS.md                     # panduan mock, fake, contoh, conformance
+│   ├── SCAFFOLD_REPORT.md           # kondisi scaffold dan deviasi (§6 berlaku)
 │   ├── testing/                     # test-cases.md, evidence/<TC-ID>/
 │   └── evaluation/                  # protocol.md, report.md
 ├── compose.yaml
@@ -1960,7 +1966,7 @@ Dilarang mencatat: body request, berkas, teks dokumen, kutipan bukti, respons mo
 | ----- | ----- | ----- | ----- | ----- | ----- |
 | Contract unit | Seluruh fungsi dan revert §6.2.3 | `forge test` | `blockchain/test/` | — | Sat |
 | Backend unit | Auth, issuers, proofs (adapter mock), verifications (proofs/AI mock), normalisasi kode, pemetaan error | pytest | `services/backend/tests/` | `MockRegistryAdapter`, AI client mock | Zan, Dws, Sat |
-| Backend integration | Penerbitan, pembacaan, pencabutan, idempotensi dengan Anvil nyata | pytest `-m integration` | `services/backend/tests/integration/` | — | Sat, Zan |
+| Backend integration | Suite conformance registry, penerbitan, pembacaan, pencabutan, idempotensi dengan Anvil nyata | `docker compose exec backend python -m pytest -m real_registry tests/conformance tests/integration` | `services/backend/tests/conformance/`, `services/backend/tests/integration/` | — | Sat, Zan |
 | ai-service unit | Ekstraksi (fixture PDF teks/scan), validator kutipan, skoring, komposisi, mapping error provider | pytest | `services/ai-service/tests/` | `MockLLMProvider` | B |
 | Frontend unit | Label, panduan, normalisasi kode | Vitest | `apps/*/src/**/*.test.ts` | Contoh kontrak | Pash, Van |
 | Scenario | SCN-01–SCN-22 | Skrip `scripts/scn/` + manual UI | `docs/testing/` | Tidak boleh | Seluruh anggota, koordinasi Pash |
@@ -1968,8 +1974,9 @@ Dilarang mencatat: body request, berkas, teks dokumen, kutipan bukti, respons mo
 
 ## 18.2 Aturan Mock
 
-* Mock hanya diinstansiasi dalam test (`APP_ENV=test`).
-* `MockRegistryAdapter` dan `MockLLMProvider` tidak dapat dipilih melalui konfigurasi `local`.
+* Mock hanya diinstansiasi dalam test (`APP_ENV=test`). Mock tidak pernah menjadi default atau fallback.
+* Satu-satunya pemilihan mock melalui konfigurasi adalah `get_provider()` di ai-service ketika `LLM_PROVIDER=mock` dan `APP_ENV=test` (AD-16), dengan impor lazy di cabang tersebut. `MockRegistryAdapter` hanya dipilih oleh test.
+* Mock, fake, contoh kontrak, dan suite conformance dimiliki Dws dan didokumentasikan di `docs/MOCKS.md`. Provider registry wajib lulus suite conformance dengan adapter nyata (marker `real_registry`).
 * Bukti SCN dan evaluasi wajib berasal dari stack nyata.
 
 ## 18.3 Skrip Skenario API
@@ -1985,7 +1992,7 @@ Skenario antarmuka (SCN-01, SCN-03, SCN-06, SCN-08, SCN-09, SCN-13, SCN-19) diek
 
 ## 18.4 Regression Sebelum Merge
 
-Sebelum PR digabungkan, penulis menjalankan `python scripts/dev.py test` untuk layanan yang terdampak dan memastikan `docker compose up` tetap sehat. Perubahan kontrak API wajib disertai `dev.py openapi` dan pembaruan tipe frontend.
+Sebelum PR digabungkan, penulis menjalankan `python scripts/dev.py test` untuk layanan yang terdampak dan memastikan `docker compose up` tetap sehat. Perubahan kontrak API wajib disertai `dev.py openapi`, yang meregenerasi `contracts/openapi.json`, tipe frontend, dan fixture `src/fixtures/api/`. Perubahan dependency Python memakai `dev.py lock <svc>` oleh owner service.
 
 # 19. Architecture Decisions & Open Issues
 
@@ -2023,16 +2030,16 @@ Coding agent tidak boleh mengganti keputusan di atas tanpa pembaruan dokumen yan
 
 | ID | Isu | Validasi | Target | Terkait |
 | ----- | ----- | ----- | ----- | ----- |
-| TOI-01 | Perilaku `anvil --state` dan `--state-interval` saat `docker compose stop` | Uji SCN-20 lebih awal | M1 | NFR-04.05 |
-| TOI-02 | Ketersediaan image `arm64` (Foundry, Python, Node) | Build di macOS Apple Silicon | M1 | OI-06 |
-| TOI-03 | Batas body Next.js Route Handler untuk unggahan 5 MB | Uji unggah FX-09 dan berkas 5 MB | M1 | FR-02.07 |
+| TOI-01 | Perilaku `anvil --state` dan `--state-interval` saat `docker compose stop` | Tervalidasi saat scaffold (`stop_signal: SIGINT`, SCAFFOLD_REPORT §5 dan D-03); diuji ulang pada SCN-20 | M1 (selesai) | NFR-04.05 |
+| TOI-02 | Ketersediaan image `arm64` (Foundry, Python, Node) | Tidak diuji: tidak ada perangkat Apple Silicon di tim; SCN-21 memakai Windows dan Linux | — | OI-06 |
+| TOI-03 | Batas body Next.js Route Handler untuk unggahan 5 MB | Uji unggah FX-09 dan berkas 5 MB setelah BFF diimplementasikan | M3 | FR-02.07 |
 | TOI-04 | Dukungan JSON mode untuk model terpilih di Groq | Bake-off dev set | M2 | OI-01 |
 | TOI-05 | Base URL dan parameter (`reasoning_effort`) per provider | Uji panggilan nyata | M2 | AD-08 |
 | TOI-06 | Ambang OCR dan DPI | Dev set scan | M2 | OI-03 |
 | TOI-07 | Ambang fuzzy kutipan | Dev set scan | M2 | MET-14 |
 | TOI-08 | Nilai timeout final | Pengukuran MET-16 | M3 | OI-03 |
-| TOI-09 | Paket data Tesseract `ind` pada image Debian | Build image | M1 | DEP-05 |
-| TOI-10 | Performa bind mount Windows untuk mode dev | Uji anggota Windows | M1 | NFR-05.07 |
+| TOI-09 | Paket data Tesseract `ind` pada image Debian | Tervalidasi saat scaffold (Debian trixie, SCAFFOLD_REPORT §5) | M1 (selesai) | DEP-05 |
+| TOI-10 | Performa bind mount Windows untuk mode dev | Uji anggota Windows yang memakai `--dev` | M2 | NFR-05.07 |
 | TOI-11 | Implementasi rate limit (P1) | Setelah P0 | Setelah M3 | FR-06.10 |
 | TOI-12 | CI GitHub Actions (P1) | Setelah P0 | Setelah M3 | AD-23 |
 | TOI-13 | Penyimpanan JWT di `sessionStorage` | Diterima sebagai keterbatasan prototipe | — | NFR-01.02 |
@@ -2044,10 +2051,10 @@ Coding agent tidak boleh mengganti keputusan di atas tanpa pembaruan dokumen yan
 | Milestone | Fokus Teknis | Keluaran |
 | ----- | ----- | ----- |
 | M0 (Sab 21/11) | Dokumen | PRD, SA, AGENTS.md, PLAN.md |
-| M1 (Min 22/11) | Fondasi dan kontrak | Kerangka repo; Compose seluruh service berjalan (stub boleh); contract + test; skema DB; skema Pydantic seluruh endpoint dan `contracts/openapi.json` + contoh dibekukan; kerangka halaman frontend dengan fixture kontrak; ekstraksi teks dasar; templat dataset awal |
-| M2 (Sel 24/11) | Integrasi inti | Akun, SVC-01, API-04–API-06 dengan Anvil nyata; ai-service ekstraksi + OCR + API-08 dengan LLM nyata; Console terhubung API; bake-off model (OI-01) |
-| M3 (Rab 25/11) | End-to-end | API-07 seluruh mode dan kondisi kegagalan; portal terhubung via BFF; dataset final dan test set beku; evaluasi dijalankan |
-| M4 (Kam 26/11) | Verifikasi | Seluruh SCN dan test case dengan bukti; perbaikan defect; laporan bagian D3 |
+| M1 (Sab 21/11) | Fondasi dan kontrak | Kerangka repo; Compose seluruh service berjalan (stub boleh); skema DB; skema Pydantic seluruh endpoint dan `contracts/openapi.json` + contoh dibekukan (lihat `docs/SCAFFOLD_REPORT.md`) |
+| M2 (Sen 23/11 12.00) | Modul mandiri | Akun, SVC-01, contract + test, adapter, API-04–API-06; ai-service ekstraksi + OCR + API-08 dengan LLM nyata; bake-off model (OI-01); dataset dan test set beku; halaman frontend dengan fixture kontrak |
+| M3 (Sel 24/11, soft deadline) | End-to-end dan feature freeze | API-07 seluruh mode dan kondisi kegagalan; Console dan portal terhubung ke API nyata; alur demo berjalan |
+| M4 (Kam 26/11) | Verifikasi | Seluruh SCN dan test case dengan bukti; evaluasi dijalankan; perbaikan defect; laporan bagian D3 |
 | M5 (Jum 27/11) | Pengumpulan | Laporan dan deck gabungan |
 
 ## 20.2 Pembekuan Kontrak (M1)
@@ -2068,11 +2075,11 @@ Van: halaman Console (fixture) ──> integrasi API-01–06
 Pash: halaman portal (fixture) ──> BFF ──> integrasi API-07 ──> koordinasi SCN
 ```
 
-Pekerjaan frontend dan AI tidak menunggu backend selesai karena kontrak dan contoh dibekukan pada M1.
+Pekerjaan frontend dan AI tidak menunggu backend selesai karena kontrak dan contoh dibekukan pada M1. Konsumen antarmuka internal (registry, pembacaan bukti, ai-service, LLM) menguji kodenya dengan mock dan fake bersama (`docs/MOCKS.md`) sehingga seluruh workstream berjalan paralel; kode produksi tetap memanggil antarmuka nyata.
 
 ## 20.4 Definisi Siap Integrasi
 
-Suatu modul siap diintegrasikan apabila: kontraknya sesuai OpenAPI, unit test modul lulus, berjalan di Compose tanpa error start, dan PIC telah menginformasikan kesiapannya kepada tim.
+Suatu modul siap diintegrasikan apabila: kontraknya sesuai OpenAPI, unit test modul lulus, berjalan di Compose tanpa error start, suite conformance terkait lulus dengan implementasi nyata (untuk provider yang memilikinya, `docs/MOCKS.md`), dan PIC telah menginformasikan kesiapannya kepada tim.
 
 # 21. Traceability & Compliance
 
@@ -2137,6 +2144,8 @@ Arsitektur memenuhi kebutuhan apabila:
 | ----- | ----- |
 | `docs/prd/` | Kebutuhan, business rules, acceptance criteria |
 | `docs/PLAN.md` | Tugas, pemilik, tenggat |
+| `docs/MOCKS.md` | Mock, fake, contoh kontrak, dan suite conformance |
+| `docs/SCAFFOLD_REPORT.md` | Kondisi scaffold, versi, hasil gate, dan deviasi dari dokumen ini (§6 berlaku) |
 | `AGENTS.md` | Instruksi coding agent |
 | `contracts/openapi.json` | Kontrak API aktual |
 | `docs/testing/`, `docs/evaluation/` | Bukti pengujian dan evaluasi |
@@ -2174,9 +2183,16 @@ Lettrust menggunakan backend modular monolith FastAPI yang menjadi satu-satunya 
 | Arsitektur prototipe D3 | Baseline — siap implementasi |
 | Registry blockchain lokal | Baseline |
 | Komponen AI dan evaluasi | Baseline; model final menunggu OI-01 |
-| Deployment lokal | Baseline; validasi lintas OS menunggu TOI-01, TOI-02, TOI-09 |
+| Deployment lokal | Baseline; TOI-01 dan TOI-09 tervalidasi; Windows tervalidasi, Linux melalui SCN-21; Apple Silicon tidak diuji (TOI-02) |
 | Penggunaan produksi | NO-GO (di luar cakupan) |
 
-SYSTEM_ARCHITECTURE v1.0 menjadi baseline teknis pengembangan Lettrust bersama PRD v1.0.
+SYSTEM_ARCHITECTURE v1.1 menjadi baseline teknis pengembangan Lettrust bersama PRD v1.1. Deviasi implementasi yang tercatat di `docs/SCAFFOLD_REPORT.md` §6 berlaku di atas teks dokumen ini.
+
+## Riwayat Revisi
+
+| Versi | Tanggal | Deskripsi Perubahan |
+| ----- | ----- | ----- |
+| 1.0 | 21 November 2026 | Baseline arsitektur D3. |
+| 1.1 | 21 November 2026 | Jadwal §20.1 mengikuti PRD v1.1; status TOI-01/02/03/09/10 diperbarui dari hasil scaffold; kepemilikan dan lokasi mock (§4.1, §13.1, §18.2) serta rujukan `docs/MOCKS.md`; perintah integrasi `real_registry` (§18.1); errata contoh (`reviewedBy`, `reasonDetail`, catatan contoh disingkat di §10.1). |
 
 **End of Document**

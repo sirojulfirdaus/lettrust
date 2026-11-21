@@ -89,7 +89,7 @@ Nilai batas default dapat disesuaikan melalui konfigurasi. Nilai final dan cara 
 | ASM-05 | Layanan inferensi AI free tier tersedia dengan kuota yang memadai untuk pengembangan, evaluasi, dan demo apabila penggunaannya direncanakan. |
 | ASM-06 | Setiap anggota memiliki akses ke perangkat yang mampu menjalankan Docker. Apabila tidak, jalur native terdokumentasi tersedia. |
 | ASM-07 | Smart contract pada jaringan pengembangan lokal memenuhi rencana D2 yang mengizinkan local atau public testnet. |
-| ASM-08 | Jadwal pengumpulan D3 mengikuti guideline (27 November 2026, 23.59 WIB) dengan soft deadline internal 26 November 2026, 23.59 WIB. |
+| ASM-08 | Jadwal pengumpulan D3 mengikuti guideline (27 November 2026, 23.59 WIB) dengan soft deadline internal (feature freeze) 24 November 2026, 23.59 WIB. |
 
 ## 3.6 Status Validasi
 

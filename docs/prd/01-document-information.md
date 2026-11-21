@@ -9,7 +9,7 @@
 | Judul Proyek Akademik | Deteksi Penipuan Proses Rekrutmen Berbasis Blockchain dan AI |
 | Konteks | Tugas Besar II3120 Layanan Sistem & Teknologi Informasi (LaSTI), Institut Teknologi Bandung, 2026 — Kelompok 04 |
 | Nama Dokumen | Product Requirements Document (PRD) |
-| Versi | 1.0 |
+| Versi | 1.1 |
 | Tanggal | 21 November 2026 |
 | Status | D3 Implementation Baseline |
 | Jenis Produk | Verification-as-a-Service, model B2B2C (prototipe akademik) |
@@ -99,7 +99,7 @@ Seluruh identifier dipertahankan selama kebutuhan atau artefak masih berlaku. Id
 
 Penomoran acceptance criteria dimulai kembali dari AC-01 pada setiap detailed functional requirement. Referensi terhadap acceptance criteria wajib menyertakan identifier requirement, misalnya `FR-03.11/AC-02`.
 
-Namespace dipisahkan secara tegas. `BR-0x.yy` adalah business rule PRD, `AD-xx` dan `TOI-xx` adalah keputusan dan isu teknis pada SYSTEM_ARCHITECTURE, `T-xx` adalah tugas pada PLAN.md, dan `TC-xxx` adalah test case pada dokumentasi pengujian.
+Namespace dipisahkan secara tegas. `BR-0x.yy` adalah business rule PRD, `AD-xx` dan `TOI-xx` adalah keputusan dan isu teknis pada SYSTEM_ARCHITECTURE, `TB-xx` (tugas bersama) dan `T<PIC>-xx` (tugas individu, misalnya `T3-02` = tugas kedua PIC 3) adalah tugas pada PLAN.md, dan `TC-xxx` adalah test case pada dokumentasi pengujian.
 
 ### 1.5.2 Prioritas Kebutuhan
 
@@ -254,3 +254,4 @@ Detail kontrak teknis untuk DLT-01, DLT-02, DLT-07, DLT-08, DLT-12, dan DLT-14 d
 | Versi | Tanggal | Deskripsi Perubahan |
 | ----- | ----- | ----- |
 | 1.0 | 21 November 2026 | PRD awal D3 berdasarkan desain D1–D2, keputusan produk D3, dan keputusan teknis yang disepakati Kelompok 04. |
+| 1.1 | 21 November 2026 | Jadwal dipercepat: soft deadline (feature freeze) Selasa 24 November 2026 23.59 WIB (ASM-08, DEP-10, R-01, §11.6); skema ID tugas PLAN menjadi `TB-xx`/`T<PIC>-xx`; OI-06 diperbarui sesuai perangkat tim (Windows dan Linux). Tidak ada perubahan kebutuhan fungsional. |

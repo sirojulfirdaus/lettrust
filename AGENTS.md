@@ -13,7 +13,7 @@ Fixed baseline — do not redesign:
 - `blockchain/` (Solidity, Foundry) and `chain` (Anvil, persistent state): `OfferProofRegistry`, single registrar signer, off-chain issuer authorization.
 - Local deployment only, through Docker Compose and `python scripts/dev.py`. All data is synthetic.
 
-Demo and test scenarios must use the real Anvil registry and the real LLM. Mocks are for unit tests only.
+Demo and test scenarios must use the real Anvil registry and the real LLM. Mocks are for tests only (`docs/MOCKS.md`).
 
 ## 2. Documentation and Context Efficiency
 
@@ -21,8 +21,10 @@ Demo and test scenarios must use the real Anvil registry and the real LLM. Mocks
 |---|---|
 | `docs/prd/` | Product requirements. Ch. 1 = conventions and ID scheme; Ch. 6 = detailed FR and acceptance criteria; Ch. 8 = business rules and result semantics; Ch. 9 = UI labels, states, guidance rules; Ch. 12 = scenarios (SCN) and evidence rules. |
 | `docs/SYSTEM_ARCHITECTURE.md` | Technical baseline: components, ownership (§4.1, §13.1), API contracts (§10), orchestration (§5), blockchain (§6), AI (§7), auth (§8), data (§9), config (§14), deployment (§15), testing (§18), decisions AD/TOI (§19). |
-| `docs/PLAN.md` | Tasks (`T-xx`), owners, dependencies, deadlines, done criteria. |
-| `contracts/openapi.json`, `contracts/examples/` | Frozen API contract and example responses. Source of truth for frontend types. |
+| `docs/PLAN.md` | Tasks: shared `TB-xx` and individual `T<PIC>-xx` (e.g. `T3-02` = second task of PIC 3), with files, references, dependencies, deadlines, done criteria, and verification commands. |
+| `docs/MOCKS.md` | Shared mocks, fakes, contract examples, conformance suites, and how to inject them in tests. |
+| `docs/SCAFFOLD_REPORT.md` | Scaffold state, versions, and recorded deviations from SYSTEM_ARCHITECTURE (§6). |
+| `contracts/openapi.json`, `contracts/examples/` | Frozen API contract and example responses (`examples/index.json` maps examples to schemas). Source of truth for frontend types and fixtures. |
 | `docs/testing/` | Test cases (`TC-xxx`) and evidence. |
 | `docs/evaluation/` | AI evaluation protocol and report. |
 | `README.md` | Actual setup and commands. |
@@ -39,6 +41,8 @@ Each team member works on their own module. Ownership is defined in SYSTEM_ARCHI
 
 - Modify only files inside the module of the member you are working for, unless the human explicitly instructs otherwise.
 - Shared files — `contracts/`, `compose.yaml`, `compose.dev.yaml`, `.env.example`, `scripts/dev.py`, `services/backend/app/core/`, `services/backend/app/main.py` — change only when explicitly instructed. Contract changes belong to the Technical Lead (Dws).
+- Mocks, fakes, and conformance suites belong to Dws: `services/backend/app/modules/registry/mock.py`, `services/ai-service/app/analysis/mock_provider.py`, `services/backend/tests/fakes/`, `services/backend/tests/conformance/`. Do not edit them for another member; if a mock looks wrong, report it under "Perlu koordinasi".
+- Never hand-edit generated files: `contracts/openapi.json`, `apps/*/src/lib/api/schema.d.ts`, `apps/*/src/fixtures/api/`, `services/backend/app/modules/registry/abi/`. `services/*/constraints.txt` is regenerated only with `python scripts/dev.py lock <svc>` when that service's requirements change, and only for its owner.
 - If the task needs a change outside the owned module, do not make it. Describe the exact change needed and who owns it, so the human can coordinate.
 - Do not expand scope, add features, or change product behavior beyond the PRD. Do not close Open Issues (OI) or Technical Open Issues (TOI) on assumption.
 
@@ -62,11 +66,24 @@ All git operations are done by humans.
 
 Do not ask for approval for routine steps. Ask before scope changes, contract changes, destructive actions, or anything listed in §4.
 
+### Executing a PLAN task
+
+When the human says "kerjakan <ID>" (e.g. "kerjakan T3-02"):
+
+1. Find the row in `docs/PLAN.md`. If the ID does not exist or the task belongs to a different PIC than the member you work for, stop and ask.
+2. Check each dependency. A dependency is available when its code is merged (read-only `git log`, file header `Status: COMPLETE`). If it is not available, implement against the real interface anyway and test with the shared mocks in `docs/MOCKS.md`; add one comment line at the call site, e.g. `# Bergantung pada T6-02; diuji dengan MockRegistryAdapter`. Never write placeholder success logic. If no mock covers the dependency and the task cannot proceed, stop and report.
+3. Read the references in the row (FR/BR/SA sections) and the listed files before editing.
+4. Edit only the files listed in the row, plus tests for them and small helpers in the same folders (name them in the report). If another file must change, do not change it; report it under "Perlu koordinasi".
+5. Implement until every "Selesai bila" criterion is met. For each file that is fully implemented, change its header from `Status: STUB` to `Status: COMPLETE` and remove its `TODO` lines.
+6. Run the row's verification commands and `python scripts/dev.py test <svc>` for affected services.
+7. Report as in §11, starting with the task ID and each done criterion marked met or not met.
+8. Do not start the next task. The human will say "kerjakan <next ID>".
+
 ## 6. API Contract Rules
 
 - Request/response shapes, field names (camelCase), enums, and error codes follow SYSTEM_ARCHITECTURE §10 and `contracts/openapi.json`. Do not rename or remove D2 fields; D3 additions are additive only.
 - If a backend schema change is instructed, regenerate the contract with `python scripts/dev.py openapi`, update `contracts/examples/` if affected, and state the change clearly in the report.
-- Frontend types are generated (`npm run gen:api`). Never hand-edit generated files.
+- Frontend types and fixtures are generated by `python scripts/dev.py openapi` (`src/lib/api/schema.d.ts`, `src/fixtures/api/`). Never hand-edit generated files.
 - Never invent endpoints. Supporting endpoints are only those listed in SYSTEM_ARCHITECTURE §10.4.
 
 ## 7. Product Invariants (Never Break)
@@ -112,20 +129,22 @@ function issueProof(bytes32 proofId, bytes32 documentHash, bytes32 issuerRef) ex
 
 ## 9. Verification and Testing
 
-Use the real commands (see README once available):
+Use the real commands (see README):
 
 | Area | Command |
 |---|---|
 | Whole stack | `python scripts/dev.py up`, `status`, `logs [svc]`, `stop/start <svc>` |
 | Unit tests in containers | `python scripts/dev.py test [svc]` |
 | Contract | `forge test` in `blockchain/` |
-| Backend integration (real Anvil) | `pytest -m integration` in `services/backend/` |
+| Backend against real Anvil (stack up) | `docker compose exec backend python -m pytest -m real_registry tests/conformance tests/integration` |
+| Contract regeneration (after an instructed schema change) | `python scripts/dev.py openapi` |
 | Frontend logic | `npm test` (Vitest) in the app |
 | API scenarios | scripts in `scripts/scn/` |
 | AI evaluation | `python scripts/dev.py eval …` |
 
 - State clearly what was verified and how: automated with mocks, automated against real Anvil/LLM, or manual. If a check could not run, say why. Never claim success without having run it.
 - Mock results are never evidence for scenarios, evaluation, or demo.
+- A registry provider is ready for integration only after the conformance suite passes against the real adapter (`real_registry`).
 - In `docs/testing/`, fill `Actual result` and `Status` only after a real execution, with evidence saved under `docs/testing/evidence/<TC-ID>/`. Never pre-fill PASS. Evidence must not contain secrets.
 - AI evaluation: tune prompts/thresholds on the dev set only; never use or modify the frozen test set for tuning; record model ID, prompt version, and raw outputs; report actual results including failures.
 - Use only LLM API credits from the account of the member you work for. Keep calls small; do not loop on quota errors.

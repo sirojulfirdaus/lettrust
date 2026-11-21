@@ -27,7 +27,7 @@ Status keputusan tidak menggantikan hasil pengujian.
 | DEP-07 | Repository GitHub | Kolaborasi enam anggota. Commit, push, dan merge dilakukan oleh manusia. | Required |
 | DEP-08 | Laporan D1–D2 dan guideline II3120 | Baseline desain dan syarat penilaian. | Available |
 | DEP-09 | Koneksi internet | Analisis AI melalui layanan eksternal dan pengunduhan dependency/image. | Required |
-| DEP-10 | Ketersediaan seluruh anggota | Enam workstream paralel hingga soft deadline 26 November 2026. | Required |
+| DEP-10 | Ketersediaan seluruh anggota | Enam workstream paralel hingga soft deadline 24 November 2026 dan verifikasi hingga 26 November 2026. | Required |
 
 ## 11.3 Open Issues Register
 
@@ -38,7 +38,7 @@ Status keputusan tidak menggantikan hasil pengujian.
 | OI-03 | Nilai batas operasional | Mengonfirmasi batas ukuran berkas (default 5 MB), halaman AI (default 5), panjang teks, dan batas waktu berdasarkan pengukuran. | Technical Lead | Milestone M3 | Partially Resolved |
 | OI-04 | Penerimaan delta D3 oleh dosen | Menyampaikan DLT-01–DLT-16 secara eksplisit pada laporan dan presentasi D3 beserta alasannya. | Project Coordinator | Pengumpulan D3 | Open |
 | OI-05 | Kecukupan kuota free tier | Memantau kuota selama pengembangan, evaluasi, dan demo; menyiapkan kunci cadangan dari akun anggota lain. | AI Engineer | Berkelanjutan | Open |
-| OI-06 | Kompatibilitas Docker lintas OS | Memvalidasi seluruh image pada Windows (WSL2) dan macOS Apple Silicon. | Technical Lead | Milestone M1 | Open |
+| OI-06 | Kompatibilitas Docker lintas OS | Windows (WSL2) tervalidasi saat scaffold (`docs/SCAFFOLD_REPORT.md` §5); Linux divalidasi melalui SCN-21. macOS Apple Silicon tidak divalidasi karena tidak ada perangkat di tim dan dicatat sebagai keterbatasan. | Technical Lead | Milestone M4 | Partially Resolved |
 | OI-07 | Pembatasan laju partner | Mengimplementasikan FR-06.10 apabila waktu memungkinkan. | Technical Lead | Setelah P0 | Deferred |
 | OI-08 | Format final `referenceCode` dan representasi hash | Ditetapkan di SYSTEM_ARCHITECTURE. | Technical Lead, Blockchain Engineer | Milestone M1 | Partially Resolved |
 | OI-09 | Pemakaian ulang kode referensi | Pemeriksaan kode saja dapat menampilkan FOUND ACTIVE untuk surat palsu yang menyalin kode asli. Mitigasi: menampilkan nama penerbit dan waktu terbit, serta mendorong unggah berkas (MATCH mengikat bukti ke berkas). | Product | — | Accepted Limitation |
@@ -73,7 +73,7 @@ Status keputusan tidak menggantikan hasil pengujian.
 
 | ID | Risiko | Severity | Kemungkinan | Mitigasi | Pemilik |
 | ----- | ----- | ----- | ----- | ----- | ----- |
-| R-01 | Waktu pengembangan tidak cukup untuk seluruh P0 dan bukti pengujian. | Critical | Tinggi | Milestone harian, kontrak dibekukan lebih awal, jalur kritis dipantau, urutan pemangkasan P1 terlebih dahulu, soft deadline 26 November. | Project Coordinator |
+| R-01 | Waktu pengembangan tidak cukup untuk seluruh P0 dan bukti pengujian. | Critical | Tinggi | Milestone harian, kontrak dibekukan lebih awal, jalur kritis dipantau, urutan pemangkasan P1 terlebih dahulu, soft deadline (feature freeze) 24 November. | Project Coordinator |
 | R-02 | Integrasi antarmodul terlambat sehingga pengujian end-to-end tertunda. | High | Sedang | Kontrak OpenAPI dan contoh respons dibekukan pada M1; frontend memakai fixture kontrak selama backend belum siap; integrasi bertahap M2–M3. | Technical Lead |
 | R-03 | Kuota free tier habis saat evaluasi atau demo. | High | Sedang | Kunci API per akun anggota, prompt ringkas, evaluasi terjadwal, kunci cadangan, video demo cadangan. | AI Engineer |
 | R-04 | Docker atau dependency gagal berjalan pada OS tertentu. | High | Sedang | Validasi image lintas OS pada M1, jalur native terdokumentasi, satu mesin demo yang telah diuji. | Technical Lead |
@@ -108,10 +108,10 @@ Coding agent tidak boleh menutup open issue berdasarkan asumsi sendiri.
 | Milestone | Target | Ketentuan |
 | ----- | ----- | ----- |
 | M0 | Sabtu, 21 November 2026 | PRD, SYSTEM_ARCHITECTURE, AGENTS.md, dan PLAN.md tersedia. |
-| M1 | Minggu, 22 November 2026 | Repository dan Docker berjalan; kontrak OpenAPI dibekukan; kerangka seluruh modul tersedia. |
-| M2 | Selasa, 24 November 2026 | Penerbitan dan pencabutan melalui API tercatat di registry; API-08 berfungsi; Console terhubung ke API. |
-| M3 | Rabu, 25 November 2026 | API-07 end-to-end untuk seluruh mode; evaluasi AI dijalankan. |
-| M4 (soft deadline) | Kamis, 26 November 2026, 23.59 WIB | Seluruh SCN dan test case dieksekusi dengan bukti; bagian D3 laporan selesai. |
+| M1 | Sabtu, 21 November 2026 | Repository dan Docker berjalan; kontrak OpenAPI dibekukan; kerangka seluruh modul tersedia. |
+| M2 | Senin, 23 November 2026, 12.00 WIB | Seluruh modul berjalan mandiri; model LLM dipilih (OI-01); test set evaluasi dibekukan. |
+| M3 (soft deadline) | Selasa, 24 November 2026, 23.59 WIB | Alur demo end-to-end berjalan pada stack nyata; feature freeze. |
+| M4 | Kamis, 26 November 2026, 23.59 WIB | Seluruh SCN dan test case dieksekusi dengan bukti; evaluasi AI selesai; laporan dan deck final. |
 | M5 (deadline) | Jumat, 27 November 2026, 23.59 WIB | Laporan PDF dan presentasi gabungan D1–D3 dikumpulkan. |
 
 Rincian tugas, pemilik, dan dependensi berada di `docs/PLAN.md`.
