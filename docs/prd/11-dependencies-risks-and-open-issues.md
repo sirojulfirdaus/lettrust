@@ -33,7 +33,7 @@ Status keputusan tidak menggantikan hasil pengujian.
 
 | ID | Open Issue | Keputusan / Validasi Diperlukan | Pemilik | Target | Status |
 | ----- | ----- | ----- | ----- | ----- | ----- |
-| OI-01 | Pemilihan final model LLM | Membandingkan dua kandidat model pada dev set dan membekukan pilihan beserta identitas model. | AI Engineer | Milestone M2 | Open |
+| OI-01 | Pemilihan final provider dan model LLM | Membandingkan minimal dua kandidat model (boleh dari provider berbeda yang memenuhi syarat SYSTEM_ARCHITECTURE §7.4.1) pada dev set, lalu membekukan pilihan beserta identitas provider dan model. | AI Engineer | Milestone M2 | Open |
 | OI-02 | Ukuran dan komposisi final dataset evaluasi | Menetapkan jumlah final, pembagian dev/test, dan peninjau label. Target awal 72 dokumen. | AI Engineer | Milestone M2 | Open |
 | OI-03 | Nilai batas operasional | Mengonfirmasi batas ukuran berkas (default 5 MB), halaman AI (default 5), panjang teks, dan batas waktu berdasarkan pengukuran. | Technical Lead | Milestone M3 | Partially Resolved |
 | OI-04 | Penerimaan delta D3 oleh dosen | Menyampaikan DLT-01–DLT-16 secara eksplisit pada laporan dan presentasi D3 beserta alasannya. | Project Coordinator | Pengumpulan D3 | Open |

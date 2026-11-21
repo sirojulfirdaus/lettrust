@@ -129,10 +129,12 @@ Perubahan berikut **wajib** juga direview Dws: `services/backend/app/core/`, `co
 
 | No | Aturan |
 | ----- | ----- |
-| 1 | Setiap anggota memakai kunci Groq miliknya sendiri. Kunci tidak dibagikan dan tidak ditulis di WA, PR, atau bukti. |
-| 2 | Run evaluasi final memakai kunci B. |
-| 3 | Demo memakai kunci Dws yang belum dipakai pada hari demo (PRD §12.7.2). |
-| 4 | B memantau kuota (OI-05). Bila kuota menipis sebelum evaluasi final, pemanggilan LLM untuk pengujian manual dihemat. |
+| 1 | Provider LLM ditetapkan B (T5-03) paling lambat Min 22/11 12.00 dan diumumkan di WA beserta nilai `LLM_BASE_URL` dan `LLM_MODEL`. Default konfigurasi adalah Groq. Seluruh anggota memakai provider dan model yang sama. |
+| 2 | Setiap anggota membuat kunci miliknya sendiri pada provider tersebut sebelum TB-02. Kunci tidak dibagikan dan tidak ditulis di WA, PR, atau bukti. |
+| 3 | Bila B mengganti provider atau model (paling lambat T5-07), B mengumumkan nilai baru dan setiap anggota memperbarui `.env` miliknya, lalu menjalankan `python scripts/dev.py stop ai-service` dan `start ai-service`. |
+| 4 | Run evaluasi final memakai kunci B. |
+| 5 | Demo memakai kunci Dws yang belum dipakai pada hari demo (PRD §12.7.2). |
+| 6 | B memantau kuota (OI-05). Bila kuota menipis sebelum evaluasi final, pemanggilan LLM untuk pengujian manual dihemat. |
 
 ## 4. Peta Dependensi
 
@@ -152,6 +154,7 @@ Perubahan berikut **wajib** juga direview Dws: `services/backend/app/core/`, `co
 | API S-01–S-07, API-01–API-06 nyata | T3-02–T3-05, T6-03 | T2-07 | Fixture `apps/issuer-console/src/fixtures/api/` | Sen 23/11 18.00 |
 | API-07 nyata | T1-05 | T4-06 | Fixture `apps/partner-portal/src/fixtures/api/` | Sen 23/11 12.00 |
 | Format templat dataset | T5-01 | T2-04, T4-03 | — | Sab 21/11 23.59 |
+| Keputusan provider LLM (pengumuman WA) | T5-03 | Semua (kunci LLM) | Default Groq | Min 22/11 12.00 |
 | Templat dataset ID dan EN | T2-04, T4-03 | T5-05 | — | Min 22/11 23.59 |
 | Dataset, manifest, fixture FX | T5-05, T5-06 | T4-07, T6-05, TB-04 | — | Sen 23/11 15.00 |
 | `scripts/scn/common.py` dan templat TC | T4-05 | T1-08, T3-06, T6-06, TB-04 | — | Sen 23/11 18.00 |
@@ -187,7 +190,7 @@ Urutan global (kolom No) dipakai di tracker. Urutan disusun menurut tenggat, lal
 | No | ID | Tugas | PIC | Tergantung | Tenggat | M |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
 | 1 | T1-01 | Mock, fake, contoh kontrak, conformance | Dws | — | Sab 21/11 (selesai) | M1 |
-| 2 | TB-01 | Jalankan stack lokal, kunci Groq, lapor OS | Semua | — | Sab 21/11 20.00 | M1 |
+| 2 | TB-01 | Jalankan stack lokal dan lapor OS | Semua | — | Sab 21/11 20.00 | M1 |
 | 3 | T5-01 | Format templat dataset | B | — | Sab 21/11 23.59 | M2 |
 | 4 | T3-01 | Seed data | Zan | — | Sab 21/11 23.59 | M2 |
 | 5 | T6-01 | Fungsi contract dan 10 test wajib | Sat | — | Sab 21/11 23.59 | M2 |
@@ -242,13 +245,13 @@ Urutan global (kolom No) dipakai di tracker. Urutan disusun menurut tenggat, lal
 
 ### 6.1 Tugas Bersama
 
-### TB-01 — Jalankan stack lokal, kunci Groq, lapor OS
+### TB-01 — Jalankan stack lokal dan lapor OS
 
 | Atribut | Isi |
 | ----- | ----- |
 | PIC | Semua anggota |
 | Tenggat | Sab 21/11 20.00 · M1 |
-| Langkah | 1) `git switch main`, `git pull`.<br>2) `python scripts/dev.py doctor`, lalu `python scripts/dev.py up --build`.<br>3) Isi `LLM_API_KEY` di `.env` dengan kunci Groq milik sendiri, lalu `python scripts/dev.py up`.<br>4) Kirim "siap" di WA beserta OS yang dipakai. Dari laporan ini ditetapkan satu anggota Windows dan satu anggota Linux untuk TB-05. |
+| Langkah | 1) `git switch main`, `git pull`.<br>2) `python scripts/dev.py doctor`, lalu `python scripts/dev.py up --build`.<br>3) Kunci LLM belum wajib: status `aiService: unconfigured` normal sampai B mengumumkan provider (§3.5). Setelah diumumkan, isi `LLM_API_KEY` di `.env` dengan kunci milik sendiri.<br>4) Kirim "siap" di WA beserta OS yang dipakai. Dari laporan ini ditetapkan satu anggota Windows dan satu anggota Linux untuk TB-05. |
 | Selesai bila | `python scripts/dev.py status` menunjukkan enam service sehat; `GET http://127.0.0.1:8000/api/v1/health` menunjukkan `aiService` bukan `unavailable`. |
 | Verifikasi | `python scripts/dev.py status`; `python scripts/dev.py test` lulus. |
 
@@ -796,7 +799,7 @@ Halaman dibangun dari fixture kontrak (`apps/issuer-console/src/fixtures/api/`),
 | File | `services/ai-service/app/analysis/` → `provider.py`, `prompt.py`<br>`services/ai-service/tests/test_provider.py` (baru) |
 | Ref | SA §7.3, §7.4; AD-16; FR-05.08, FR-05.11, FR-05.13; TOI-04, TOI-05 |
 | Tergantung | — |
-| Selesai bila | 1) Provider OpenAI-compatible ke Groq dengan JSON mode, timeout, dan retry sesuai SA.<br>2) Error provider dipetakan ke kode SA §10.3.<br>3) `promptVersion` tercatat; teks dokumen dibatasi sebagai data, bukan instruksi.<br>4) `get_provider()` hanya memilih `MockLLMProvider` bila `LLM_PROVIDER=mock` dan `APP_ENV=test`, dengan impor lazy (`docs/MOCKS.md` aturan 2).<br>5) Satu panggilan nyata berhasil dengan kunci sendiri. |
+| Selesai bila | 1) Provider OpenAI-compatible generik dengan JSON mode, timeout, dan retry sesuai SA. Base URL, model, dan parameter khusus model (`LLM_REASONING_EFFORT`) dibaca dari config; tidak ada nama atau URL provider di kode selain nilai default config (SA §7.4.1). Docstring provider tidak menyebut provider tertentu sebagai keputusan.<br>2) Error provider dipetakan ke kode SA §10.3.<br>3) `promptVersion` tercatat; teks dokumen dibatasi sebagai data, bukan instruksi.<br>4) `get_provider()` hanya memilih `MockLLMProvider` bila `LLM_PROVIDER=mock` dan `APP_ENV=test`, dengan impor lazy (`docs/MOCKS.md` aturan 2).<br>5) Provider dipilih sesuai syarat SA §7.4.1 dan diumumkan di WA paling lambat Min 22/11 12.00 (§3.5).<br>6) Satu panggilan nyata berhasil dengan kunci sendiri. |
 | Verifikasi | `python scripts/dev.py test ai-service` |
 
 ### T5-04 — Validator, skoring, komposisi, dan API-08
@@ -847,10 +850,10 @@ Halaman dibangun dari fixture kontrak (`apps/issuer-console/src/fixtures/api/`),
 | PIC · Reviewer | B · Dws |
 | Branch | `feat/model-selection` |
 | Tenggat | Sen 23/11 21.00 · M3 |
-| File | `ai-eval/scripts/run_eval.py`<br>`docs/evaluation/protocol.md`<br>`.env.example` (nilai default `LLM_MODEL`) |
+| File | `ai-eval/scripts/run_eval.py`<br>`docs/evaluation/protocol.md`<br>`.env.example` (nilai default `LLM_BASE_URL`, `LLM_MODEL`)<br>`services/ai-service/app/core/config.py` (nilai default yang sama)<br>`compose.yaml` (fallback `LLM_BASE_URL`, bila provider berubah; review Dws) |
 | Ref | PRD §10.4.3; SA §7.4.1; OI-01, OI-02; TOI-04, TOI-06, TOI-07 |
 | Tergantung | T5-04, T5-05 |
-| Selesai bila | 1) Kedua kandidat model dijalankan **hanya** di dev set.<br>2) Pilihan model, alasan, serta ambang OCR dan fuzzy dicatat di `protocol.md`.<br>3) `LLM_MODEL` di `.env.example` diperbarui dan diumumkan ke tim. |
+| Selesai bila | 1) Minimal dua kandidat model (boleh dari provider berbeda yang memenuhi SA §7.4.1) dijalankan **hanya** di dev set.<br>2) Pilihan provider dan model, alasan, serta ambang OCR dan fuzzy dicatat di `protocol.md`, beserta prosedur mengganti model.<br>3) Model bantu yang dipakai menulis templat dataset (bila ada) dicatat dan dipastikan berbeda dari model terpilih (PRD §10.4.2 butir 4).<br>4) Nilai default di `.env.example`, `config.py`, dan `compose.yaml` diperbarui bila berbeda, lalu diumumkan ke tim. |
 | Verifikasi | `python scripts/dev.py eval run_eval --split dev` (argumen sesuai implementasi) |
 
 ### T5-08 — Bekukan test set dan run evaluasi final
