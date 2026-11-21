@@ -1,0 +1,42 @@
+{
+  "verificationId": "VER-6T2V8W4X1Y",
+  "mode": "REFERENCE_CHECK",
+  "proofCheck": {
+    "lookup": "NOT_FOUND",
+    "reason": null,
+    "issuer": null,
+    "issuerVerified": null,
+    "lifecycleStatus": null,
+    "issuedAt": null,
+    "revokedAt": null
+  },
+  "integrityCheck": {
+    "result": "NOT_CHECKED",
+    "reason": "PROOF_NOT_FOUND",
+    "hashAlgorithm": null
+  },
+  "riskAnalysis": {
+    "state": "COMPLETED",
+    "reason": null,
+    "category": "HIGH",
+    "indicators": [
+      "Permintaan pembayaran kepada pelamar: “wajib mentransfer biaya administrasi sebesar Rp1.500.000”"
+    ],
+    "indicatorDetails": [
+      {
+        "code": "PAYMENT_REQUEST",
+        "label": "Permintaan pembayaran kepada pelamar",
+        "severity": "HIGH",
+        "evidence": [
+          "wajib mentransfer biaya administrasi sebesar Rp1.500.000"
+        ]
+      }
+    ],
+    "explanation": "Surat meminta pelamar membayar biaya administrasi sebelum bergabung.",
+    "recommendation": "Jangan melakukan pembayaran apa pun untuk proses rekrutmen. Konfirmasikan penawaran melalui situs atau kontak resmi perusahaan yang Anda cari sendiri.",
+    "extractionMethod": "TEXT_LAYER",
+    "contentTruncated": false,
+    "pagesAnalyzed": 1,
+    "pagesTotal": 1
+  }
+}

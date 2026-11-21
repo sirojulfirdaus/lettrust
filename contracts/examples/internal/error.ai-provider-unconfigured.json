@@ -1,0 +1,8 @@
+{
+  "requestId": "req_YFDJW6J0H6ZWE50Y",
+  "error": {
+    "code": "AI_PROVIDER_UNCONFIGURED",
+    "message": "Penyedia model AI belum dikonfigurasi.",
+    "details": []
+  }
+}

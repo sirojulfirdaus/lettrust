@@ -1,0 +1,51 @@
+{
+  "verificationId": "VER-3H9J5K1M6N",
+  "mode": "AI_ONLY",
+  "proofCheck": {
+    "lookup": "NOT_REQUESTED",
+    "reason": "NO_REFERENCE_CODE",
+    "issuer": null,
+    "issuerVerified": null,
+    "lifecycleStatus": null,
+    "issuedAt": null,
+    "revokedAt": null
+  },
+  "integrityCheck": {
+    "result": "NOT_CHECKED",
+    "reason": "NO_REFERENCE_CODE",
+    "hashAlgorithm": null
+  },
+  "riskAnalysis": {
+    "state": "COMPLETED",
+    "reason": null,
+    "category": "MEDIUM",
+    "indicators": [
+      "Tekanan waktu atau ancaman: “Konfirmasi paling lambat 2 jam setelah surat ini diterima”",
+      "Kontak melalui kanal tidak resmi: “Hubungi rekruter hanya melalui WhatsApp 0812-0000-1111”"
+    ],
+    "indicatorDetails": [
+      {
+        "code": "URGENCY_PRESSURE",
+        "label": "Tekanan waktu atau ancaman",
+        "severity": "MEDIUM",
+        "evidence": [
+          "Konfirmasi paling lambat 2 jam setelah surat ini diterima"
+        ]
+      },
+      {
+        "code": "UNOFFICIAL_CONTACT",
+        "label": "Kontak melalui kanal tidak resmi",
+        "severity": "MEDIUM",
+        "evidence": [
+          "Hubungi rekruter hanya melalui WhatsApp 0812-0000-1111"
+        ]
+      }
+    ],
+    "explanation": "Surat memberi tenggat konfirmasi sangat singkat dan mengarahkan komunikasi ke nomor pesan pribadi.",
+    "recommendation": "Konfirmasikan penawaran melalui situs atau kontak resmi perusahaan yang Anda cari sendiri.",
+    "extractionMethod": "MIXED",
+    "contentTruncated": true,
+    "pagesAnalyzed": 5,
+    "pagesTotal": 7
+  }
+}

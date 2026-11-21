@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "issuerId": "ISS-4D8N2P6R",
+      "companyName": "PT Sinar Demo Sejahtera",
+      "registrationNumber": "REG-DEMO-001",
+      "issuerStatus": "VERIFIED",
+      "createdAt": "2026-11-21T02:00:00Z",
+      "memberCount": 2
+    },
+    {
+      "issuerId": "ISS-6T3W9X2B",
+      "companyName": "PT Nusantara Contoh Digital",
+      "registrationNumber": "REG-DEMO-002",
+      "issuerStatus": "VERIFIED",
+      "createdAt": "2026-11-21T02:00:01Z",
+      "memberCount": 1
+    },
+    {
+      "issuerId": "ISS-8B5C1D7E",
+      "companyName": "PT Menunggu Verifikasi Demo",
+      "registrationNumber": "REG-DEMO-003",
+      "issuerStatus": "PENDING",
+      "createdAt": "2026-11-21T02:00:02Z",
+      "memberCount": 1
+    },
+    {
+      "issuerId": "ISS-2F9G4H6J",
+      "companyName": "PT Ditolak Demo",
+      "registrationNumber": "REG-DEMO-004",
+      "issuerStatus": "REJECTED",
+      "createdAt": "2026-11-21T02:00:03Z",
+      "memberCount": 1
+    }
+  ],
+  "total": 4
+}

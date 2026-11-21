@@ -1,0 +1,8 @@
+{
+  "requestId": "req_1CJZHD72SB21R4TQ",
+  "error": {
+    "code": "AI_OUTPUT_INVALID",
+    "message": "Output model tidak valid setelah satu kali pengulangan.",
+    "details": []
+  }
+}

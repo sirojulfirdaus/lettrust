@@ -1,0 +1,8 @@
+{
+  "requestId": "req_EZ1XQA3QEGYVC4HA",
+  "error": {
+    "code": "DUPLICATE_ACTIVE_DOCUMENT",
+    "message": "Berkas yang sama sudah memiliki bukti aktif.",
+    "details": []
+  }
+}

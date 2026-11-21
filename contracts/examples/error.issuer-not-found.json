@@ -1,0 +1,8 @@
+{
+  "requestId": "req_0WJG0EM85M5NG81T",
+  "error": {
+    "code": "ISSUER_NOT_FOUND",
+    "message": "Penerbit tidak ditemukan.",
+    "details": []
+  }
+}

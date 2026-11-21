@@ -1,0 +1,13 @@
+{
+  "userId": "USR-3C6D9E2F",
+  "email": "hr.rejected@lettrust.test",
+  "displayName": "HR Ditolak Demo",
+  "role": "HR",
+  "membership": {
+    "issuerId": "ISS-2F9G4H6J",
+    "companyName": "PT Ditolak Demo",
+    "issuerStatus": "REJECTED",
+    "authorizationStatus": "NOT_AUTHORIZED",
+    "reviewNote": "Nomor registrasi sintetis tidak dapat dicocokkan dengan dokumen pendukung."
+  }
+}

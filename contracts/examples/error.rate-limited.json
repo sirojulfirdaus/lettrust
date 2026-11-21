@@ -1,0 +1,8 @@
+{
+  "requestId": "req_SFAN1D15JJCC9TKF",
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Terlalu banyak permintaan. Coba lagi beberapa saat lagi.",
+    "details": []
+  }
+}

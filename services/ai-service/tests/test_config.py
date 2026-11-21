@@ -4,7 +4,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.analysis.provider import MockLLMProvider
+from app.analysis.mock_provider import MockLLMProvider
 from app.core.config import Settings
 
 BASE = {"internal_api_token": "test-internal-token-value"}
@@ -31,6 +31,6 @@ def test_llm_configured_flag():
 
 # MockLLMProvider menolak dibuat di luar APP_ENV=test.
 def test_mock_provider_guard(monkeypatch):
-    monkeypatch.setattr("app.analysis.provider.get_settings", lambda: Settings(app_env="local", **BASE))
+    monkeypatch.setattr("app.analysis.mock_provider.get_settings", lambda: Settings(app_env="local", **BASE))
     with pytest.raises(RuntimeError, match="APP_ENV=test"):
         MockLLMProvider("{}")

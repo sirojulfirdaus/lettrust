@@ -1,0 +1,13 @@
+{
+  "requestId": "req_BEG2ZXM0YC62H9AH",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Data yang dikirim tidak valid.",
+    "details": [
+      {
+        "field": "documentContent",
+        "issue": "string_too_short"
+      }
+    ]
+  }
+}

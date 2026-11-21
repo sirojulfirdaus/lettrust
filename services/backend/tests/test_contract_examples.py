@@ -1,55 +1,71 @@
-# Owner: Dws (PIC 1) | Status: COMPLETE | Ref: SA §10.7, §20.2
-"""Setiap berkas contracts/examples/*.json harus valid terhadap skema Pydantic kontrak."""
+# Owner: Dws (PIC 1) | Status: COMPLETE | Ref: SA §10, §20.2
+"""Setiap contoh publik di contracts/examples/index.json valid terhadap skema Pydantic backend dan komponen OpenAPI."""
 
-import json
-import os
-from pathlib import Path
+import inspect
 
 import pytest
+from fakes.contracts import example_index, examples_dir, load_example
 from pydantic import BaseModel
 
-from app.core.schemas import ErrorEnvelope
-from app.modules.auth.schemas import MeResponse
-from app.modules.proofs.schemas import IssueProofResponse, ProofStatusResponse
-from app.modules.verifications.schemas import VerificationResponse
+from app.core import errors as core_errors
+from app.core import schemas as core_schemas
+from app.main import app
+from app.modules.auth import schemas as auth_schemas
+from app.modules.health import schemas as health_schemas
+from app.modules.issuers import schemas as issuer_schemas
+from app.modules.proofs import schemas as proof_schemas
+from app.modules.verifications import schemas as verification_schemas
 
-# Prefiks nama berkas contoh → skema respons. Contoh baru wajib memakai salah satu prefiks ini.
-SCHEMA_BY_PREFIX: dict[str, type[BaseModel]] = {
-    "api-04.": IssueProofResponse,
-    "api-05.": ProofStatusResponse,
-    "api-07.": VerificationResponse,
-    "s-03.": MeResponse,
-    "error.": ErrorEnvelope,
+MODELS: dict[str, type[BaseModel]] = {
+    name: cls
+    for module in (core_schemas, auth_schemas, issuer_schemas, proof_schemas, verification_schemas, health_schemas)
+    for name, cls in inspect.getmembers(module, inspect.isclass)
+    if issubclass(cls, BaseModel)
 }
+ENTRIES = example_index()
+PUBLIC = [entry for entry in ENTRIES if entry.get("service", "backend") == "backend"]
+APPS = {"issuer-console", "partner-portal"}
 
 
-# Menentukan folder contracts/examples (env CONTRACTS_DIR di container, atau relatif repo saat native).
-def examples_dir() -> Path:
-    base = (
-        Path(os.environ["CONTRACTS_DIR"])
-        if os.environ.get("CONTRACTS_DIR")
-        else Path(__file__).resolve().parents[3] / "contracts"
+# Setiap berkas JSON di contracts/examples (termasuk internal/) terdaftar tepat sekali di index.json.
+def test_every_example_file_is_indexed():
+    files = sorted(
+        path.relative_to(examples_dir()).as_posix()
+        for path in examples_dir().rglob("*.json")
+        if path.name != "index.json"
     )
-    return base / "examples"
+    indexed = [entry["file"] for entry in ENTRIES]
+    assert len(indexed) == len(set(indexed)), "entri index.json duplikat"
+    assert files == sorted(indexed)
 
 
-EXAMPLES = sorted(examples_dir().glob("*.json"))
+# Set contoh publik mencakup sukses setiap endpoint SA §10.4 (kecuali API-04/API-07 multipart request).
+def test_every_endpoint_has_success_example():
+    prefixes = {entry["file"].split(".")[0] for entry in PUBLIC if not entry["file"].startswith("error.")}
+    expected = {f"s-0{i}" for i in range(1, 8)} | {f"api-0{i}" for i in range(1, 8)}
+    assert expected <= prefixes
 
 
-# Folder contoh harus ada dan berisi contoh API-07 SA §10.7.3–§10.7.6.
-def test_examples_present():
-    names = {path.name for path in EXAMPLES}
-    assert len([n for n in names if n.startswith("api-07.")]) >= 4, f"contoh API-07 kurang di {examples_dir()}"
-    assert {"api-04.", "api-05.", "s-03.", "error."} <= {
-        next(p for p in SCHEMA_BY_PREFIX if n.startswith(p)) for n in names
-    }
-
-
-# Setiap contoh tervalidasi penuh (field tak dikenal ditolak) terhadap skemanya.
-@pytest.mark.parametrize("path", EXAMPLES, ids=lambda p: p.name)
-def test_example_matches_schema(path: Path):
-    prefix = next((p for p in SCHEMA_BY_PREFIX if path.name.startswith(p)), None)
-    assert prefix is not None, f"{path.name} tidak memakai prefiks yang dikenal: {list(SCHEMA_BY_PREFIX)}"
-    data = json.loads(path.read_text(encoding="utf-8"))
-    model = SCHEMA_BY_PREFIX[prefix].model_validate(data)
+# Setiap contoh publik tervalidasi penuh (field tak dikenal ditolak) dan round-trip identik.
+@pytest.mark.parametrize("entry", PUBLIC, ids=lambda e: e["file"])
+def test_example_matches_schema(entry):
+    assert entry["schema"] in MODELS, f"skema {entry['schema']} tidak ada di backend"
+    data = load_example(entry["file"])
+    model = MODELS[entry["schema"]].model_validate(data)
     assert model.model_dump(by_alias=True, mode="json") == data
+
+
+# Nama skema contoh untuk frontend harus ada sebagai komponen OpenAPI (dipakai fixture TypeScript `satisfies`).
+@pytest.mark.parametrize("entry", [e for e in PUBLIC if e.get("apps")], ids=lambda e: e["file"])
+def test_fixture_schema_is_openapi_component(entry):
+    assert set(entry["apps"]) <= APPS
+    assert entry["schema"] in app.openapi()["components"]["schemas"]
+
+
+# Contoh error memakai pesan default dan HTTP status katalog backend (SA §10.3).
+@pytest.mark.parametrize("entry", [e for e in PUBLIC if e["schema"] == "ErrorEnvelope"], ids=lambda e: e["file"])
+def test_error_example_matches_catalog(entry):
+    error = load_example(entry["file"])["error"]
+    code = core_schemas.ErrorCode(error["code"])
+    assert error["message"] == core_errors.DEFAULT_MESSAGES[code]
+    assert entry["httpStatus"] == core_errors.ERROR_HTTP_STATUS[code]

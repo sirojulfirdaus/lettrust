@@ -1,0 +1,31 @@
+{
+  "verificationId": "VER-4N7P2Q8R5S",
+  "mode": "REFERENCE_CHECK",
+  "proofCheck": {
+    "lookup": "NOT_FOUND",
+    "reason": null,
+    "issuer": null,
+    "issuerVerified": null,
+    "lifecycleStatus": null,
+    "issuedAt": null,
+    "revokedAt": null
+  },
+  "integrityCheck": {
+    "result": "NOT_CHECKED",
+    "reason": "PROOF_NOT_FOUND",
+    "hashAlgorithm": null
+  },
+  "riskAnalysis": {
+    "state": "NOT_REQUESTED",
+    "reason": null,
+    "category": null,
+    "indicators": [],
+    "indicatorDetails": [],
+    "explanation": null,
+    "recommendation": null,
+    "extractionMethod": null,
+    "contentTruncated": null,
+    "pagesAnalyzed": null,
+    "pagesTotal": null
+  }
+}

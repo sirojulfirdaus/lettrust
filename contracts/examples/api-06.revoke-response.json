@@ -1,0 +1,9 @@
+{
+  "proofId": "0x9f1c279185f44d9cababbfe3678dbaabc433e38dee2131f8b711eb6c5592e2a4",
+  "lifecycleStatus": "REVOKED",
+  "revokedAt": "2026-11-24T08:01:44Z",
+  "transaction": {
+    "hash": "0x81cd64c092a959c7edc525ed45e845b1de6a7590d173fd2fad9133c8a779aa30",
+    "blockNumber": 19
+  }
+}

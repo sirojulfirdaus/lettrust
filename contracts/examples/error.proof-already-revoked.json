@@ -1,0 +1,8 @@
+{
+  "requestId": "req_4SDG2TNWHP5QPVHX",
+  "error": {
+    "code": "PROOF_ALREADY_REVOKED",
+    "message": "Bukti ini sudah dicabut sebelumnya.",
+    "details": []
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "requestId": "req_X5MMN4F4Q5T3QJW6",
+  "error": {
+    "code": "EMAIL_ALREADY_REGISTERED",
+    "message": "Email sudah terdaftar. Silakan masuk.",
+    "details": []
+  }
+}

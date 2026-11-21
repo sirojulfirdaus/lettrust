@@ -1,0 +1,8 @@
+{
+  "requestId": "req_JXW4VJJCJ245EBE1",
+  "error": {
+    "code": "AI_ONLY_REQUIRES_INCLUDE_RISK",
+    "message": "Tanpa kode referensi, pemeriksaan hanya dapat dilakukan dengan analisis AI. Setujui pemrosesan AI untuk melanjutkan.",
+    "details": []
+  }
+}

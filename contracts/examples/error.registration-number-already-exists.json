@@ -1,0 +1,8 @@
+{
+  "requestId": "req_QMJQC7HSK088PZHS",
+  "error": {
+    "code": "REGISTRATION_NUMBER_ALREADY_EXISTS",
+    "message": "Nomor registrasi perusahaan sudah terdaftar.",
+    "details": []
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "status": "degraded",
+  "components": {
+    "database": "ok",
+    "registry": "unavailable",
+    "aiService": "unconfigured"
+  }
+}

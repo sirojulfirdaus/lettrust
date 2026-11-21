@@ -1,0 +1,8 @@
+{
+  "requestId": "req_MK48AM2NY1R7GEFM",
+  "error": {
+    "code": "EMPTY_FILE",
+    "message": "Berkas kosong tidak dapat diproses.",
+    "details": []
+  }
+}
