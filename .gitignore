@@ -1,0 +1,40 @@
+# Rahasia dan state lokal (SA §13.3)
+.env
+.local/
+*.db
+*.db-shm
+*.db-wal
+anvil-state.json
+
+# Python
+**/__pycache__/
+**/.venv/
+**/.pytest_cache/
+**/.ruff_cache/
+*.pyc
+
+# Node / Next.js
+**/node_modules/
+**/.next/
+**/out/
+**/next-env.d.ts
+**/*.tsbuildinfo
+**/coverage/
+
+# Foundry
+blockchain/out/
+blockchain/cache/
+blockchain/broadcast/
+
+# Evaluasi AI
+ai-eval/results/**/tmp/
+
+# OS dan editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~

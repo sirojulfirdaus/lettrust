@@ -1,0 +1,19 @@
+{
+  "proofId": "0x9f1c279185f44d9cababbfe3678dbaabc433e38dee2131f8b711eb6c5592e2a4",
+  "issuerId": "ISS-4D8N2P6R",
+  "documentHash": "3b1ff94ff1305d81b725e88592f5c30da604ce6271d05e91f356c9b41d8b9c0d",
+  "lifecycleStatus": "REVOKED",
+  "referenceCode": "LTR-7K3M-9QX2-H4TD",
+  "issuedAt": "2026-11-23T04:12:09Z",
+  "revokedAt": "2026-11-24T08:01:44Z",
+  "revocationReasonCode": "OFFER_WITHDRAWN",
+  "issueTransaction": {
+    "hash": "0x5ab255bd3da0f5a838125bd0ee20c5bfdd7caba173912d4281cae816b79a77e1",
+    "blockNumber": 12
+  },
+  "revokeTransaction": {
+    "hash": "0x81cd64c092a959c7edc525ed45e845b1de6a7590d173fd2fad9133c8a779aa30",
+    "blockNumber": 19
+  },
+  "source": "REGISTRY"
+}

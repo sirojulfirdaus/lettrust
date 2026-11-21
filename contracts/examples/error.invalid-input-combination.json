@@ -1,0 +1,8 @@
+{
+  "requestId": "req_8K2M4Q7T9VXYZ0AB",
+  "error": {
+    "code": "INVALID_INPUT_COMBINATION",
+    "message": "Masukkan kode referensi atau unggah berkas PDF untuk dianalisis.",
+    "details": []
+  }
+}

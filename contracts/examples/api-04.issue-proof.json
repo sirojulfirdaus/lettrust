@@ -1,0 +1,13 @@
+{
+  "proofId": "0x9f1c279185f44d9cababbfe3678dbaabc433e38dee2131f8b711eb6c5592e2a4",
+  "referenceCode": "LTR-7K3M-9QX2-H4TD",
+  "issuerId": "ISS-4D8N2P6R",
+  "hashAlgorithm": "SHA-256",
+  "documentHash": "3b1ff94ff1305d81b725e88592f5c30da604ce6271d05e91f356c9b41d8b9c0d",
+  "lifecycleStatus": "ACTIVE",
+  "issuedAt": "2026-11-23T04:12:09Z",
+  "transaction": {
+    "hash": "0x5ab255bd3da0f5a838125bd0ee20c5bfdd7caba173912d4281cae816b79a77e1",
+    "blockNumber": 12
+  }
+}
