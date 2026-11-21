@@ -5,7 +5,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.core.config import Settings, get_settings
+from app.core.config import Settings
 
 
 @dataclass(frozen=True)
@@ -49,20 +49,6 @@ class OpenAICompatibleProvider:
     # Lihat LLMProvider.complete.
     def complete(self, messages: list[dict[str, str]]) -> CompletionResult:
         raise NotImplementedError("OpenAICompatibleProvider.complete belum diimplementasikan")
-
-
-class MockLLMProvider:
-    """Provider palsu khusus unit test; menolak dibuat di luar APP_ENV=test."""
-
-    # Guard AD-16: mock tidak dapat aktif melalui konfigurasi local.
-    def __init__(self, canned_content: str):
-        if get_settings().app_env != "test":
-            raise RuntimeError("MockLLMProvider hanya boleh dipakai saat APP_ENV=test")
-        self._canned_content = canned_content
-
-    # Lihat LLMProvider.complete.
-    def complete(self, messages: list[dict[str, str]]) -> CompletionResult:
-        raise NotImplementedError("MockLLMProvider.complete belum diimplementasikan")
 
 
 # Memilih provider dari konfigurasi; mock hanya bila LLM_PROVIDER=mock dan APP_ENV=test.

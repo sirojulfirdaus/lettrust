@@ -1,0 +1,15 @@
+{
+  "status": "degraded",
+  "tesseract": {
+    "available": true,
+    "version": "5.5.0",
+    "languages": [
+      "eng"
+    ],
+    "missingLanguages": [
+      "ind"
+    ]
+  },
+  "llm": "configured",
+  "model": "openai/gpt-oss-120b"
+}

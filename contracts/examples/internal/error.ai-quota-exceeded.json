@@ -1,0 +1,8 @@
+{
+  "requestId": "req_CQ4Z5TF5NW7EPSM2",
+  "error": {
+    "code": "AI_QUOTA_EXCEEDED",
+    "message": "Kuota atau rate limit penyedia model terlampaui.",
+    "details": []
+  }
+}

@@ -1,0 +1,673 @@
+{
+  "$comment": "Satu-satunya pemetaan contoh -> skema (nama komponen OpenAPI/kelas Pydantic). Dipakai test backend, test ai-service, dan generator fixture frontend (scripts/dev.py openapi). Owner: Dws (PIC 1).",
+  "examples": [
+    {
+      "file": "api-04.issue-proof.json",
+      "schema": "IssueProofResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-05.proof-status-revoked.json",
+      "schema": "ProofStatusResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-03.session-hr-pending.json",
+      "schema": "MeResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-07.reference-match-ai.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.ai-only.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.registry-unavailable.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.code-only.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "error.invalid-input-combination.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "partner-portal"
+      ],
+      "httpStatus": 400
+    },
+    {
+      "file": "s-01.register-request.json",
+      "schema": "RegisterAccountRequest",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-01.register-response.json",
+      "schema": "UserSummary",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-02.login-request.json",
+      "schema": "LoginRequest",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-02.login-response.json",
+      "schema": "LoginResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-03.session-hr-authorized.json",
+      "schema": "MeResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-03.session-hr-verified-not-authorized.json",
+      "schema": "MeResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-03.session-hr-rejected.json",
+      "schema": "MeResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-03.session-hr-unaffiliated.json",
+      "schema": "MeResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-03.session-admin.json",
+      "schema": "MeResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-01.register-issuer-request.json",
+      "schema": "RegisterIssuerRequest",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-01.register-issuer-response.json",
+      "schema": "RegisterIssuerResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-04.issuer-list.json",
+      "schema": "IssuerListResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-04.issuer-list-pending.json",
+      "schema": "IssuerListResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-04.issuer-list-empty.json",
+      "schema": "IssuerListResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-05.issuer-detail-admin.json",
+      "schema": "IssuerDetailResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-05.issuer-detail-member.json",
+      "schema": "IssuerDetailResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-05.issuer-detail-pending.json",
+      "schema": "IssuerDetailResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-02.verify-issuer-request.json",
+      "schema": "VerifyIssuerRequest",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-02.verify-issuer-request-rejected.json",
+      "schema": "VerifyIssuerRequest",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-02.verify-issuer-response.json",
+      "schema": "VerifyIssuerResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-03.authorize-hr-request.json",
+      "schema": "AuthorizeHrRequest",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-03.authorize-hr-response.json",
+      "schema": "AuthorizeHrResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-06.proof-list.json",
+      "schema": "ProofListResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-06.proof-list-empty.json",
+      "schema": "ProofListResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-05.proof-status-active.json",
+      "schema": "ProofStatusResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-06.revoke-request.json",
+      "schema": "RevokeProofRequest",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "api-06.revoke-response.json",
+      "schema": "RevokeProofResponse",
+      "apps": [
+        "issuer-console"
+      ]
+    },
+    {
+      "file": "s-07.health-ok.json",
+      "schema": "HealthResponse",
+      "apps": [
+        "issuer-console",
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "s-07.health-degraded.json",
+      "schema": "HealthResponse",
+      "apps": [
+        "issuer-console",
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.not-found-code-only.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.not-found-with-ai.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.revoked-mismatch.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.issuer-not-verified.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.ai-unavailable.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.ai-quota-exceeded.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.ai-not-performed.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.double-outage.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "api-07.ai-only-medium-partial.json",
+      "schema": "VerificationResponse",
+      "apps": [
+        "partner-portal"
+      ]
+    },
+    {
+      "file": "error.validation-error.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console",
+        "partner-portal"
+      ],
+      "httpStatus": 400
+    },
+    {
+      "file": "error.unauthenticated.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 401
+    },
+    {
+      "file": "error.invalid-credentials.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 401
+    },
+    {
+      "file": "error.forbidden-operation.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 403
+    },
+    {
+      "file": "error.issuer-not-found.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 404
+    },
+    {
+      "file": "error.proof-not-found.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 404
+    },
+    {
+      "file": "error.email-already-registered.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.account-already-affiliated.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.registration-number-already-exists.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.issuer-decision-already-made.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.issuer-not-verified.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.hr-already-authorized.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.hr-not-affiliated.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 422
+    },
+    {
+      "file": "error.proof-already-revoked.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.idempotency-key-conflict.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.duplicate-active-document.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 409
+    },
+    {
+      "file": "error.registry-unavailable.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 503
+    },
+    {
+      "file": "error.registry-transaction-failed.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console"
+      ],
+      "httpStatus": 503
+    },
+    {
+      "file": "error.empty-file.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console",
+        "partner-portal"
+      ],
+      "httpStatus": 400
+    },
+    {
+      "file": "error.multiple-files.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console",
+        "partner-portal"
+      ],
+      "httpStatus": 400
+    },
+    {
+      "file": "error.file-too-large.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console",
+        "partner-portal"
+      ],
+      "httpStatus": 413
+    },
+    {
+      "file": "error.unsupported-media-type.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console",
+        "partner-portal"
+      ],
+      "httpStatus": 415
+    },
+    {
+      "file": "error.internal-error.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "issuer-console",
+        "partner-portal"
+      ],
+      "httpStatus": 500
+    },
+    {
+      "file": "error.ai-only-requires-include-risk.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "partner-portal"
+      ],
+      "httpStatus": 400
+    },
+    {
+      "file": "error.invalid-reference-code-format.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "partner-portal"
+      ],
+      "httpStatus": 400
+    },
+    {
+      "file": "error.rate-limited.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "partner-portal"
+      ],
+      "httpStatus": 429
+    },
+    {
+      "file": "error.service-unavailable.json",
+      "schema": "ErrorEnvelope",
+      "apps": [
+        "partner-portal"
+      ],
+      "httpStatus": 503
+    },
+    {
+      "file": "internal/i-01.extraction-ok.json",
+      "schema": "ExtractionResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/i-01.extraction-ok-truncated.json",
+      "schema": "ExtractionResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/i-01.extraction-no-content.json",
+      "schema": "ExtractionResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/i-01.extraction-unreadable.json",
+      "schema": "ExtractionResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/api-08.request.json",
+      "schema": "RiskAnalysisRequest",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/api-08.response-high.json",
+      "schema": "RiskAnalysisResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/api-08.response-medium.json",
+      "schema": "RiskAnalysisResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/api-08.response-low.json",
+      "schema": "RiskAnalysisResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/i-02.health-ok.json",
+      "schema": "AiHealthResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/i-02.health-unconfigured.json",
+      "schema": "AiHealthResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/i-02.health-ocr-missing-language.json",
+      "schema": "AiHealthResponse",
+      "service": "ai-service"
+    },
+    {
+      "file": "internal/error.validation-error.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 400
+    },
+    {
+      "file": "internal/error.unauthenticated.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 401
+    },
+    {
+      "file": "internal/error.empty-file.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 400
+    },
+    {
+      "file": "internal/error.file-too-large.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 413
+    },
+    {
+      "file": "internal/error.unsupported-media-type.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 415
+    },
+    {
+      "file": "internal/error.ai-provider-unconfigured.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 503
+    },
+    {
+      "file": "internal/error.ai-quota-exceeded.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 503
+    },
+    {
+      "file": "internal/error.ai-provider-error.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 503
+    },
+    {
+      "file": "internal/error.ai-output-invalid.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 502
+    },
+    {
+      "file": "internal/error.ai-timeout.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 504
+    },
+    {
+      "file": "internal/error.internal-error.json",
+      "schema": "ErrorEnvelope",
+      "service": "ai-service",
+      "httpStatus": 500
+    }
+  ]
+}

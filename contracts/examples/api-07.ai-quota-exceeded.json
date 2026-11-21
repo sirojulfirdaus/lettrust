@@ -1,0 +1,31 @@
+{
+  "verificationId": "VER-9R4S1T6V3W",
+  "mode": "AI_ONLY",
+  "proofCheck": {
+    "lookup": "NOT_REQUESTED",
+    "reason": "NO_REFERENCE_CODE",
+    "issuer": null,
+    "issuerVerified": null,
+    "lifecycleStatus": null,
+    "issuedAt": null,
+    "revokedAt": null
+  },
+  "integrityCheck": {
+    "result": "NOT_CHECKED",
+    "reason": "NO_REFERENCE_CODE",
+    "hashAlgorithm": null
+  },
+  "riskAnalysis": {
+    "state": "UNAVAILABLE",
+    "reason": "AI_QUOTA_EXCEEDED",
+    "category": null,
+    "indicators": [],
+    "indicatorDetails": [],
+    "explanation": null,
+    "recommendation": null,
+    "extractionMethod": null,
+    "contentTruncated": null,
+    "pagesAnalyzed": null,
+    "pagesTotal": null
+  }
+}

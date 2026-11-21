@@ -1,0 +1,17 @@
+{
+  "requestId": "req_23MMBSSK0H9D5SB2",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Data yang dikirim tidak valid.",
+    "details": [
+      {
+        "field": "email",
+        "issue": "value_error"
+      },
+      {
+        "field": "password",
+        "issue": "string_too_short"
+      }
+    ]
+  }
+}

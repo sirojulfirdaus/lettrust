@@ -1,0 +1,24 @@
+{
+  "category": "HIGH",
+  "indicators": [
+    "Permintaan pembayaran kepada pelamar: “lakukan pembayaran biaya administrasi ke rekening yang disebutkan”"
+  ],
+  "indicatorDetails": [
+    {
+      "code": "PAYMENT_REQUEST",
+      "label": "Permintaan pembayaran kepada pelamar",
+      "severity": "HIGH",
+      "evidence": [
+        "lakukan pembayaran biaya administrasi ke rekening yang disebutkan"
+      ]
+    }
+  ],
+  "explanation": "Surat meminta pelamar melakukan pembayaran biaya administrasi sebelum bergabung.",
+  "recommendation": "Jangan melakukan pembayaran apa pun untuk proses rekrutmen. Konfirmasikan penawaran melalui situs atau kontak resmi perusahaan yang Anda cari sendiri.",
+  "meta": {
+    "model": "openai/gpt-oss-120b",
+    "promptVersion": "v1",
+    "latencyMs": 1840,
+    "droppedIndicators": 0
+  }
+}

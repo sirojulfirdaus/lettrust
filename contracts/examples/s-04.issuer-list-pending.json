@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "issuerId": "ISS-8B5C1D7E",
+      "companyName": "PT Menunggu Verifikasi Demo",
+      "registrationNumber": "REG-DEMO-003",
+      "issuerStatus": "PENDING",
+      "createdAt": "2026-11-21T02:00:02Z",
+      "memberCount": 1
+    }
+  ],
+  "total": 1
+}

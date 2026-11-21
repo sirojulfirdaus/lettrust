@@ -1,0 +1,8 @@
+{
+  "requestId": "req_3TFEZ0NP85FHZ4T8",
+  "error": {
+    "code": "HR_NOT_AFFILIATED",
+    "message": "Akun HR tidak terhubung dengan penerbit ini.",
+    "details": []
+  }
+}

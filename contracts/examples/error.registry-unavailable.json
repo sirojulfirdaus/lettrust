@@ -1,0 +1,8 @@
+{
+  "requestId": "req_E5AMDDWY4WZZ45N2",
+  "error": {
+    "code": "REGISTRY_UNAVAILABLE",
+    "message": "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
+    "details": []
+  }
+}

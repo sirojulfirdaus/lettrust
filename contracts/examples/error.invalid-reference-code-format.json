@@ -1,0 +1,8 @@
+{
+  "requestId": "req_TV42PN7VTRMQFKA2",
+  "error": {
+    "code": "INVALID_REFERENCE_CODE_FORMAT",
+    "message": "Format kode referensi tidak valid. Periksa kembali kode pada surat Anda.",
+    "details": []
+  }
+}

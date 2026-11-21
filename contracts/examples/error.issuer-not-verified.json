@@ -1,0 +1,8 @@
+{
+  "requestId": "req_9P9GP2R775FAEZ4V",
+  "error": {
+    "code": "ISSUER_NOT_VERIFIED",
+    "message": "Penerbit belum terverifikasi sehingga HR belum dapat diotorisasi.",
+    "details": []
+  }
+}

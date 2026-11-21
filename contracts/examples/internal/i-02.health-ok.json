@@ -1,0 +1,14 @@
+{
+  "status": "ok",
+  "tesseract": {
+    "available": true,
+    "version": "5.5.0",
+    "languages": [
+      "eng",
+      "ind"
+    ],
+    "missingLanguages": []
+  },
+  "llm": "configured",
+  "model": "openai/gpt-oss-120b"
+}

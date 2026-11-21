@@ -1,0 +1,31 @@
+{
+  "verificationId": "VER-7C3D8E4F9G",
+  "mode": "REFERENCE_CHECK",
+  "proofCheck": {
+    "lookup": "UNAVAILABLE",
+    "reason": "REGISTRY_UNAVAILABLE",
+    "issuer": null,
+    "issuerVerified": null,
+    "lifecycleStatus": null,
+    "issuedAt": null,
+    "revokedAt": null
+  },
+  "integrityCheck": {
+    "result": "NOT_CHECKED",
+    "reason": "REGISTRY_UNAVAILABLE",
+    "hashAlgorithm": null
+  },
+  "riskAnalysis": {
+    "state": "UNAVAILABLE",
+    "reason": "AI_TIMEOUT",
+    "category": null,
+    "indicators": [],
+    "indicatorDetails": [],
+    "explanation": null,
+    "recommendation": null,
+    "extractionMethod": null,
+    "contentTruncated": null,
+    "pagesAnalyzed": null,
+    "pagesTotal": null
+  }
+}

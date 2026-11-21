@@ -1,0 +1,8 @@
+{
+  "requestId": "req_ASJG1W9S341T4T9X",
+  "error": {
+    "code": "FILE_TOO_LARGE",
+    "message": "Ukuran berkas melebihi batas yang diizinkan.",
+    "details": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "issuerId": "ISS-8B5C1D7E",
+  "companyName": "PT Menunggu Verifikasi Demo",
+  "registrationNumber": "REG-DEMO-003",
+  "contactEmail": "hr@menunggu-demo.test",
+  "issuerStatus": "PENDING",
+  "evidenceRef": null,
+  "reviewNote": null,
+  "reviewedBy": null,
+  "reviewedAt": null,
+  "createdAt": "2026-11-21T02:00:00Z",
+  "members": [
+    {
+      "hrId": "USR-4G7H2J5K",
+      "displayName": "HR Menunggu Demo",
+      "email": "hr.pending@lettrust.test",
+      "authorizationStatus": "NOT_AUTHORIZED",
+      "authorizedAt": null
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "category": "LOW",
+  "indicators": [],
+  "indicatorDetails": [],
+  "explanation": "Tidak ditemukan pola dari daftar indikator.",
+  "recommendation": "Apabila ragu, konfirmasikan penawaran melalui kanal resmi perusahaan. Risiko rendah tidak menjamin surat aman.",
+  "meta": {
+    "model": "openai/gpt-oss-120b",
+    "promptVersion": "v1",
+    "latencyMs": 1210,
+    "droppedIndicators": 0
+  }
+}

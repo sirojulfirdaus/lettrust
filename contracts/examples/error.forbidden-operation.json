@@ -1,0 +1,8 @@
+{
+  "requestId": "req_DDM4660FT1X19KAB",
+  "error": {
+    "code": "FORBIDDEN_OPERATION",
+    "message": "Anda tidak memiliki izin untuk tindakan ini.",
+    "details": []
+  }
+}

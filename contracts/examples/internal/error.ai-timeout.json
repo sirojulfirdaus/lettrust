@@ -1,0 +1,8 @@
+{
+  "requestId": "req_6YB9E0TNXAPW4YBE",
+  "error": {
+    "code": "AI_TIMEOUT",
+    "message": "Penyedia model AI melebihi batas waktu.",
+    "details": []
+  }
+}

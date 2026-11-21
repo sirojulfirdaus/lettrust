@@ -1,0 +1,24 @@
+{
+  "category": "MEDIUM",
+  "indicators": [
+    "Kontak melalui kanal tidak resmi: “Hubungi rekruter hanya melalui WhatsApp 0812-0000-1111”"
+  ],
+  "indicatorDetails": [
+    {
+      "code": "UNOFFICIAL_CONTACT",
+      "label": "Kontak melalui kanal tidak resmi",
+      "severity": "MEDIUM",
+      "evidence": [
+        "Hubungi rekruter hanya melalui WhatsApp 0812-0000-1111"
+      ]
+    }
+  ],
+  "explanation": "Surat mengarahkan komunikasi ke nomor pesan pribadi.",
+  "recommendation": "Konfirmasikan penawaran melalui situs atau kontak resmi perusahaan yang Anda cari sendiri.",
+  "meta": {
+    "model": "openai/gpt-oss-120b",
+    "promptVersion": "v1",
+    "latencyMs": 1532,
+    "droppedIndicators": 1
+  }
+}

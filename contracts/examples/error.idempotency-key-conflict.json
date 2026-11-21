@@ -1,0 +1,8 @@
+{
+  "requestId": "req_SY7CHNHP6D07DD1D",
+  "error": {
+    "code": "IDEMPOTENCY_KEY_CONFLICT",
+    "message": "Permintaan bertentangan dengan permintaan sebelumnya. Mulai ulang proses penerbitan.",
+    "details": []
+  }
+}

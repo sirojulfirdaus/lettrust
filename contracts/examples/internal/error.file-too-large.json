@@ -1,0 +1,8 @@
+{
+  "requestId": "req_MBZ4Q9RMSF9RBA2X",
+  "error": {
+    "code": "FILE_TOO_LARGE",
+    "message": "Ukuran berkas melebihi batas yang diizinkan.",
+    "details": []
+  }
+}

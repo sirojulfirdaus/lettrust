@@ -1,0 +1,8 @@
+{
+  "requestId": "req_NX37ZZCPNRKMZ8SV",
+  "error": {
+    "code": "ACCOUNT_ALREADY_AFFILIATED",
+    "message": "Akun Anda sudah terhubung dengan perusahaan.",
+    "details": []
+  }
+}

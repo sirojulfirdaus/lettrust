@@ -9,6 +9,16 @@ from pathlib import Path
 import pytest
 
 _TMP_DIR = Path(tempfile.mkdtemp(prefix="lettrust-test-"))
+# Konfigurasi registry asli container (sebelum ditimpa) untuk suite conformance `-m real_registry` (Anvil nyata).
+REAL_REGISTRY_ENV = {
+    key: os.environ.get(key, "")
+    for key in (
+        "REGISTRY_RPC_URL",
+        "REGISTRY_DEPLOYMENT_FILE",
+        "REGISTRY_CONTRACT_ADDRESS",
+        "REGISTRY_SIGNER_PRIVATE_KEY",
+    )
+}
 # Nilai test non-rahasia; upstream sengaja diarahkan ke port tertutup agar unit test tidak bergantung stack.
 os.environ.update(
     {

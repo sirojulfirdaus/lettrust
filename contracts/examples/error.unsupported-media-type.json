@@ -1,0 +1,8 @@
+{
+  "requestId": "req_DGT3E5KMHVYYJ5VC",
+  "error": {
+    "code": "UNSUPPORTED_MEDIA_TYPE",
+    "message": "Berkas harus berformat PDF.",
+    "details": []
+  }
+}

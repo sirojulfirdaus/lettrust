@@ -1,0 +1,8 @@
+{
+  "requestId": "req_GE8ZRH9YYDZBV2GE",
+  "error": {
+    "code": "REGISTRY_TRANSACTION_FAILED",
+    "message": "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
+    "details": []
+  }
+}

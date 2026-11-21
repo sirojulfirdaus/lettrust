@@ -208,6 +208,12 @@ Semua pemeriksaan dijalankan terhadap stack nyata (Anvil nyata); tidak ada mock 
 | D-11 | Frontend: TypeScript 5.9.3 (bukan 7.x), `@types/node` 24, `resolve.tsconfigPaths` Vite bawaan; Vitest portal memetakan `server-only` ke modul kosong. | Kompatibilitas tooling Next/ESLint dan agar modul config server dapat diuji. |
 | D-12 | shadcn 4.23 memasang paket runtime `cn` dan `shadcn`. | Komponen hasil generate mengimpor `cn` dan CSS mengimpor `shadcn/tailwind.css`. |
 | D-13 | Rute test backend memeriksa endpoint lewat `app.openapi()["paths"]`. | FastAPI 0.165 menyimpan router ter-include sebagai `_IncludedRouter` (privat), bukan `APIRoute`. |
+| D-14 | `MockLLMProvider` dipindah dari `app/analysis/provider.py` ke `app/analysis/mock_provider.py` (owner Dws). | Memisahkan mock milik Dws dari file provider milik B; Protocol dan provider nyata di `provider.py` tidak berubah (§10). |
+| D-15 | Kepemilikan mock dipindah ke Dws: `MockRegistryAdapter` (sebelumnya Sat) dan `MockLLMProvider` (sebelumnya B). | Mock dibangun sekali oleh Dws dan dijaga jujur lewat suite conformance; provider tidak mengedit mock (`docs/MOCKS.md`). |
+| D-16 | `python scripts/dev.py openapi` juga menghasilkan fixture TypeScript `apps/*/src/fixtures/api/*.ts` dari `contracts/examples/index.json` dan menulis `openapi.json` dengan LF eksplisit. | Fixture `satisfies` tipe OpenAPI untuk UI; LF agar hasil identik byte-per-byte lintas OS. |
+| D-17 | `contracts/examples/index.json` menggantikan pemetaan prefiks di test backend sebagai satu-satunya pemetaan contoh → skema; contoh internal di `contracts/examples/internal/`. | Satu sumber untuk test backend, test ai-service, dan generator fixture. |
+| D-18 | `pyproject.toml` backend men-deselect marker `real_registry` secara default; `tests/conftest.py` menyimpan env registry asli (`REAL_REGISTRY_ENV`) sebelum ditimpa. | Suite conformance web3 hanya jalan eksplisit terhadap Anvil nyata; `pytest` dan `dev.py test` tetap hijau. |
+| D-19 | `dev.py test ai-service` juga me-mount `contracts/` (`CONTRACTS_DIR`). | Test contoh internal ai-service membaca `contracts/examples`. |
 
 ## 7. Known Issues dan Keputusan untuk Manusia
 
@@ -283,3 +289,59 @@ Diterapkan 21/11 atas review Dws (PIC 1). Tidak ada logika bisnis yang ditambahk
 | Secret | Scan nilai `JWT_SECRET`, `INTERNAL_API_TOKEN`, `PARTNER_TOKEN` di 312 berkas (kecuali `.env`, `.git`, `node_modules`, `.next`) | 0 match; `.env` ter-ignore dan tidak muncul di `git status`. |
 
 Tidak ada fix yang BLOCKED.
+
+## 10. Mock dan Contoh Bersama
+
+Dibuat 21/11 oleh agent atas instruksi Dws (PIC 1). Tidak ada logika bisnis provider yang diimplementasikan dan tidak ada skema, route, status code, atau kode error yang diubah. Panduan pemakaian: [`docs/MOCKS.md`](MOCKS.md).
+
+### Berkas
+
+| Path | Owner | Status | Catatan |
+| ----- | ----- | ----- | ----- |
+| `services/backend/app/modules/registry/mock.py` | Dws | COMPLETE | `MockRegistryAdapter` in-memory; `fail_next` (hanya exception yang mungkin dari adapter nyata), `set_unavailable`, `proofs`, `calls`, `reset`; guard `APP_ENV=test` |
+| `services/backend/tests/conformance/{__init__,conftest,test_registry_conformance}.py` | Dws | COMPLETE | 10 test Protocol × {mock, web3 (`real_registry`)} + 6 test khusus mock |
+| `services/backend/tests/fakes/{__init__,contracts,proofs,ai_service}.py` | Dws | COMPLETE | Akses `index.json`; fake proof reader + factory; fake ai-service `httpx.MockTransport` |
+| `services/backend/tests/test_fakes.py` | Dws | COMPLETE | Test fake proof reader dan fake ai-service |
+| `services/backend/tests/test_contract_examples.py` | Dws | COMPLETE (diubah) | Memakai `index.json`; setiap berkas terdaftar, sukses tiap endpoint, komponen OpenAPI, katalog error |
+| `services/backend/tests/conftest.py` | Dws | COMPLETE (diubah) | `REAL_REGISTRY_ENV` |
+| `services/backend/pyproject.toml` | Dws | COMPLETE (diubah) | Marker `real_registry`, deselect default |
+| `services/ai-service/app/analysis/mock_provider.py` | Dws | COMPLETE | `MockLLMProvider` terjadwal + 17 `SCENARIOS` |
+| `services/ai-service/app/analysis/provider.py` | B | STUB (diubah) | Hanya kelas `MockLLMProvider` dan import `get_settings` dihapus |
+| `services/ai-service/tests/test_mock_provider.py`, `test_internal_examples.py` | Dws | COMPLETE | Konsistensi skenario; validasi contoh internal |
+| `services/ai-service/tests/test_config.py` | B | COMPLETE (diubah) | Import `MockLLMProvider` dari modul baru |
+| `contracts/examples/*.json` (73), `contracts/examples/internal/*.json` (22), `contracts/examples/index.json` | Dws | COMPLETE | Sukses semua endpoint S-01–S-07 dan API-01–API-07; 27 error publik; I-01, API-08, I-02; 11 error internal |
+| `contracts/README.md`, `README.md` | Dws | COMPLETE (diubah) | Konvensi baru, generator fixture, tautan `docs/MOCKS.md` |
+| `scripts/dev.py` | Dws | COMPLETE (diubah) | `openapi`: fixture TS + LF; `test`: mount `contracts/` untuk ai-service |
+| `apps/issuer-console/src/fixtures/api/*.ts` (55 + `index.ts`), `apps/partner-portal/src/fixtures/api/*.ts` (26 + `index.ts`) | — | GEN | `export const … satisfies components["schemas"]["…"]` |
+| `apps/issuer-console/src/lib/fixtures.test.ts`, `apps/partner-portal/src/lib/fixtures.test.ts` | Dws | COMPLETE | Sanity Vitest |
+| `docs/MOCKS.md` | Dws | COMPLETE | Tabel, cara injeksi, API injeksi kegagalan, perintah conformance, Asumsi, aturan tim |
+
+### Hasil Verifikasi
+
+| Pemeriksaan | Hasil |
+| ----- | ----- |
+| `python scripts/dev.py test` | PASS. Sebelum → sesudah: blockchain 1 → 1; backend 79 → 284 (+10 deselected `real_registry`); ai-service 14 → 71; issuer-console 2 → 3; partner-portal 4 → 5. |
+| Conformance mock | PASS (10 test Protocol + 6 test khusus mock). |
+| Conformance nyata: `docker compose exec backend python -m pytest -m real_registry tests/conformance` | Koleksi benar (10 test web3). `test_health[web3]` PASS terhadap Anvil nyata; 9 lainnya FAIL, semuanya `NotImplementedError` (diharapkan, adapter masih stub). Run pertama tanpa path `tests/conformance` gagal di koleksi (`IndexError`) karena `docker compose exec` tidak me-mount `contracts/`; perintah resmi kini menyertakan path tersebut dan error koleksi dibuat jelas (`RuntimeError`). |
+| `python scripts/dev.py openapi` | `contracts/openapi.json` byte-identik dengan sebelum task; run kedua: `schema.d.ts` dan fixture kedua app tanpa diff. Semula `openapi.json` tertulis CRLF di Windows (beda byte); diperbaiki dengan LF eksplisit. |
+| Uji negatif TypeScript (salinan sementara portal di scratchpad, `node_modules` lewat junction) | Setelah `next typegen`, `tsc --noEmit` baseline exit 0. Mengganti `"mode": "AI_ONLY"` menjadi `"AI_ONLY_TYPO"` di `api07AiOnly.ts` → exit 2 dengan `error TS2322: Type '"AI_ONLY_TYPO"' is not assignable to type '"REFERENCE_CHECK" or "AI_ONLY"'`. `next build` di salinan tidak dapat dijalankan karena Turbopack menolak `node_modules` di luar workspace (junction); bukti memakai `tsc`. Salinan dihapus; `node_modules` asli utuh. |
+| `npm run lint`, `npm run build`, `npm test` (kedua app) | PASS. |
+| `ruff check`, `ruff format --check` (kedua service) | PASS. |
+| Import mock/fake di kode produksi (`services/*/app/` selain berkas mock) | 0 kecocokan. |
+| `python scripts/dev.py up --build` → `status` | Enam service sehat (deployer Exited 0); health `degraded` hanya karena `aiService=unconfigured`. |
+| Secret | 0 nilai secret di 497 berkas (kecuali `.env`); `.env` ter-ignore. |
+| Review internal (`/ponytail-review`) | Tiga temuan diterapkan: fake ai-service menolak mode error yang tidak mungkin per endpoint; token internal fake dibaca dari Settings; `fail_next` mock registry menolak exception yang tidak mungkin per operasi. |
+
+### Masalah Kontrak
+
+Tidak ada skema yang diubah. Temuan untuk diputuskan Dws:
+
+1. SA §10.5 (S-05, API-02): contoh `reviewedBy: "USR-ADMIN001"` memuat huruf `I` dan `O` yang bukan alfabet Crockford; `VerifyIssuerResponse.reviewedBy` berpola `^USR-[0-9A-HJKMNP-TV-Z]{8}$` sehingga contoh SA tidak lolos skema. Contoh repo memakai `USR-ADM9N7Q2`. **Keputusan Dws (21/11):** skema otoritatif; contoh SA keliru/disingkat dan akan dikoreksi pada pembaruan dokumen berikutnya.
+2. Contoh SA §10.6 memotong ID/hash dengan `…` (mis. `0x9f1c…e2a4`), tidak valid terhadap pola skema; contoh repo memakai nilai lengkap. **Keputusan Dws (21/11):** skema otoritatif; contoh SA keliru/disingkat dan akan dikoreksi pada pembaruan dokumen berikutnya.
+3. SA §7.2: contoh respons ekstraksi OK tidak memuat `reasonDetail`, sedangkan skema ai-service selalu mengirim `reasonDetail` (null untuk OK). Contoh repo menyertakan `"reasonDetail": null`. **Keputusan Dws (21/11):** skema otoritatif; contoh SA keliru/disingkat dan akan dikoreksi pada pembaruan dokumen berikutnya.
+4. `app/analysis/provider.py::get_provider` (B) berkomentar "mock hanya bila LLM_PROVIDER=mock dan APP_ENV=test", sedangkan aturan task ini melarang jalur produksi memilih mock. Rekomendasi: `get_provider` tidak mengimpor `mock_provider`; test menginjeksi `MockLLMProvider` langsung. Belum diubah (file milik B). **Keputusan Dws (21/11):** diizinkan sesuai AD-16 dengan aturan `docs/MOCKS.md` (hanya `get_provider()` saat `LLM_PROVIDER=mock` dan `APP_ENV=test`, impor `mock_provider` lazy di cabang itu); pemeriksaan import mock di kode produksi sebelumnya mengecualikan satu cabang ber-guard tersebut.
+5. Backend belum punya model respons I-01/API-08 di `verifications/ai_client.py` (mengembalikan `dict`); contoh internal hanya divalidasi terhadap skema ai-service. **Keputusan Dws (21/11):** Dws menambahkan model respons I-01/API-08 di `ai_client.py` sebagai bagian tugas ai_client dan memvalidasinya terhadap `contracts/examples/internal/`.
+
+### BLOCKED
+
+Tidak ada.

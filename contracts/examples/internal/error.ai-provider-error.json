@@ -1,0 +1,8 @@
+{
+  "requestId": "req_11ZB285J2N6M7QCM",
+  "error": {
+    "code": "AI_PROVIDER_ERROR",
+    "message": "Penyedia model AI mengembalikan kesalahan.",
+    "details": []
+  }
+}

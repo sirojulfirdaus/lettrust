@@ -1,0 +1,13 @@
+{
+  "userId": "USR-9R4T6V8W",
+  "email": "hr2.sinar@lettrust.test",
+  "displayName": "HR Sinar Kedua Demo",
+  "role": "HR",
+  "membership": {
+    "issuerId": "ISS-4D8N2P6R",
+    "companyName": "PT Sinar Demo Sejahtera",
+    "issuerStatus": "VERIFIED",
+    "authorizationStatus": "NOT_AUTHORIZED",
+    "reviewNote": null
+  }
+}
