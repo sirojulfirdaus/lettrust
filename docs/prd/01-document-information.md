@@ -9,7 +9,7 @@
 | Judul Proyek Akademik | Deteksi Penipuan Proses Rekrutmen Berbasis Blockchain dan AI |
 | Konteks | Tugas Besar II3120 Layanan Sistem & Teknologi Informasi (LaSTI), Institut Teknologi Bandung, 2026 — Kelompok 04 |
 | Nama Dokumen | Product Requirements Document (PRD) |
-| Versi | 1.1 |
+| Versi | 1.2 |
 | Tanggal | 21 November 2026 |
 | Status | D3 Implementation Baseline |
 | Jenis Produk | Verification-as-a-Service, model B2B2C (prototipe akademik) |
@@ -255,3 +255,4 @@ Detail kontrak teknis untuk DLT-01, DLT-02, DLT-07, DLT-08, DLT-12, dan DLT-14 d
 | ----- | ----- | ----- |
 | 1.0 | 21 November 2026 | PRD awal D3 berdasarkan desain D1–D2, keputusan produk D3, dan keputusan teknis yang disepakati Kelompok 04. |
 | 1.1 | 21 November 2026 | Jadwal dipercepat: soft deadline (feature freeze) Selasa 24 November 2026 23.59 WIB (ASM-08, DEP-10, R-01, §11.6); skema ID tugas PLAN menjadi `TB-xx`/`T<PIC>-xx`; OI-06 diperbarui sesuai perangkat tim (Windows dan Linux). Tidak ada perubahan kebutuhan fungsional. |
+| 1.2 | 21 November 2026 | Rincian M2 diselaraskan dengan PLAN.md: modul mandiri pukul 12.00; pemilihan model (OI-01) dan pembekuan test set pukul 23.59 pada hari yang sama. |

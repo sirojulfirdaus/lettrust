@@ -4,7 +4,7 @@
 
 | Atribut | Keterangan |
 | ----- | ----- |
-| Version | 1.1 |
+| Version | 1.2 |
 | Date | 21 November 2026 |
 | Status | D3 Architecture Baseline |
 | Architecture Style | Modular monolith backend dengan layanan AI terpisah, dua aplikasi web, dan registry smart contract lokal |
@@ -13,7 +13,7 @@
 | Deployment | Lokal melalui Docker Compose dengan launcher lintas OS |
 | Development Decision | GO — prototipe D3 |
 | Production Readiness | Not Ready (di luar cakupan) |
-| Document Reference | Lettrust PRD v1.1 (`docs/prd/`) |
+| Document Reference | Lettrust PRD v1.2 (`docs/prd/`) |
 
 # 1. Architecture Overview
 
@@ -2052,7 +2052,7 @@ Coding agent tidak boleh mengganti keputusan di atas tanpa pembaruan dokumen yan
 | ----- | ----- | ----- |
 | M0 (Sab 21/11) | Dokumen | PRD, SA, AGENTS.md, PLAN.md |
 | M1 (Sab 21/11) | Fondasi dan kontrak | Kerangka repo; Compose seluruh service berjalan (stub boleh); skema DB; skema Pydantic seluruh endpoint dan `contracts/openapi.json` + contoh dibekukan (lihat `docs/SCAFFOLD_REPORT.md`) |
-| M2 (Sen 23/11 12.00) | Modul mandiri | Akun, SVC-01, contract + test, adapter, API-04–API-06; ai-service ekstraksi + OCR + API-08 dengan LLM nyata; bake-off model (OI-01); dataset dan test set beku; halaman frontend dengan fixture kontrak |
+| M2 (Sen 23/11 12.00; OI-01 dan test set 23.59) | Modul mandiri | Akun, SVC-01, contract + test, adapter, API-04–API-06; ai-service ekstraksi + OCR + API-08 dengan LLM nyata; bake-off model (OI-01); dataset dan test set beku; halaman frontend dengan fixture kontrak |
 | M3 (Sel 24/11, soft deadline) | End-to-end dan feature freeze | API-07 seluruh mode dan kondisi kegagalan; Console dan portal terhubung ke API nyata; alur demo berjalan |
 | M4 (Kam 26/11) | Verifikasi | Seluruh SCN dan test case dengan bukti; evaluasi dijalankan; perbaikan defect; laporan bagian D3 |
 | M5 (Jum 27/11) | Pengumpulan | Laporan dan deck gabungan |
@@ -2186,7 +2186,7 @@ Lettrust menggunakan backend modular monolith FastAPI yang menjadi satu-satunya 
 | Deployment lokal | Baseline; TOI-01 dan TOI-09 tervalidasi; Windows tervalidasi, Linux melalui SCN-21; Apple Silicon tidak diuji (TOI-02) |
 | Penggunaan produksi | NO-GO (di luar cakupan) |
 
-SYSTEM_ARCHITECTURE v1.1 menjadi baseline teknis pengembangan Lettrust bersama PRD v1.1. Deviasi implementasi yang tercatat di `docs/SCAFFOLD_REPORT.md` §6 berlaku di atas teks dokumen ini.
+SYSTEM_ARCHITECTURE v1.2 menjadi baseline teknis pengembangan Lettrust bersama PRD v1.2. Deviasi implementasi yang tercatat di `docs/SCAFFOLD_REPORT.md` §6 berlaku di atas teks dokumen ini.
 
 ## Riwayat Revisi
 
@@ -2194,5 +2194,6 @@ SYSTEM_ARCHITECTURE v1.1 menjadi baseline teknis pengembangan Lettrust bersama P
 | ----- | ----- | ----- |
 | 1.0 | 21 November 2026 | Baseline arsitektur D3. |
 | 1.1 | 21 November 2026 | Jadwal §20.1 mengikuti PRD v1.1; status TOI-01/02/03/09/10 diperbarui dari hasil scaffold; kepemilikan dan lokasi mock (§4.1, §13.1, §18.2) serta rujukan `docs/MOCKS.md`; perintah integrasi `real_registry` (§18.1); errata contoh (`reviewedBy`, `reasonDetail`, catatan contoh disingkat di §10.1). |
+| 1.2 | 21 November 2026 | Rincian M2 §20.1 diselaraskan dengan PLAN.md dan PRD v1.2. |
 
 **End of Document**

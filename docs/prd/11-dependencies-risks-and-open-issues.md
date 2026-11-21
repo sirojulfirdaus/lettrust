@@ -109,7 +109,7 @@ Coding agent tidak boleh menutup open issue berdasarkan asumsi sendiri.
 | ----- | ----- | ----- |
 | M0 | Sabtu, 21 November 2026 | PRD, SYSTEM_ARCHITECTURE, AGENTS.md, dan PLAN.md tersedia. |
 | M1 | Sabtu, 21 November 2026 | Repository dan Docker berjalan; kontrak OpenAPI dibekukan; kerangka seluruh modul tersedia. |
-| M2 | Senin, 23 November 2026, 12.00 WIB | Seluruh modul berjalan mandiri; model LLM dipilih (OI-01); test set evaluasi dibekukan. |
+| M2 | Senin, 23 November 2026, 12.00 WIB | Seluruh modul berjalan mandiri (boleh diuji dengan mock). Pada hari yang sama pukul 23.59: model LLM dipilih (OI-01) dan test set evaluasi dibekukan. |
 | M3 (soft deadline) | Selasa, 24 November 2026, 23.59 WIB | Alur demo end-to-end berjalan pada stack nyata; feature freeze. |
 | M4 | Kamis, 26 November 2026, 23.59 WIB | Seluruh SCN dan test case dieksekusi dengan bukti; evaluasi AI selesai; laporan dan deck final. |
 | M5 (deadline) | Jumat, 27 November 2026, 23.59 WIB | Laporan PDF dan presentasi gabungan D1–D3 dikumpulkan. |
