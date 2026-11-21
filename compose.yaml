@@ -1,0 +1,165 @@
+# Owner: Dws (PIC 1) | Status: COMPLETE | Ref: SA §15.1, §14.1
+# Seluruh port terikat ke 127.0.0.1. Port host dapat dioverride (*_HOST_PORT) bila bentrok; port internal tetap. Setiap service hanya menerima variabel yang dibutuhkannya.
+name: lettrust
+
+services:
+  chain:
+    image: ghcr.io/foundry-rs/foundry:v1.9.0
+    # Volume bernama dibuat root-owned karena /data tidak ada di image; anvil perlu menulis state.
+    user: "0:0"
+    entrypoint: ["anvil"]
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8545"
+      - --chain-id
+      - "31337"
+      - --state
+      - /data/anvil-state.json
+      - --state-interval
+      - "5"
+    # SIGINT memicu anvil menyimpan state sebelum berhenti (TOI-01).
+    stop_signal: SIGINT
+    stop_grace_period: 20s
+    ports:
+      - "127.0.0.1:${CHAIN_HOST_PORT:-8545}:8545"
+    volumes:
+      - chain-data:/data
+    healthcheck:
+      test: ["CMD", "cast", "block-number", "--rpc-url", "http://127.0.0.1:8545"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  chain-deployer:
+    build:
+      context: ./blockchain
+    image: lettrust-chain-deployer:local
+    environment:
+      REGISTRY_RPC_URL: http://chain:8545
+      REGISTRY_SIGNER_PRIVATE_KEY: ${REGISTRY_SIGNER_PRIVATE_KEY:?REGISTRY_SIGNER_PRIVATE_KEY belum diisi di .env}
+      DEPLOYMENT_FILE: /shared/deployments/local.json
+    volumes:
+      - shared:/shared
+    depends_on:
+      chain:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: ./services/backend
+    image: lettrust-backend:local
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/lettrust.db}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET belum diisi; jalankan python scripts/dev.py up}
+      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-480}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
+      REGISTRY_RPC_URL: ${REGISTRY_RPC_URL:-http://chain:8545}
+      REGISTRY_DEPLOYMENT_FILE: ${REGISTRY_DEPLOYMENT_FILE:-/shared/deployments/local.json}
+      REGISTRY_CONTRACT_ADDRESS: ${REGISTRY_CONTRACT_ADDRESS:-}
+      REGISTRY_SIGNER_PRIVATE_KEY: ${REGISTRY_SIGNER_PRIVATE_KEY:?REGISTRY_SIGNER_PRIVATE_KEY belum diisi di .env}
+      REGISTRY_RPC_TIMEOUT_SECONDS: ${REGISTRY_RPC_TIMEOUT_SECONDS:-5}
+      REGISTRY_TX_RECEIPT_TIMEOUT_SECONDS: ${REGISTRY_TX_RECEIPT_TIMEOUT_SECONDS:-20}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8001}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN belum diisi; jalankan python scripts/dev.py up}
+      AI_EXTRACTION_TIMEOUT_SECONDS: ${AI_EXTRACTION_TIMEOUT_SECONDS:-60}
+      AI_ANALYSIS_TIMEOUT_SECONDS: ${AI_ANALYSIS_TIMEOUT_SECONDS:-50}
+      PARTNER_TOKEN: ${PARTNER_TOKEN:?PARTNER_TOKEN belum diisi; jalankan python scripts/dev.py up}
+      PARTNER_RATE_LIMIT_PER_MINUTE: ${PARTNER_RATE_LIMIT_PER_MINUTE:-60}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?SEED_ADMIN_PASSWORD belum diisi di .env}
+      SEED_HR_PASSWORD: ${SEED_HR_PASSWORD:?SEED_HR_PASSWORD belum diisi di .env}
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT:-8000}:8000"
+    volumes:
+      - backend-data:/data
+      - shared:/shared:ro
+    depends_on:
+      chain-deployer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  ai-service:
+    build:
+      context: ./services/ai-service
+    image: lettrust-ai-service:local
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN belum diisi; jalankan python scripts/dev.py up}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai_compatible}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b}
+      LLM_REASONING_EFFORT: ${LLM_REASONING_EFFORT:-}
+      LLM_REQUEST_TIMEOUT_SECONDS: ${LLM_REQUEST_TIMEOUT_SECONDS:-40}
+      LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-900}
+      PROMPT_VERSION: ${PROMPT_VERSION:-v1}
+      AI_MAX_PAGES: ${AI_MAX_PAGES:-5}
+      AI_MAX_CHARS: ${AI_MAX_CHARS:-12000}
+      OCR_MIN_CHARS_PER_PAGE: ${OCR_MIN_CHARS_PER_PAGE:-25}
+      OCR_DPI: ${OCR_DPI:-300}
+      OCR_PAGE_TIMEOUT_SECONDS: ${OCR_PAGE_TIMEOUT_SECONDS:-20}
+      EVIDENCE_FUZZY_THRESHOLD: ${EVIDENCE_FUZZY_THRESHOLD:-90}
+    ports:
+      - "127.0.0.1:${AI_SERVICE_HOST_PORT:-8001}:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/internal/v1/health', timeout=5).status == 200 else 1)"]
+      interval: 10s
+      timeout: 8s
+      retries: 12
+      start_period: 10s
+
+  issuer-console:
+    build:
+      context: ./apps/issuer-console
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    image: lettrust-issuer-console:local
+    ports:
+      - "127.0.0.1:${CONSOLE_HOST_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  partner-portal:
+    build:
+      context: ./apps/partner-portal
+    image: lettrust-partner-portal:local
+    environment:
+      LETTRUST_API_BASE_URL: ${LETTRUST_API_BASE_URL:-http://backend:8000}
+      LETTRUST_PARTNER_TOKEN: ${PARTNER_TOKEN:?PARTNER_TOKEN belum diisi; jalankan python scripts/dev.py up}
+      PORTAL_UPSTREAM_TIMEOUT_MS: ${PORTAL_UPSTREAM_TIMEOUT_MS:-120000}
+    ports:
+      - "127.0.0.1:${PORTAL_HOST_PORT:-3001}:3001"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  chain-data:
+  backend-data:
+  shared:

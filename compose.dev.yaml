@@ -1,0 +1,33 @@
+# Owner: Dws (PIC 1) | Status: COMPLETE | Ref: SA §15.3
+# Override pengembangan: bind mount source backend dan ai-service dengan uvicorn --reload.
+# Frontend disarankan dijalankan native (npm run dev) bersama `dev.py up --except issuer-console partner-portal`.
+services:
+  backend:
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - ./services/backend/app:/app/app
+      - ./services/backend/tests:/app/tests
+    command:
+      - sh
+      - -c
+      - python -m app.cli init-db && python -m app.cli seed --if-empty && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --reload --reload-dir /app/app
+
+  ai-service:
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - ./services/ai-service/app:/app/app
+      - ./services/ai-service/tests:/app/tests
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8001"
+      - --workers
+      - "1"
+      - --reload
+      - --reload-dir
+      - /app/app

@@ -1,0 +1,3001 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Lettrust API",
+    "description": "Kontrak API Lettrust D3 (SYSTEM_ARCHITECTURE §10). Endpoint publik/terautentikasi di /api/v1.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register Account",
+        "operationId": "registerAccount",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Kode error: EMAIL_ALREADY_REGISTERED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Session",
+        "operationId": "getSession",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ]
+      }
+    },
+    "/api/v1/issuers": {
+      "post": {
+        "tags": [
+          "issuers"
+        ],
+        "summary": "Register Issuer",
+        "operationId": "registerIssuer",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterIssuerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterIssuerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Kode error: FORBIDDEN_OPERATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Kode error: ACCOUNT_ALREADY_AFFILIATED, REGISTRATION_NUMBER_ALREADY_EXISTS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "issuers"
+        ],
+        "summary": "List Issuers",
+        "operationId": "listIssuers",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/IssuerStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Kode error: FORBIDDEN_OPERATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/issuers/{issuerId}": {
+      "get": {
+        "tags": [
+          "issuers"
+        ],
+        "summary": "Get Issuer",
+        "operationId": "getIssuer",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "issuerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Issuerid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Kode error: ISSUER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/issuers/{issuerId}/verification": {
+      "patch": {
+        "tags": [
+          "issuers"
+        ],
+        "summary": "Verify Issuer",
+        "operationId": "verifyIssuer",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "issuerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Issuerid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyIssuerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyIssuerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Kode error: FORBIDDEN_OPERATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Kode error: ISSUER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Kode error: ISSUER_DECISION_ALREADY_MADE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/issuers/{issuerId}/hr-authorizations": {
+      "post": {
+        "tags": [
+          "issuers"
+        ],
+        "summary": "Authorize Hr",
+        "operationId": "authorizeHR",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "issuerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Issuerid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeHrRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizeHrResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Kode error: FORBIDDEN_OPERATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Kode error: ISSUER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Kode error: ISSUER_NOT_VERIFIED, HR_ALREADY_AUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/proofs": {
+      "post": {
+        "tags": [
+          "proofs"
+        ],
+        "summary": "Issue Proof",
+        "operationId": "issueProof",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_issueProof"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueProofResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: EMPTY_FILE, MULTIPLE_FILES, VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Kode error: FORBIDDEN_OPERATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Kode error: IDEMPOTENCY_KEY_CONFLICT, DUPLICATE_ACTIVE_DOCUMENT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Kode error: FILE_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Kode error: UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kode error: REGISTRY_UNAVAILABLE, REGISTRY_TRANSACTION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "proofs"
+        ],
+        "summary": "List Proofs",
+        "operationId": "listProofs",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/LifecycleStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProofListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Kode error: FORBIDDEN_OPERATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/proofs/{proofId}": {
+      "get": {
+        "tags": [
+          "proofs"
+        ],
+        "summary": "Get Proof Status",
+        "operationId": "getProofStatus",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proofId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Proofid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProofStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Kode error: FORBIDDEN_OPERATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Kode error: PROOF_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kode error: REGISTRY_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/proofs/{proofId}/revocations": {
+      "post": {
+        "tags": [
+          "proofs"
+        ],
+        "summary": "Revoke Proof",
+        "operationId": "revokeProof",
+        "security": [
+          {
+            "ConsoleJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "proofId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Proofid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeProofRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeProofResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Kode error: FORBIDDEN_OPERATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Kode error: PROOF_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Kode error: PROOF_ALREADY_REVOKED, IDEMPOTENCY_KEY_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kode error: REGISTRY_UNAVAILABLE, REGISTRY_TRANSACTION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/verifications": {
+      "post": {
+        "tags": [
+          "verifications"
+        ],
+        "summary": "Verify Offer",
+        "operationId": "verifyOffer",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_verifyOffer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Kode error: INVALID_INPUT_COMBINATION, AI_ONLY_REQUIRES_INCLUDE_RISK, INVALID_REFERENCE_CODE_FORMAT, EMPTY_FILE, MULTIPLE_FILES, VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Kode error: UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Kode error: FILE_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Kode error: UNSUPPORTED_MEDIA_TYPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Kode error: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kode error: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Kode error: NOT_IMPLEMENTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Kode error: SERVICE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "PartnerToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthorizationStatus": {
+        "type": "string",
+        "enum": [
+          "NOT_AUTHORIZED",
+          "AUTHORIZED"
+        ],
+        "title": "AuthorizationStatus",
+        "description": "Status otorisasi HR pada penerbit."
+      },
+      "AuthorizeHrRequest": {
+        "properties": {
+          "hrId": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Hrid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hrId"
+        ],
+        "title": "AuthorizeHrRequest",
+        "description": "API-03 authorizeHR."
+      },
+      "AuthorizeHrResponse": {
+        "properties": {
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "hrId": {
+            "type": "string",
+            "pattern": "^USR-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Hrid"
+          },
+          "authorizationStatus": {
+            "$ref": "#/components/schemas/AuthorizationStatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issuerId",
+          "hrId",
+          "authorizationStatus"
+        ],
+        "title": "AuthorizeHrResponse",
+        "description": "API-03: HR berstatus AUTHORIZED (sesuai D2)."
+      },
+      "Body_issueProof": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "Satu berkas PDF final, maks MAX_UPLOAD_BYTES."
+          },
+          "issuerId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuerid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_issueProof"
+      },
+      "Body_verifyOffer": {
+        "properties": {
+          "referenceCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referencecode"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File",
+            "description": "PDF opsional, maks MAX_UPLOAD_BYTES."
+          },
+          "includeRisk": {
+            "type": "boolean",
+            "title": "Includerisk",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Body_verifyOffer"
+      },
+      "ComponentStatus": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "unavailable",
+          "unconfigured"
+        ],
+        "title": "ComponentStatus",
+        "description": "Status satu komponen yang dipantau."
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "description": "Isi error: kode stabil, pesan aman untuk pengguna, dan rincian opsional."
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "VALIDATION_ERROR",
+          "INVALID_INPUT_COMBINATION",
+          "AI_ONLY_REQUIRES_INCLUDE_RISK",
+          "INVALID_REFERENCE_CODE_FORMAT",
+          "EMPTY_FILE",
+          "MULTIPLE_FILES",
+          "UNAUTHENTICATED",
+          "INVALID_CREDENTIALS",
+          "FORBIDDEN_OPERATION",
+          "ISSUER_NOT_FOUND",
+          "PROOF_NOT_FOUND",
+          "EMAIL_ALREADY_REGISTERED",
+          "ACCOUNT_ALREADY_AFFILIATED",
+          "REGISTRATION_NUMBER_ALREADY_EXISTS",
+          "ISSUER_DECISION_ALREADY_MADE",
+          "ISSUER_NOT_VERIFIED",
+          "HR_ALREADY_AUTHORIZED",
+          "PROOF_ALREADY_REVOKED",
+          "IDEMPOTENCY_KEY_CONFLICT",
+          "DUPLICATE_ACTIVE_DOCUMENT",
+          "HR_NOT_AFFILIATED",
+          "FILE_TOO_LARGE",
+          "UNSUPPORTED_MEDIA_TYPE",
+          "RATE_LIMITED",
+          "INTERNAL_ERROR",
+          "REGISTRY_UNAVAILABLE",
+          "REGISTRY_TRANSACTION_FAILED",
+          "SERVICE_UNAVAILABLE",
+          "AI_PROVIDER_UNCONFIGURED",
+          "AI_QUOTA_EXCEEDED",
+          "AI_PROVIDER_ERROR",
+          "AI_OUTPUT_INVALID",
+          "AI_TIMEOUT",
+          "NOT_FOUND",
+          "METHOD_NOT_ALLOWED",
+          "NOT_IMPLEMENTED"
+        ],
+        "title": "ErrorCode",
+        "description": "Katalog kode error SA §10.3 (ditambah NOT_IMPLEMENTED sementara selama scaffolding)."
+      },
+      "ErrorDetail": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "issue": {
+            "type": "string",
+            "title": "Issue"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "issue"
+        ],
+        "title": "ErrorDetail",
+        "description": "Rincian error validasi per field (hanya untuk VALIDATION_ERROR)."
+      },
+      "ErrorEnvelope": {
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "title": "Requestid"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "requestId",
+          "error"
+        ],
+        "title": "ErrorEnvelope",
+        "description": "Envelope error SA §10.2 yang dikembalikan seluruh endpoint saat gagal."
+      },
+      "ExtractionMethod": {
+        "type": "string",
+        "enum": [
+          "TEXT_LAYER",
+          "OCR",
+          "MIXED"
+        ],
+        "title": "ExtractionMethod",
+        "description": "Metode pembacaan isi dokumen."
+      },
+      "HealthComponents": {
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/ComponentStatus"
+          },
+          "registry": {
+            "$ref": "#/components/schemas/ComponentStatus"
+          },
+          "aiService": {
+            "$ref": "#/components/schemas/ComponentStatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "database",
+          "registry",
+          "aiService"
+        ],
+        "title": "HealthComponents",
+        "description": "Status basis data, registry, dan layanan AI."
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "components": {
+            "$ref": "#/components/schemas/HealthComponents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "components"
+        ],
+        "title": "HealthResponse",
+        "description": "S-07: `degraded` bila ada komponen unavailable/unconfigured; HTTP tetap 200."
+      },
+      "IndicatorCode": {
+        "type": "string",
+        "enum": [
+          "PAYMENT_REQUEST",
+          "SENSITIVE_DATA_REQUEST",
+          "UNOFFICIAL_CONTACT",
+          "URGENCY_PRESSURE",
+          "IDENTITY_INCONSISTENCY",
+          "UNREALISTIC_COMPENSATION",
+          "VAGUE_JOB_DETAILS"
+        ],
+        "title": "IndicatorCode",
+        "description": "Taksonomi tertutup indikator risiko (PRD §8.4)."
+      },
+      "IndicatorDetail": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/IndicatorCode"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Evidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "label",
+          "severity",
+          "evidence"
+        ],
+        "title": "IndicatorDetail",
+        "description": "Indikator tervalidasi beserta kutipan bukti dari dokumen."
+      },
+      "IntegrityCheck": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/IntegrityResult"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IntegrityReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hashAlgorithm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "SHA-256"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hashalgorithm"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "result",
+          "reason",
+          "hashAlgorithm"
+        ],
+        "title": "IntegrityCheck",
+        "description": "Komponen pemeriksaan integritas berkas (SA §5.3.2)."
+      },
+      "IntegrityReason": {
+        "type": "string",
+        "enum": [
+          "NO_FILE",
+          "NO_REFERENCE_CODE",
+          "PROOF_NOT_FOUND",
+          "REGISTRY_UNAVAILABLE"
+        ],
+        "title": "IntegrityReason",
+        "description": "Alasan integritas tidak diperiksa."
+      },
+      "IntegrityResult": {
+        "type": "string",
+        "enum": [
+          "MATCH",
+          "MISMATCH",
+          "NOT_CHECKED"
+        ],
+        "title": "IntegrityResult",
+        "description": "Hasil perbandingan hash berkas."
+      },
+      "IssueProofResponse": {
+        "properties": {
+          "proofId": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$",
+            "title": "Proofid"
+          },
+          "referenceCode": {
+            "type": "string",
+            "pattern": "^LTR-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$",
+            "title": "Referencecode"
+          },
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "hashAlgorithm": {
+            "type": "string",
+            "const": "SHA-256",
+            "title": "Hashalgorithm"
+          },
+          "documentHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Documenthash"
+          },
+          "lifecycleStatus": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issuedat"
+          },
+          "transaction": {
+            "$ref": "#/components/schemas/TransactionRef"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proofId",
+          "referenceCode",
+          "issuerId",
+          "hashAlgorithm",
+          "documentHash",
+          "lifecycleStatus",
+          "issuedAt",
+          "transaction"
+        ],
+        "title": "IssueProofResponse",
+        "description": "API-04: bukti ACTIVE setelah receipt terkonfirmasi (issuedAt dan transaction aditif D3)."
+      },
+      "IssuerDecision": {
+        "type": "string",
+        "enum": [
+          "VERIFIED",
+          "REJECTED"
+        ],
+        "title": "IssuerDecision",
+        "description": "Keputusan verifikasi Administrator (API-02)."
+      },
+      "IssuerDetailResponse": {
+        "properties": {
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "companyName": {
+            "type": "string",
+            "title": "Companyname"
+          },
+          "registrationNumber": {
+            "type": "string",
+            "title": "Registrationnumber"
+          },
+          "contactEmail": {
+            "type": "string",
+            "title": "Contactemail"
+          },
+          "issuerStatus": {
+            "$ref": "#/components/schemas/IssuerStatus"
+          },
+          "evidenceRef": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidenceref"
+          },
+          "reviewNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewnote"
+          },
+          "reviewedBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewedby"
+          },
+          "reviewedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewedat"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/IssuerMember"
+            },
+            "type": "array",
+            "title": "Members"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issuerId",
+          "companyName",
+          "registrationNumber",
+          "contactEmail",
+          "issuerStatus",
+          "evidenceRef",
+          "reviewNote",
+          "reviewedBy",
+          "reviewedAt",
+          "createdAt",
+          "members"
+        ],
+        "title": "IssuerDetailResponse",
+        "description": "S-05: detail penerbit untuk Administrator atau anggota."
+      },
+      "IssuerListItem": {
+        "properties": {
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "companyName": {
+            "type": "string",
+            "title": "Companyname"
+          },
+          "registrationNumber": {
+            "type": "string",
+            "title": "Registrationnumber"
+          },
+          "issuerStatus": {
+            "$ref": "#/components/schemas/IssuerStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "memberCount": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Membercount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issuerId",
+          "companyName",
+          "registrationNumber",
+          "issuerStatus",
+          "createdAt",
+          "memberCount"
+        ],
+        "title": "IssuerListItem",
+        "description": "Baris daftar penerbit (S-04)."
+      },
+      "IssuerListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IssuerListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "IssuerListResponse",
+        "description": "S-04: koleksi penerbit."
+      },
+      "IssuerMember": {
+        "properties": {
+          "hrId": {
+            "type": "string",
+            "pattern": "^USR-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Hrid"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "authorizationStatus": {
+            "$ref": "#/components/schemas/AuthorizationStatus"
+          },
+          "authorizedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authorizedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hrId",
+          "displayName",
+          "email",
+          "authorizationStatus",
+          "authorizedAt"
+        ],
+        "title": "IssuerMember",
+        "description": "Anggota HR penerbit; email anggota lain tidak dikirim kepada sesama anggota (null)."
+      },
+      "IssuerStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "VERIFIED",
+          "REJECTED"
+        ],
+        "title": "IssuerStatus",
+        "description": "Status verifikasi penerbit."
+      },
+      "LifecycleStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "REVOKED"
+        ],
+        "title": "LifecycleStatus",
+        "description": "Status bukti pada registry."
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "description": "S-02: kredensial login."
+      },
+      "LoginResponse": {
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "title": "Accesstoken"
+          },
+          "tokenType": {
+            "type": "string",
+            "const": "Bearer",
+            "title": "Tokentype"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Expiresin"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserSummary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "user"
+        ],
+        "title": "LoginResponse",
+        "description": "S-02: token sesi JWT beserta profil singkat."
+      },
+      "MeResponse": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "pattern": "^USR-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Userid"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "membership": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Membership"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "userId",
+          "email",
+          "displayName",
+          "role",
+          "membership"
+        ],
+        "title": "MeResponse",
+        "description": "S-03: profil sesi; membership null untuk HR tidak terafiliasi dan Administrator."
+      },
+      "Membership": {
+        "properties": {
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "companyName": {
+            "type": "string",
+            "title": "Companyname"
+          },
+          "issuerStatus": {
+            "$ref": "#/components/schemas/IssuerStatus"
+          },
+          "authorizationStatus": {
+            "$ref": "#/components/schemas/AuthorizationStatus"
+          },
+          "reviewNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewnote"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issuerId",
+          "companyName",
+          "issuerStatus",
+          "authorizationStatus",
+          "reviewNote"
+        ],
+        "title": "Membership",
+        "description": "Afiliasi HR ke penerbit beserta status penerbit dan otorisasi."
+      },
+      "ProofCheck": {
+        "properties": {
+          "lookup": {
+            "$ref": "#/components/schemas/ProofLookup"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProofReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VerifiedIssuer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issuerVerified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuerverified"
+          },
+          "lifecycleStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProofLifecycleStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issuedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuedat"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lookup",
+          "reason",
+          "issuer",
+          "issuerVerified",
+          "lifecycleStatus",
+          "issuedAt",
+          "revokedAt"
+        ],
+        "title": "ProofCheck",
+        "description": "Komponen pemeriksaan bukti (SA §5.3.1)."
+      },
+      "ProofLifecycleStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "REVOKED"
+        ],
+        "title": "ProofLifecycleStatus",
+        "description": "Status bukti yang dibaca dari registry."
+      },
+      "ProofListItem": {
+        "properties": {
+          "proofId": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$",
+            "title": "Proofid"
+          },
+          "referenceCode": {
+            "type": "string",
+            "pattern": "^LTR-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$",
+            "title": "Referencecode"
+          },
+          "lifecycleStatus": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issuedat"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proofId",
+          "referenceCode",
+          "lifecycleStatus",
+          "issuedAt",
+          "revokedAt"
+        ],
+        "title": "ProofListItem",
+        "description": "Baris daftar bukti (S-06); status dari cermin off-chain."
+      },
+      "ProofListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProofListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ProofListResponse",
+        "description": "S-06: koleksi bukti milik penerbit HR."
+      },
+      "ProofLookup": {
+        "type": "string",
+        "enum": [
+          "FOUND",
+          "NOT_FOUND",
+          "UNAVAILABLE",
+          "NOT_REQUESTED"
+        ],
+        "title": "ProofLookup",
+        "description": "Hasil pemeriksaan bukti."
+      },
+      "ProofReason": {
+        "type": "string",
+        "enum": [
+          "NO_REFERENCE_CODE",
+          "REGISTRY_UNAVAILABLE"
+        ],
+        "title": "ProofReason",
+        "description": "Alasan status proofCheck."
+      },
+      "ProofStatusResponse": {
+        "properties": {
+          "proofId": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$",
+            "title": "Proofid"
+          },
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "documentHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Documenthash"
+          },
+          "lifecycleStatus": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "referenceCode": {
+            "type": "string",
+            "pattern": "^LTR-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$",
+            "title": "Referencecode"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Issuedat"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          },
+          "revocationReasonCode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevocationReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issueTransaction": {
+            "$ref": "#/components/schemas/TransactionRef"
+          },
+          "revokeTransaction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransactionRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "const": "REGISTRY",
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proofId",
+          "issuerId",
+          "documentHash",
+          "lifecycleStatus",
+          "referenceCode",
+          "issuedAt",
+          "revokedAt",
+          "revocationReasonCode",
+          "issueTransaction",
+          "revokeTransaction",
+          "source"
+        ],
+        "title": "ProofStatusResponse",
+        "description": "API-05: hash, status, dan waktu dibaca dari registry; field lain dari off-chain."
+      },
+      "RegisterAccountRequest": {
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Displayname"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "displayName",
+          "email",
+          "password"
+        ],
+        "title": "RegisterAccountRequest",
+        "description": "S-01: registrasi akun HR (role selalu HR, tidak dikirim client)."
+      },
+      "RegisterIssuerRequest": {
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Companyname"
+          },
+          "registrationNumber": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9./-]+$",
+            "title": "Registrationnumber"
+          },
+          "contactEmail": {
+            "type": "string",
+            "format": "email",
+            "title": "Contactemail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "companyName",
+          "registrationNumber",
+          "contactEmail"
+        ],
+        "title": "RegisterIssuerRequest",
+        "description": "API-01 registerIssuer."
+      },
+      "RegisterIssuerResponse": {
+        "properties": {
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "issuerStatus": {
+            "$ref": "#/components/schemas/IssuerStatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issuerId",
+          "issuerStatus"
+        ],
+        "title": "RegisterIssuerResponse",
+        "description": "API-01: penerbit baru berstatus PENDING (sesuai D2)."
+      },
+      "RevocationReasonCode": {
+        "type": "string",
+        "enum": [
+          "OFFER_WITHDRAWN",
+          "ISSUED_IN_ERROR",
+          "DOCUMENT_REPLACED",
+          "OTHER"
+        ],
+        "title": "RevocationReasonCode",
+        "description": "Alasan pencabutan yang diizinkan (disimpan off-chain)."
+      },
+      "RevokeProofRequest": {
+        "properties": {
+          "reasonCode": {
+            "$ref": "#/components/schemas/RevocationReasonCode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reasonCode"
+        ],
+        "title": "RevokeProofRequest",
+        "description": "API-06 revokeProof."
+      },
+      "RevokeProofResponse": {
+        "properties": {
+          "proofId": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$",
+            "title": "Proofid"
+          },
+          "lifecycleStatus": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Revokedat"
+          },
+          "transaction": {
+            "$ref": "#/components/schemas/TransactionRef"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proofId",
+          "lifecycleStatus",
+          "revokedAt",
+          "transaction"
+        ],
+        "title": "RevokeProofResponse",
+        "description": "API-06: bukti REVOKED setelah receipt pencabutan terkonfirmasi."
+      },
+      "RiskAnalysis": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/RiskState"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "indicators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Indicators"
+          },
+          "indicatorDetails": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorDetail"
+            },
+            "type": "array",
+            "title": "Indicatordetails"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "extractionMethod": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtractionMethod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contentTruncated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contenttruncated"
+          },
+          "pagesAnalyzed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagesanalyzed"
+          },
+          "pagesTotal": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagestotal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "reason",
+          "category",
+          "indicators",
+          "indicatorDetails",
+          "explanation",
+          "recommendation",
+          "extractionMethod",
+          "contentTruncated",
+          "pagesAnalyzed",
+          "pagesTotal"
+        ],
+        "title": "RiskAnalysis",
+        "description": "Komponen analisis risiko AI (SA §5.3.3); category null bila state bukan COMPLETED."
+      },
+      "RiskCategory": {
+        "type": "string",
+        "enum": [
+          "LOW",
+          "MEDIUM",
+          "HIGH"
+        ],
+        "title": "RiskCategory",
+        "description": "Kategori risiko hasil skoring deterministik (PRD §8.5)."
+      },
+      "RiskReason": {
+        "type": "string",
+        "enum": [
+          "DOCUMENT_CONTENT_UNAVAILABLE",
+          "AI_SERVICE_UNAVAILABLE",
+          "AI_TIMEOUT",
+          "AI_QUOTA_EXCEEDED",
+          "AI_OUTPUT_INVALID"
+        ],
+        "title": "RiskReason",
+        "description": "Alasan analisis AI tidak selesai."
+      },
+      "RiskState": {
+        "type": "string",
+        "enum": [
+          "COMPLETED",
+          "NOT_REQUESTED",
+          "NOT_PERFORMED",
+          "UNAVAILABLE"
+        ],
+        "title": "RiskState",
+        "description": "Status analisis AI."
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "HR",
+          "ADMIN"
+        ],
+        "title": "Role",
+        "description": "Role akun; ditentukan server, tidak pernah dari input client."
+      },
+      "Severity": {
+        "type": "string",
+        "enum": [
+          "LOW",
+          "MEDIUM",
+          "HIGH"
+        ],
+        "title": "Severity",
+        "description": "Tingkat indikator."
+      },
+      "TransactionRef": {
+        "properties": {
+          "hash": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$",
+            "title": "Hash"
+          },
+          "blockNumber": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Blocknumber"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hash",
+          "blockNumber"
+        ],
+        "title": "TransactionRef",
+        "description": "Referensi transaksi registry yang telah terkonfirmasi."
+      },
+      "UserSummary": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "pattern": "^USR-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Userid"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "displayName": {
+            "type": "string",
+            "title": "Displayname"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "userId",
+          "email",
+          "displayName",
+          "role"
+        ],
+        "title": "UserSummary",
+        "description": "Identitas akun yang aman ditampilkan (tanpa password)."
+      },
+      "VerificationMode": {
+        "type": "string",
+        "enum": [
+          "REFERENCE_CHECK",
+          "AI_ONLY"
+        ],
+        "title": "VerificationMode",
+        "description": "Mode verifikasi: dengan kode atau AI saja."
+      },
+      "VerificationResponse": {
+        "properties": {
+          "verificationId": {
+            "type": "string",
+            "pattern": "^VER-[0-9A-HJKMNP-TV-Z]{10}$",
+            "title": "Verificationid"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/VerificationMode"
+          },
+          "proofCheck": {
+            "$ref": "#/components/schemas/ProofCheck"
+          },
+          "integrityCheck": {
+            "$ref": "#/components/schemas/IntegrityCheck"
+          },
+          "riskAnalysis": {
+            "$ref": "#/components/schemas/RiskAnalysis"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "verificationId",
+          "mode",
+          "proofCheck",
+          "integrityCheck",
+          "riskAnalysis"
+        ],
+        "title": "VerificationResponse",
+        "description": "API-07: tiga komponen hasil terpisah; tidak ada field vonis gabungan."
+      },
+      "VerifiedIssuer": {
+        "properties": {
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "companyName": {
+            "type": "string",
+            "title": "Companyname"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issuerId",
+          "companyName"
+        ],
+        "title": "VerifiedIssuer",
+        "description": "Identitas penerbit bukti (hanya id dan nama perusahaan, DLT-07)."
+      },
+      "VerifyIssuerRequest": {
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/IssuerDecision"
+          },
+          "evidenceRef": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Evidenceref"
+          },
+          "reviewNote": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewnote"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision",
+          "evidenceRef"
+        ],
+        "title": "VerifyIssuerRequest",
+        "description": "API-02 verifyIssuer."
+      },
+      "VerifyIssuerResponse": {
+        "properties": {
+          "issuerId": {
+            "type": "string",
+            "pattern": "^ISS-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Issuerid"
+          },
+          "issuerStatus": {
+            "$ref": "#/components/schemas/IssuerStatus"
+          },
+          "reviewedBy": {
+            "type": "string",
+            "pattern": "^USR-[0-9A-HJKMNP-TV-Z]{8}$",
+            "title": "Reviewedby"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reviewedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issuerId",
+          "issuerStatus",
+          "reviewedBy",
+          "reviewedAt"
+        ],
+        "title": "VerifyIssuerResponse",
+        "description": "API-02: hasil keputusan beserta peninjau dan waktu."
+      }
+    },
+    "securitySchemes": {
+      "ConsoleJWT": {
+        "type": "http",
+        "description": "JWT HS256 dari S-02 login (Lettrust Console).",
+        "scheme": "bearer"
+      },
+      "PartnerToken": {
+        "type": "http",
+        "description": "Token partner statis; hanya dipegang server portal mitra (BFF).",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

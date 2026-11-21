@@ -1,0 +1,17 @@
+# Owner: B (PIC 5) | Status: COMPLETE | Ref: SA §13.1, §18.1
+[project]
+name = "lettrust-ai-service"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -p no:cacheprovider"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]

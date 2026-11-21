@@ -1,0 +1,13 @@
+{
+  "userId": "USR-7K3M9Q2H",
+  "email": "rina@lettrust.test",
+  "displayName": "Rina Demo",
+  "role": "HR",
+  "membership": {
+    "issuerId": "ISS-4D8N2P6R",
+    "companyName": "PT Contoh Rekrutmen",
+    "issuerStatus": "PENDING",
+    "authorizationStatus": "NOT_AUTHORIZED",
+    "reviewNote": null
+  }
+}

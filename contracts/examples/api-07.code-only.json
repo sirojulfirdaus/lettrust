@@ -1,0 +1,34 @@
+{
+  "verificationId": "VER-2B6N9R4W8C",
+  "mode": "REFERENCE_CHECK",
+  "proofCheck": {
+    "lookup": "FOUND",
+    "reason": null,
+    "issuer": {
+      "issuerId": "ISS-4D8N2P6R",
+      "companyName": "PT Sinar Demo Sejahtera"
+    },
+    "issuerVerified": true,
+    "lifecycleStatus": "ACTIVE",
+    "issuedAt": "2026-11-23T04:12:09Z",
+    "revokedAt": null
+  },
+  "integrityCheck": {
+    "result": "NOT_CHECKED",
+    "reason": "NO_FILE",
+    "hashAlgorithm": null
+  },
+  "riskAnalysis": {
+    "state": "NOT_REQUESTED",
+    "reason": null,
+    "category": null,
+    "indicators": [],
+    "indicatorDetails": [],
+    "explanation": null,
+    "recommendation": null,
+    "extractionMethod": null,
+    "contentTruncated": null,
+    "pagesAnalyzed": null,
+    "pagesTotal": null
+  }
+}
