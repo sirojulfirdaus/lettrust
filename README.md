@@ -46,7 +46,7 @@ Seluruh port terikat ke `127.0.0.1`.
 | HR Sinar belum diotorisasi | `hr2.sinar@lettrust.test` | `SEED_HR_PASSWORD` |
 | Partner Portal Karier Mitra (Simulasi) | — | token = `PARTNER_TOKEN` |
 
-Catatan: seed belum diimplementasikan (`python -m app.cli seed` masih STUB); akun di atas belum tersedia. Kredensial hanya untuk environment lokal.
+Backend mengisi data seed sintetis saat startup jika basis data kosong. Saat backend berjalan, gunakan `python scripts/dev.py seed` untuk menjalankan seed ulang tanpa menggandakan data. Kredensial hanya untuk environment lokal.
 
 ## Perintah Launcher
 
