@@ -67,11 +67,11 @@ def test_no_extra_routes():
 
 # Endpoint stub mengembalikan 501 NOT_IMPLEMENTED dengan envelope SA §10.2 dan requestId.
 @pytest.mark.parametrize("endpoint_id", list(STUB_REQUESTS))
-def test_stub_returns_501_envelope(client, endpoint_id):
+def test_stub_returns_501_envelope(client, partner_headers, endpoint_id):
     _, method, path = next(e for e in ENDPOINTS if e[0] == endpoint_id)
-    response = client.request(
-        method, concrete(path), headers={"Authorization": "Bearer dummy"}, **STUB_REQUESTS[endpoint_id]
-    )
+    # API-07 butuh token partner valid (partner_client sudah COMPLETE, T1-03) agar router stub tercapai.
+    headers = partner_headers if endpoint_id == "API-07" else {"Authorization": "Bearer dummy"}
+    response = client.request(method, concrete(path), headers=headers, **STUB_REQUESTS[endpoint_id])
     assert response.status_code == 501, response.text
     body = response.json()
     assert body["error"]["code"] == "NOT_IMPLEMENTED"
