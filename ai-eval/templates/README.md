@@ -41,7 +41,7 @@ Acuan label adalah PRD bagian 8.4 dan 8.5 (BR-04.06). Kode dihitung satu kali, m
 | `PAYMENT_REQUEST` | HIGH | Pelamar diminta membayar biaya sebelum bekerja. Biaya yang ditanggung perusahaan bukan indikator ini. |
 | `SENSITIVE_DATA_REQUEST` | HIGH | Permintaan OTP, PIN, password, akses rekening, atau data sensitif sejenis. |
 | `UNOFFICIAL_CONTACT` | MEDIUM | Komunikasi hanya melalui kanal pribadi atau email layanan gratis yang mengatasnamakan HR. |
-| `URGENCY_PRESSURE` | MEDIUM | Tenggat sangat singkat atau ancaman kehilangan posisi. |
+| `URGENCY_PRESSURE` | MEDIUM | Tenggat konfirmasi sangat singkat, ancaman kehilangan posisi, atau kuota terbatas. |
 | `IDENTITY_INCONSISTENCY` | MEDIUM | Nama perusahaan, alamat, posisi, atau penanda tangan saling bertentangan dalam surat. |
 | `UNREALISTIC_COMPENSATION` | LOW | Kompensasi jauh melebihi kewajaran posisi. |
 | `VAGUE_JOB_DETAILS` | LOW | Rincian pekerjaan tidak memadai. |
