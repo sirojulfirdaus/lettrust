@@ -34,11 +34,11 @@ def test_declared_content_length_over_limit(client):
 
 
 # Body di bawah batas (berkas 2 MB, di atas ambang spool default 1 MB) tetap sampai ke route stub (501).
-def test_body_under_limit_reaches_route(client):
+def test_body_under_limit_reaches_route(client, partner_headers):
     pdf = b"%PDF-1.4\n" + b"0" * (2 * 1024 * 1024)
     response = client.post(
         "/api/v1/verifications",
-        headers=AUTH,
+        headers=partner_headers,
         data={"referenceCode": "LTR-7K3M-9QX2-H4TD", "includeRisk": "false"},
         files={"file": ("offer.pdf", pdf, "application/pdf")},
     )
