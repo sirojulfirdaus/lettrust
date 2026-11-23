@@ -31,13 +31,13 @@ def test_internal_endpoints_require_token(client):
             assert response.json()["requestId"].startswith("req_")
 
 
-# Token valid mempertahankan request ID: API-08 masih stub, I-01 sudah memetakan PDF rusak.
+# Token valid mempertahankan request ID: API-08 tanpa key ditolak, I-01 memetakan PDF rusak.
 def test_internal_endpoints_preserve_request_id(client: TestClient) -> None:
     headers = {"X-Internal-Token": INTERNAL_TOKEN, "X-Request-ID": "req_FROMBACKEND00001"}
     risk = client.post("/internal/v1/risk-analyses", json={"documentContent": "teks"}, headers=headers)
     extraction = client.post("/internal/v1/document-extractions", files={"file": PDF}, headers=headers)
-    assert risk.status_code == 501
-    assert risk.json()["error"]["code"] == "NOT_IMPLEMENTED"
+    assert risk.status_code == 503
+    assert risk.json()["error"]["code"] == "AI_PROVIDER_UNCONFIGURED"
     assert risk.json()["requestId"] == "req_FROMBACKEND00001"
     assert extraction.status_code == 200
     assert extraction.json()["reasonDetail"] == "PDF_UNREADABLE"
