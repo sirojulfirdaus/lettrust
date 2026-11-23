@@ -1,5 +1,4 @@
-# Owner: Zan (PIC 3) | Status: STUB | Ref: PRD FR-01.01, FR-01.02, FR-01.04; SA §10.4, §10.5
-# TODO: Ganti `raise not_implemented()` dengan pemanggilan auth.service.
+# Owner: Zan (PIC 3) | Status: COMPLETE | Ref: PRD FR-01.01, FR-01.02, FR-01.04; SA §10.4, §10.5
 """Router endpoint akun: S-01 register, S-02 login, S-03 me."""
 
 from typing import Annotated
@@ -8,8 +7,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.errors import error_responses, not_implemented
+from app.core.errors import error_responses
 from app.core.schemas import ErrorCode
+from app.modules.auth import service
 from app.modules.auth.dependencies import current_user
 from app.modules.auth.models import User
 from app.modules.auth.schemas import LoginRequest, LoginResponse, MeResponse, RegisterAccountRequest, UserSummary
@@ -25,8 +25,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     operation_id="registerAccount",
     responses=error_responses(ErrorCode.EMAIL_ALREADY_REGISTERED),
 )
-async def register_account(payload: RegisterAccountRequest, db: Annotated[Session, Depends(get_db)]) -> UserSummary:
-    raise not_implemented()
+def register_account(payload: RegisterAccountRequest, db: Annotated[Session, Depends(get_db)]) -> UserSummary:
+    return service.register_account(db, payload)
 
 
 # S-02: login email + password (publik).
@@ -36,8 +36,8 @@ async def register_account(payload: RegisterAccountRequest, db: Annotated[Sessio
     operation_id="login",
     responses=error_responses(ErrorCode.INVALID_CREDENTIALS),
 )
-async def login(payload: LoginRequest, db: Annotated[Session, Depends(get_db)]) -> LoginResponse:
-    raise not_implemented()
+def login(payload: LoginRequest, db: Annotated[Session, Depends(get_db)]) -> LoginResponse:
+    return service.login(db, payload)
 
 
 # S-03: profil sesi dan membership (JWT).
@@ -47,7 +47,5 @@ async def login(payload: LoginRequest, db: Annotated[Session, Depends(get_db)]) 
     operation_id="getSession",
     responses=error_responses(ErrorCode.UNAUTHENTICATED),
 )
-async def get_session(
-    user: Annotated[User, Depends(current_user)], db: Annotated[Session, Depends(get_db)]
-) -> MeResponse:
-    raise not_implemented()
+def get_session(user: Annotated[User, Depends(current_user)], db: Annotated[Session, Depends(get_db)]) -> MeResponse:
+    return service.get_session_profile(db, user)
