@@ -17,12 +17,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  ApiError,
-  apiFetch,
-  type RegisterAccountRequest,
-  type UserSummary,
-} from "@/lib/api/client";
+import { ApiError } from "@/lib/api/client";
+import { submitRegisterFlow } from "@/app/login/auth-flow";
 import {
   mapValidationDetails,
   validateRegisterForm,
@@ -53,17 +49,7 @@ export default function RegisterPage() {
 
     setIsSubmitting(true);
     try {
-      const payload: RegisterAccountRequest = {
-        displayName: displayName.trim(),
-        email: email.trim().toLowerCase(),
-        password,
-      };
-      await apiFetch<UserSummary>("/api/v1/auth/register", {
-        method: "POST",
-        auth: false,
-        body: payload,
-      });
-
+      await submitRegisterFlow(displayName, email, password);
       router.replace("/login?registered=1");
     } catch (error) {
       if (error instanceof ApiError) {
@@ -138,7 +124,9 @@ export default function RegisterPage() {
                   }
                 }}
                 aria-invalid={Boolean(fieldErrors.displayName)}
-                aria-describedby={fieldErrors.displayName ? "register-name-error" : "register-name-hint"}
+                aria-describedby={
+                  fieldErrors.displayName ? "register-name-error" : "register-name-hint"
+                }
                 disabled={isSubmitting}
                 required
               />

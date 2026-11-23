@@ -17,15 +17,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  ApiError,
-  apiFetch,
-  fetchSessionProfile,
-  type LoginRequest,
-  type LoginResponse,
-} from "@/lib/api/client";
-import { resolveLandingRoute } from "@/lib/routes";
-import { createSession, saveSession } from "@/lib/session";
+import { ApiError } from "@/lib/api/client";
+import { submitLoginFlow } from "./auth-flow";
 import {
   mapValidationDetails,
   validateLoginForm,
@@ -57,25 +50,8 @@ function LoginFormContent() {
 
     setIsSubmitting(true);
     try {
-      const payload: LoginRequest = {
-        email: email.trim().toLowerCase(),
-        password,
-      };
-      const loginResponse = await apiFetch<LoginResponse>("/api/v1/auth/login", {
-        method: "POST",
-        auth: false,
-        body: payload,
-      });
-
-      saveSession(createSession(loginResponse.accessToken, loginResponse.expiresIn));
-
-      const profile = await fetchSessionProfile({
-        onUnauthorized: () => {
-          setFormError("Sesi Anda telah berakhir. Silakan masuk kembali.");
-        },
-      });
-
-      router.replace(resolveLandingRoute(profile));
+      const { redirectTo } = await submitLoginFlow(email, password);
+      router.replace(redirectTo);
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.code === "VALIDATION_ERROR" && error.details.length > 0) {

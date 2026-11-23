@@ -15,6 +15,11 @@ export type RegisterFieldErrors = {
 // Regex email dasar yang mengizinkan domain sintetis seperti .test (sesuai D-06).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Menghitung jumlah karakter Unicode (code points) agar selaras dengan len() Python di backend.
+export function countCodePoints(value: string): number {
+  return [...value].length;
+}
+
 // Memvalidasi input formulir login sebelum dikirim ke S-02.
 export function validateLoginForm(email: string, password: string): LoginFieldErrors {
   const errors: LoginFieldErrors = {};
@@ -42,10 +47,12 @@ export function validateRegisterForm(
   const errors: RegisterFieldErrors = {};
   const trimmedName = displayName.trim();
   const trimmedEmail = email.trim();
+  const nameLength = countCodePoints(trimmedName);
+  const passwordLength = countCodePoints(password);
 
-  if (trimmedName.length < 2) {
+  if (nameLength < 2) {
     errors.displayName = "Nama lengkap minimal 2 karakter.";
-  } else if (trimmedName.length > 80) {
+  } else if (nameLength > 80) {
     errors.displayName = "Nama lengkap maksimal 80 karakter.";
   }
 
@@ -55,9 +62,9 @@ export function validateRegisterForm(
     errors.email = "Format email tidak valid.";
   }
 
-  if (password.length < 8) {
+  if (passwordLength < 8) {
     errors.password = "Password minimal 8 karakter.";
-  } else if (password.length > 128) {
+  } else if (passwordLength > 128) {
     errors.password = "Password maksimal 128 karakter.";
   }
 

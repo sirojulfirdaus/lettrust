@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { errorValidationError } from "@/fixtures/api";
 import {
+  countCodePoints,
   mapValidationDetails,
   validateLoginForm,
   validateRegisterForm,
@@ -30,6 +31,37 @@ describe("validasi formulir login dan registrasi", () => {
       password: "Password minimal 8 karakter.",
     });
     expect(validateRegisterForm("A".repeat(81), "ok@lettrust.test", "x".repeat(129))).toEqual({
+      displayName: "Nama lengkap maksimal 80 karakter.",
+      password: "Password maksimal 128 karakter.",
+    });
+  });
+
+  it("menghitung batas nama dan password dengan Unicode code points selaras backend Python", () => {
+    // Empat emoji memiliki .length === 8 di UTF-16, tetapi hanya 4 code points.
+    expect(countCodePoints("😀😀😀😀")).toBe(4);
+    expect(validateRegisterForm("😀", "ok@lettrust.test", "😀😀😀😀")).toEqual({
+      displayName: "Nama lengkap minimal 2 karakter.",
+      password: "Password minimal 8 karakter.",
+    });
+
+    // Batas minimum dan maksimum tepat dengan karakter non-BMP harus diterima.
+    expect(validateRegisterForm("😀😀", "ok@lettrust.test", "😀".repeat(8))).toEqual({});
+    expect(
+      validateRegisterForm(
+        `${"a".repeat(79)}😀`,
+        "ok@lettrust.test",
+        `${"p".repeat(127)}😀`,
+      ),
+    ).toEqual({});
+
+    // Melebihi batas maksimum tepat 1 code point harus ditolak.
+    expect(
+      validateRegisterForm(
+        `${"a".repeat(80)}😀`,
+        "ok@lettrust.test",
+        `${"p".repeat(128)}😀`,
+      ),
+    ).toEqual({
       displayName: "Nama lengkap maksimal 80 karakter.",
       password: "Password maksimal 128 karakter.",
     });
