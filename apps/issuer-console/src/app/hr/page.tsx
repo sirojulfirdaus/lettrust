@@ -88,9 +88,20 @@ export default function HrHomePage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    loadHrHomeData({
+    void loadHrHomeData({
       signal: controller.signal,
       onUnauthorized: () => router.replace("/login?reason=session_expired"),
+      onProfileReady: (readyProfile) => {
+        setProfileState({
+          status: "ready",
+          profile: readyProfile.profile,
+          membership: readyProfile.membership,
+          hrStatus: readyProfile.status,
+        });
+        setProofState({
+          status: readyProfile.shouldLoadProofs ? "loading" : "idle",
+        });
+      },
     }).then((result) => {
       if (result.kind === "aborted" || result.kind === "unauthorized") {
         return;
@@ -103,12 +114,6 @@ export default function HrHomePage() {
         setProfileState({ status: "error", message: result.message });
         return;
       }
-      setProfileState({
-        status: "ready",
-        profile: result.profile,
-        membership: result.membership,
-        hrStatus: result.status,
-      });
       if (result.proofsError !== null) {
         setProofState({ status: "error", message: result.proofsError });
       } else if (result.proofs !== null) {

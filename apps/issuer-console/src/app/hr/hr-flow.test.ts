@@ -215,4 +215,54 @@ describe("alur halaman Beranda HR", () => {
     }
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("langsung meneruskan kartu status lewat onProfileReady saat GET /api/v1/proofs masih tertahan", async () => {
+    saveSession(createSession("jwt-hr-authorized", 3600));
+
+    let resolveProofs: ((value: Response) => void) | undefined;
+    const pendingProofsPromise = new Promise<Response>((resolve) => {
+      resolveProofs = resolve;
+    });
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(s03SessionHrAuthorized, 200))
+      .mockReturnValueOnce(pendingProofsPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onProfileReady = vi.fn();
+    let homeResolved = false;
+
+    const homePromise = loadHrHomeData({ onProfileReady }).then((result) => {
+      homeResolved = true;
+      return result;
+    });
+
+    await vi.waitFor(() => {
+      expect(onProfileReady).toHaveBeenCalledTimes(1);
+    });
+
+    expect(homeResolved).toBe(false);
+    expect(onProfileReady).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "ready",
+        profile: s03SessionHrAuthorized,
+        shouldLoadProofs: true,
+        status: expect.objectContaining({
+          canIssueProof: true,
+          issuerStatusLabel: "Terverifikasi",
+          authorizationLabel: "Diotorisasi",
+        }),
+      }),
+    );
+
+    resolveProofs?.(jsonResponse(s06ProofList, 200));
+    const finalResult = await homePromise;
+    expect(homeResolved).toBe(true);
+    expect(finalResult.kind).toBe("ready");
+    if (finalResult.kind === "ready") {
+      expect(finalResult.proofs).toEqual(s06ProofList);
+      expect(finalResult.proofsError).toBeNull();
+    }
+  });
 });

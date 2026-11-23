@@ -28,6 +28,9 @@ export type HrProfileLoadResult =
   | { kind: "aborted" }
   | { kind: "error"; message: string };
 
+// Profil sesi S-03 yang siap ditampilkan sebelum pemuatan ringkasan bukti selesai.
+export type HrProfileReadyResult = Extract<HrProfileLoadResult, { kind: "ready" }>;
+
 // Hasil pemuatan ringkasan bukti S-06 untuk HR yang telah diotorisasi.
 export type HrProofSummaryLoadResult =
   | { kind: "ready"; data: ProofListResponse }
@@ -127,10 +130,11 @@ export async function loadHrProofSummary(options?: {
   }
 }
 
-// Menjalankan alur muat Beranda HR: selalu memuat S-03, dan hanya memanggil S-06 bila VERIFIED + AUTHORIZED.
+// Menjalankan alur muat Beranda HR: selalu memuat S-03, meneruskan profil segera setelah siap, dan memanggil S-06 bila VERIFIED + AUTHORIZED.
 export async function loadHrHomeData(options?: {
   signal?: AbortSignal;
   onUnauthorized?: () => void;
+  onProfileReady?: (profile: HrProfileReadyResult) => void;
 }): Promise<HrHomeLoadResult> {
   const profileResult = await loadHrProfile(options);
   if (profileResult.kind === "redirect") {
@@ -142,6 +146,8 @@ export async function loadHrHomeData(options?: {
   if (profileResult.kind === "error") {
     return { kind: "profile_error", message: profileResult.message };
   }
+
+  options?.onProfileReady?.(profileResult);
 
   if (!profileResult.shouldLoadProofs) {
     return {
