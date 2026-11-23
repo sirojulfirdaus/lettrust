@@ -18,6 +18,8 @@ from fakes.contracts import load_example
 INTERNAL_TOKEN = get_settings().internal_api_token.get_secret_value()
 EXTRACTION_PATH = "/internal/v1/document-extractions"
 ANALYSIS_PATH = "/internal/v1/risk-analyses"
+# Nilai extractionMethod API-08 yang diterima ai-service.
+EXTRACTION_METHODS = {"TEXT_LAYER", "OCR", "MIXED"}
 HEALTH_PATH = "/internal/v1/health"
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
@@ -118,7 +120,8 @@ class FakeAiService:
         return _example_response(request, *ERROR_EXAMPLES[mode])
 
 
-# Memeriksa bentuk body seperti ai-service: I-01 multipart, API-08 JSON dengan documentContent non-kosong.
+# Memeriksa bentuk body seperti ai-service: I-01 multipart; API-08 JSON dengan documentContent non-kosong dan
+# extractionMethod opsional (TEXT_LAYER/OCR/MIXED; tidak boleh null, D-20).
 def _body_valid(path: str, request: httpx.Request) -> bool:
     if path == EXTRACTION_PATH:
         return request.headers.get("content-type", "").startswith("multipart/form-data")
@@ -127,7 +130,10 @@ def _body_valid(path: str, request: httpx.Request) -> bool:
             body = json.loads(request.content or b"null")
         except ValueError:
             return False
-        return isinstance(body, dict) and isinstance(body.get("documentContent"), str) and bool(body["documentContent"])
+        if not isinstance(body, dict) or set(body) - {"documentContent", "extractionMethod"}:
+            return False
+        method_valid = "extractionMethod" not in body or body["extractionMethod"] in EXTRACTION_METHODS
+        return isinstance(body.get("documentContent"), str) and bool(body["documentContent"]) and method_valid
     return True
 
 

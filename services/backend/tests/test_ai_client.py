@@ -71,7 +71,7 @@ def test_pipeline_completed_high():
     assert fake.requests[0].extensions["timeout"]["read"] == settings.ai_extraction_timeout_seconds
     assert fake.requests[1].extensions["timeout"]["read"] == settings.ai_analysis_timeout_seconds
     assert FILE_BYTES in fake.requests[0].content
-    assert json.loads(fake.requests[1].content) == {"documentContent": extraction["text"]}
+    assert json.loads(fake.requests[1].content) == {"documentContent": extraction["text"], "extractionMethod": "MIXED"}
     assert risk == {
         "state": "COMPLETED",
         "reason": None,
@@ -96,6 +96,29 @@ def test_pipeline_completed_categories(analysis):
     assert risk["category"] == load_example(f"internal/api-08.response-{analysis}.json")["category"]
     assert risk["contentTruncated"] is True
     assert (risk["pagesAnalyzed"], risk["pagesTotal"]) == (extraction["pagesProcessed"], extraction["pagesTotal"])
+
+
+# D-20: metode I-01 diteruskan apa adanya sebagai extractionMethod API-08 (fuzzy ai-service hanya OCR/MIXED).
+@pytest.mark.parametrize("extraction", ["ok", "ok_truncated"])
+def test_extraction_method_forwarded(extraction):
+    fake = FakeAiService(extraction=extraction, analysis="low")
+    risk = run_pipeline(fake.transport())
+    method = load_example(f"internal/i-01.extraction-{extraction.replace('_', '-')}.json")["method"]
+    assert risk["state"] == "COMPLETED" and risk["extractionMethod"] == method
+    assert json.loads(fake.requests[1].content)["extractionMethod"] == method
+
+
+# Metode None tidak dikirim (bukan null) agar ai-service memakai default TEXT_LAYER tanpa fuzzy.
+def test_missing_method_omitted_from_request():
+    fake = FakeAiService(analysis="low")
+
+    # Memanggil API-08 langsung lewat client dengan transport fake.
+    async def call() -> None:
+        async with httpx.AsyncClient(base_url=get_settings().ai_service_url, transport=fake.transport()) as http:
+            await ai_client.AiServiceClient(http).analyze("Surat sintetis.", None, REQUEST_ID)
+
+    asyncio.run(call())
+    assert json.loads(fake.requests[0].content) == {"documentContent": "Surat sintetis."}
 
 
 # NO_CONTENT (teks tidak terbaca / PDF rusak) → NOT_PERFORMED tanpa memanggil API-08.
