@@ -98,7 +98,7 @@ export function getProofLifecyclePresentation(status: ProofListItem["lifecycleSt
   if (status === "ACTIVE") {
     return { label: "Aktif", tone: "positive" };
   }
-  return { label: "Dicabut", tone: "danger" };
+  return { label: "Dicabut", tone: "warning" };
 }
 
 // Memformat stempel waktu ISO-8601 ke tampilan tanggal dan waktu yang mudah dibaca.

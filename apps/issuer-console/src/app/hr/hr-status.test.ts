@@ -61,7 +61,7 @@ describe("pemetaan status Beranda HR", () => {
     const revoked = getProofLifecyclePresentation(s06ProofList.items[1].lifecycleStatus);
 
     expect(active).toEqual({ label: "Aktif", tone: "positive" });
-    expect(revoked).toEqual({ label: "Dicabut", tone: "danger" });
+    expect(revoked).toEqual({ label: "Dicabut", tone: "warning" });
   });
 
   it("memformat stempel waktu ISO bukti dengan aman", () => {
