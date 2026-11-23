@@ -1,6 +1,6 @@
 // Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.02/AC-04, §9.8; SA §10.1, §10.2, §11.1, §11.2.2
 import type { components, paths } from "./schema";
-import { clearSession, readSession } from "@/lib/session";
+import { consumeUnauthorizedSession, readSession } from "@/lib/session";
 
 // Base URL backend; disisipkan saat build dari NEXT_PUBLIC_API_BASE_URL (bukan secret).
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -53,7 +53,7 @@ export function mapApiErrorMessage(
   status: number,
   fallbackMessage?: string,
 ): string {
-  if (code in ERROR_MESSAGES) {
+  if (Object.hasOwn(ERROR_MESSAGES, code)) {
     return ERROR_MESSAGES[code];
   }
   if (status === 401) {
@@ -258,11 +258,7 @@ export async function apiFetch<T>(path: ApiPath, options: ApiFetchOptions = {}):
     const message = mapApiErrorMessage(code, response.status, envelope?.error.message);
 
     if (response.status === 401 && auth) {
-      const activeToken = readSession()?.accessToken ?? null;
-      if (activeToken === sentToken) {
-        if (activeToken !== null) {
-          clearSession();
-        }
+      if (consumeUnauthorizedSession(sentToken)) {
         (onUnauthorized ?? defaultRedirectToLogin)();
       }
     }
@@ -278,11 +274,11 @@ export async function fetchSessionProfile(
   options?: Pick<ApiFetchOptions, "signal" | "onUnauthorized"> & { accessToken?: string },
 ): Promise<MeResponse> {
   const { accessToken, ...rest } = options ?? {};
-  if (accessToken) {
+  if (accessToken !== undefined) {
     return apiFetch<MeResponse>("/api/v1/auth/me", {
       method: "GET",
       auth: false,
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
       ...rest,
     });
   }

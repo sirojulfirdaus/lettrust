@@ -1,0 +1,65 @@
+[
+  {
+    "id": "id-medium-01",
+    "lang": "id",
+    "label": "MEDIUM",
+    "indicators": [
+      "URGENCY_PRESSURE"
+    ],
+    "text": "Medan, 12 November 2026\nNomor: 131/HRD-MDN/XI/2026\nPerihal: Penawaran Kerja Staf Akuntansi\n\nYth. Sdri. Melisa Siregar,\n\nPT Niaga Bangun Simulasi menawarkan posisi Staf Akuntansi mulai tanggal 1 Desember 2026. Tanggung jawab Anda meliputi pencatatan faktur pembelian, penyusunan laporan pajak bulanan, serta rekonsiliasi rekening operasional perusahaan di bawah supervisi Kepala Akuntansi, Bapak Rudi Simanjuntak.\n\nTempat kerja berada di Jalan Gatot Subroto Fiktif Nomor 34, Medan, dengan jam kerja Senin sampai Jumat pukul 08.30–17.30 WIB termasuk istirahat satu jam. Gaji pokok yang ditawarkan sebesar Rp5.800.000 per bulan ditambah tunjangan makan Rp500.000 per bulan. Proses rekrutmen ini bebas biaya dan tidak memungut pembayaran dari pelamar.\n\nAnda wajib mengirimkan konfirmasi penerimaan paling lambat dalam waktu 2 jam sejak surat ini diterima; apabila melewati batas waktu tersebut, posisi Anda akan langsung dialihkan kepada kandidat cadangan karena kuota penerimaan sangat terbatas. Kirimkan konfirmasi ke email resmi hr@niaga-bangun.test. Kontak resmi perusahaan tersedia pada https://niaga-bangun.test.\n\nHormat kami,\nRudi Simanjuntak\nKepala Akuntansi, PT Niaga Bangun Simulasi",
+    "notes": "URGENCY_PRESSURE (MEDIUM): kutipan 'Anda wajib mengirimkan konfirmasi penerimaan paling lambat dalam waktu 2 jam sejak surat ini diterima; apabila melewati batas waktu tersebut, posisi Anda akan langsung dialihkan kepada kandidat cadangan karena kuota penerimaan sangat terbatas.' menunjukkan tenggat sangat singkat disertai ancaman kehilangan posisi dan kuota terbatas. Satu indikator MEDIUM tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Van (dibantu coding agent Gemini sesi T2-04); peninjau: Pash (menunggu tinjauan manusia); status: menunggu tinjauan Van dan Pash."
+  },
+  {
+    "id": "id-medium-02",
+    "lang": "id",
+    "label": "MEDIUM",
+    "indicators": [
+      "UNOFFICIAL_CONTACT"
+    ],
+    "text": "Tangerang, 12 November 2026\nNomor: 094/REK-TNG/XI/2026\nPerihal: Penawaran Kerja Staf Layanan Pelanggan\n\nYth. Sdr. Fajar Ramadhan,\n\nPT Kirim Cepat Simulasi menawarkan posisi Staf Layanan Pelanggan mulai tanggal 1 Desember 2026. Tugas Anda mencakup penanganan pertanyaan status pengiriman, pencatatan keluhan pelanggan pada sistem tiket, dan eskalasi kendala operasional kepada Penyelia Layanan Pelanggan, Ibu Lina Permata.\n\nLokasi kerja bertempat di Gedung Logistik Contoh Lantai 3, Jalan Raya Serpong Simulasi Nomor 15, Tangerang, dengan jadwal kerja Senin sampai Jumat pukul 08.00–17.00 WIB termasuk istirahat satu jam. Gaji pokok yang ditawarkan sebesar Rp5.400.000 per bulan dan tunjangan transportasi Rp500.000 per bulan. Tidak ada biaya rekrutmen yang dibebankan kepada pelamar.\n\nMohon menyampaikan konfirmasi kesediaan paling lambat 19 November 2026. Seluruh koordinasi dan konfirmasi penawaran kerja hanya dilayani melalui pesan WhatsApp pribadi perekrut di nomor 0812-0000-7741 atau alamat email layanan gratis rekrutmen.kirimcepat88@mailgratis.test; mohon tidak menghubungi alamat email maupun telepon kantor pusat.\n\nHormat kami,\nLina Permata\nPenyelia Layanan Pelanggan, PT Kirim Cepat Simulasi",
+    "notes": "UNOFFICIAL_CONTACT (MEDIUM): kutipan 'Seluruh koordinasi dan konfirmasi penawaran kerja hanya dilayani melalui pesan WhatsApp pribadi perekrut di nomor 0812-0000-7741 atau alamat email layanan gratis rekrutmen.kirimcepat88@mailgratis.test; mohon tidak menghubungi alamat email maupun telepon kantor pusat.' menunjukkan komunikasi dibatasi hanya melalui kanal pribadi dan email layanan gratis. Satu indikator MEDIUM tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Van (dibantu coding agent Gemini sesi T2-04); peninjau: Pash (menunggu tinjauan manusia); status: menunggu tinjauan Van dan Pash."
+  },
+  {
+    "id": "id-medium-03",
+    "lang": "id",
+    "label": "MEDIUM",
+    "indicators": [
+      "IDENTITY_INCONSISTENCY"
+    ],
+    "text": "Jakarta, 13 November 2026\nNomor: 162/HR-PMN/XI/2026\nPerihal: Penawaran Kerja Analis Pengadaan — PT Pelita Medika Nusantara\n\nYth. Sdri. Kartika Putri,\n\nDengan ini PT Pelita Medika Nusantara yang beralamat di Jalan Cendana Fiktif Nomor 45, Jakarta Pusat menawarkan posisi Analis Pengadaan kepada Anda mulai 1 Desember 2026. Dalam penempatan nanti, Anda akan bekerja di bawah PT Cakra Niaga Bersama sebagai Supervisor Penjualan yang berkantor di Kawasan Industri Simulasi Blok F-9, Surabaya, dengan tugas mengevaluasi penawaran pemasok, menyusun kontrak pengadaan, dan memantau jadwal pengiriman di bawah arahan Manajer Pengadaan, Bapak Wahyu Hidayat.\n\nJadwal kerja adalah Senin sampai Jumat pukul 08.00–17.00 WIB dengan waktu istirahat satu jam. Gaji pokok yang ditawarkan sebesar Rp7.500.000 per bulan ditambah tunjangan makan Rp600.000 per bulan. Tidak ada biaya yang dibebankan kepada pelamar dalam proses rekrutmen ini.\n\nSilakan mengirimkan konfirmasi penerimaan paling lambat tanggal 23 November 2026 ke hr@pelita-medika.test. Informasi perusahaan dapat dilihat di https://pelita-medika.test.\n\nHormat kami,\nAndi Nugroho\nKepala Divisi Produksi, PT Sinar Farma Contoh",
+    "notes": "IDENTITY_INCONSISTENCY (MEDIUM): kutipan 'PT Pelita Medika Nusantara yang beralamat di Jalan Cendana Fiktif Nomor 45, Jakarta Pusat menawarkan posisi Analis Pengadaan' bertentangan dengan 'bekerja di bawah PT Cakra Niaga Bersama sebagai Supervisor Penjualan yang berkantor di Kawasan Industri Simulasi Blok F-9, Surabaya' serta penanda tangan Andi Nugroho sebagai 'Kepala Divisi Produksi, PT Sinar Farma Contoh'. Satu indikator MEDIUM tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Van (dibantu coding agent Gemini sesi T2-04); peninjau: Pash (menunggu tinjauan manusia); status: menunggu tinjauan Van dan Pash."
+  },
+  {
+    "id": "id-medium-04",
+    "lang": "id",
+    "label": "MEDIUM",
+    "indicators": [
+      "UNREALISTIC_COMPENSATION",
+      "VAGUE_JOB_DETAILS"
+    ],
+    "text": "Makassar, 13 November 2026\nNomor: 047/SDM-MKS/XI/2026\nPerihal: Penawaran Kerja Asisten Umum\n\nYth. Kandidat Terpilih,\n\nPT Graha Sentosa Simulasi menawarkan posisi Asisten Umum tingkat pemula tanpa syarat pengalaman mulai 1 Desember 2026. Rincian tugas harian, lokasi penempatan, jam kerja, serta atasan langsung tidak dicantumkan dalam surat ini dan akan ditentukan kemudian mengikuti arahan manajemen.\n\nPerusahaan memberikan gaji pokok sebesar Rp58.000.000 per bulan ditambah tunjangan transportasi Rp12.000.000 per bulan untuk posisi Asisten Umum tingkat pemula tersebut. Proses penerimaan tidak memungut biaya apa pun dari kandidat.\n\nMohon kirimkan jawaban Anda paling lambat tanggal 24 November 2026 melalui alamat email resmi karir@graha-sentosa.test. Informasi resmi perusahaan tersedia di https://graha-sentosa.test.\n\nHormat kami,\nRahmat Fauzi\nManajer SDM, PT Graha Sentosa Simulasi",
+    "notes": "UNREALISTIC_COMPENSATION (LOW): kutipan 'gaji pokok sebesar Rp58.000.000 per bulan ditambah tunjangan transportasi Rp12.000.000 per bulan untuk posisi Asisten Umum tingkat pemula tersebut.' jauh melebihi kewajaran posisi; VAGUE_JOB_DETAILS (LOW): kutipan 'Yth. Kandidat Terpilih,' dan 'Rincian tugas harian, lokasi penempatan, jam kerja, serta atasan langsung tidak dicantumkan dalam surat ini dan akan ditentukan kemudian mengikuti arahan manajemen.' Dua indikator LOW berbeda tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Van (dibantu coding agent Gemini sesi T2-04); peninjau: Pash (menunggu tinjauan manusia); status: menunggu tinjauan Van dan Pash."
+  },
+  {
+    "id": "id-medium-05",
+    "lang": "id",
+    "label": "MEDIUM",
+    "indicators": [
+      "UNOFFICIAL_CONTACT",
+      "URGENCY_PRESSURE"
+    ],
+    "text": "Bekasi, 14 November 2026\nNomor: 210/HR-CKR/XI/2026\nPerihal: Penawaran Kerja Teknisi Pemeliharaan Mesin\n\nYth. Sdr. Yoga Mahendra,\n\nPT Kemasan Mandiri Contoh menawarkan posisi Teknisi Pemeliharaan Mesin mulai tanggal 1 Desember 2026. Tanggung jawab Anda meliputi pemeriksaan rutin mesin cetak kemasan, perbaikan gangguan mekanis ringan, serta pencatatan jadwal perawatan preventif di bawah supervisi Kepala Pemeliharaan, Bapak Eko Susilo.\n\nLokasi kerja berada di Kawasan Industri Simulasi Blok H-3, Bekasi, dengan jadwal kerja Senin sampai Jumat pukul 08.00–17.00 WIB termasuk istirahat satu jam. Gaji pokok yang ditawarkan sebesar Rp6.400.000 per bulan ditambah tunjangan keahlian Rp600.000 per bulan. Tidak ada pungutan biaya rekrutmen kepada pelamar.\n\nKonfirmasi kesediaan wajib diterima paling lambat pukul 15.00 WIB hari ini dalam waktu 1 jam setelah surat dikirim; jika melewati batas tersebut, tawaran otomatis dibatalkan secara permanen karena kuota terbatas. Seluruh komunikasi dan pengiriman konfirmasi hanya dilakukan melalui nomor WhatsApp pribadi HRD di 0813-0000-5520 dan email pribadi hrd.kemasan.mandiri@suratgratis.test, bukan melalui kanal resmi perusahaan.\n\nHormat kami,\nEko Susilo\nKepala Pemeliharaan, PT Kemasan Mandiri Contoh",
+    "notes": "URGENCY_PRESSURE (MEDIUM): kutipan 'Konfirmasi kesediaan wajib diterima paling lambat pukul 15.00 WIB hari ini dalam waktu 1 jam setelah surat dikirim; jika melewati batas tersebut, tawaran otomatis dibatalkan secara permanen karena kuota terbatas.'; UNOFFICIAL_CONTACT (MEDIUM): kutipan 'Seluruh komunikasi dan pengiriman konfirmasi hanya dilakukan melalui nomor WhatsApp pribadi HRD di 0813-0000-5520 dan email pribadi hrd.kemasan.mandiri@suratgratis.test, bukan melalui kanal resmi perusahaan.' Dua indikator MEDIUM tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Van (dibantu coding agent Gemini sesi T2-04); peninjau: Pash (menunggu tinjauan manusia); status: menunggu tinjauan Van dan Pash."
+  },
+  {
+    "id": "id-medium-06",
+    "lang": "id",
+    "label": "MEDIUM",
+    "indicators": [
+      "IDENTITY_INCONSISTENCY",
+      "VAGUE_JOB_DETAILS"
+    ],
+    "text": "Denpasar, 14 November 2026\nNomor: 063/HRD-DPS/XI/2026\nPerihal: Penawaran Kerja Koordinator Proyek — PT Graha Karya Simulasi\n\nYth. Saudara/i Calon Karyawan,\n\nPT Graha Karya Simulasi yang berkedudukan di Jalan Sunset Simulasi Nomor 21, Denpasar menawarkan posisi Koordinator Proyek mulai 1 Desember 2026. Namun demikian, ikatan kerja Anda tercatat pada PT Mandala Jasa Fiktif di Balikpapan untuk jabatan Staf Pemasaran. Uraian pekerjaan, jam kerja, dan atasan langsung tidak dicantumkan dalam surat ini dan akan disampaikan secara lisan sewaktu-waktu.\n\nGaji pokok yang ditawarkan sebesar Rp6.500.000 per bulan ditambah tunjangan makan Rp500.000 per bulan. Perusahaan tidak memungut biaya apa pun dari kandidat. Mohon mengirimkan tanggapan paling lambat tanggal 25 November 2026 melalui karir@graha-karya.test. Informasi resmi dapat dilihat pada situs https://graha-karya.test.\n\nHormat kami,\nPutu Mahendrawan\nManajer SDM, PT Graha Karya Simulasi",
+    "notes": "IDENTITY_INCONSISTENCY (MEDIUM): kutipan 'PT Graha Karya Simulasi yang berkedudukan di Jalan Sunset Simulasi Nomor 21, Denpasar menawarkan posisi Koordinator Proyek' bertentangan dengan 'ikatan kerja Anda tercatat pada PT Mandala Jasa Fiktif di Balikpapan untuk jabatan Staf Pemasaran.'; VAGUE_JOB_DETAILS (LOW): kutipan 'Yth. Saudara/i Calon Karyawan,' dan 'Uraian pekerjaan, jam kerja, dan atasan langsung tidak dicantumkan dalam surat ini dan akan disampaikan secara lisan sewaktu-waktu.' Satu MEDIUM dan satu LOW tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Van (dibantu coding agent Gemini sesi T2-04); peninjau: Pash (menunggu tinjauan manusia); status: menunggu tinjauan Van dan Pash."
+  }
+]

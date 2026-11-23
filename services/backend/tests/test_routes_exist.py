@@ -1,9 +1,17 @@
 # Owner: Dws (PIC 1) | Status: COMPLETE | Ref: SA §10.4
 """Setiap endpoint backend SA §10.4 ada dengan method yang benar; endpoint stub mengembalikan envelope 501."""
 
-import pytest
+from datetime import UTC, datetime
 
+import pytest
+from fastapi.testclient import TestClient
+
+from app.core.db import get_session_factory
+from app.core.ids import new_user_id
+from app.core.security import create_access_token, hash_password
 from app.main import app
+from app.modules.auth.models import User
+from app.modules.auth.schemas import Role
 
 PROOF_ID = "0x" + "ab" * 32
 # (ID, method, path) dari SA §10.4; I-01, API-08, I-02 berada di ai-service.
@@ -24,11 +32,9 @@ ENDPOINTS = [
     ("S-07", "GET", "/api/v1/health"),
 ]
 PDF = ("offer.pdf", b"%PDF-1.4\n%synthetic\n", "application/pdf")
+STUB_ADMIN_ENDPOINTS = {"S-04", "S-05", "API-02", "API-03"}
 # Permintaan valid per endpoint stub agar validasi lolos dan stub tercapai.
 STUB_REQUESTS = {
-    "S-01": {"json": {"displayName": "Rina Demo", "email": "rina@lettrust.test", "password": "rahasia-demo-123"}},
-    "S-02": {"json": {"email": "rina@lettrust.test", "password": "rahasia-demo-123"}},
-    "S-03": {},
     "API-01": {
         "json": {"companyName": "PT Contoh", "registrationNumber": "REG-DEMO-001", "contactEmail": "hr@contoh.test"}
     },
@@ -65,13 +71,43 @@ def test_no_extra_routes():
     assert registered_routes() == {(m, p) for _, m, p in ENDPOINTS}
 
 
+# Menyiapkan akun sintetis dan JWT sah agar pemeriksaan stub mencapai handler yang dilindungi.
+@pytest.fixture(scope="module")
+def stub_console_tokens(client: TestClient) -> dict[Role, str]:
+    tokens = {}
+    password_hash = hash_password("Stub#Demo2026")
+    with get_session_factory().begin() as db:
+        for role in (Role.ADMIN, Role.HR):
+            user_id = new_user_id()
+            db.add(
+                User(
+                    id=user_id,
+                    email=f"scaffold-{role.lower()}@lettrust.test",
+                    display_name="Akun Demo Scaffold",
+                    password_hash=password_hash,
+                    role=role,
+                    created_at=datetime.now(UTC),
+                )
+            )
+            tokens[role], _ = create_access_token(user_id, role)
+    return tokens
+
+
 # Endpoint stub mengembalikan 501 NOT_IMPLEMENTED dengan envelope SA §10.2 dan requestId.
 @pytest.mark.parametrize("endpoint_id", list(STUB_REQUESTS))
-def test_stub_returns_501_envelope(client, endpoint_id):
+def test_stub_returns_501_envelope(
+    client: TestClient,
+    endpoint_id: str,
+    stub_console_tokens: dict[Role, str],
+    partner_headers: dict[str, str],
+) -> None:
     _, method, path = next(e for e in ENDPOINTS if e[0] == endpoint_id)
-    response = client.request(
-        method, concrete(path), headers={"Authorization": "Bearer dummy"}, **STUB_REQUESTS[endpoint_id]
-    )
+    # API-07 memakai token partner. Rute Console memakai JWT sesuai role yang disyaratkan.
+    headers = partner_headers
+    if endpoint_id != "API-07":
+        role = Role.ADMIN if endpoint_id in STUB_ADMIN_ENDPOINTS else Role.HR
+        headers = {"Authorization": f"Bearer {stub_console_tokens[role]}"}
+    response = client.request(method, concrete(path), headers=headers, **STUB_REQUESTS[endpoint_id])
     assert response.status_code == 501, response.text
     body = response.json()
     assert body["error"]["code"] == "NOT_IMPLEMENTED"

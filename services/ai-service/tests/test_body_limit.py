@@ -5,6 +5,7 @@ import asyncio
 import json
 
 from conftest import INTERNAL_TOKEN
+from fastapi.testclient import TestClient
 from starlette.formparsers import MultiPartParser
 
 from app.core.body_limit import MULTIPART_OVERHEAD_BYTES, BodySizeLimitMiddleware, request_body_limit
@@ -34,16 +35,17 @@ def test_declared_content_length_over_limit(client):
     assert response.headers["X-Request-ID"] == body["requestId"]
 
 
-# Body di bawah batas (berkas 2 MB, di atas ambang spool default 1 MB) tetap sampai ke route stub (501).
-def test_body_under_limit_reaches_route(client):
+# Body di bawah batas (berkas 2 MB) mencapai ekstraksi; PDF rusak dipetakan ke NO_CONTENT.
+def test_body_under_limit_reaches_route(client: TestClient) -> None:
     pdf = b"%PDF-1.4\n" + b"0" * (2 * 1024 * 1024)
     response = client.post(
         "/internal/v1/document-extractions",
         headers=AUTH,
         files={"file": ("offer.pdf", pdf, "application/pdf")},
     )
-    assert response.status_code == 501
-    assert response.json()["error"]["code"] == "NOT_IMPLEMENTED"
+    assert response.status_code == 200
+    assert response.json()["status"] == "NO_CONTENT"
+    assert response.json()["reasonDetail"] == "PDF_UNREADABLE"
 
 
 # Body stream tanpa Content-Length dihitung saat diterima; melewati batas → 413 dan respons app dibuang.
