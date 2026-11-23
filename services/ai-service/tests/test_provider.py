@@ -13,11 +13,12 @@ import httpx
 import pytest
 from openai import OpenAI
 
-from app.analysis import provider
+from app.analysis import provider, service
 from app.analysis.prompt import NEGATIVE_EXAMPLES, OUTPUT_SCHEMA, USER_TEMPLATE, build_messages
 from app.analysis.taxonomy import TAXONOMY
 from app.core.config import Settings, get_settings
-from app.core.errors import ERROR_HTTP_STATUS, ErrorCode
+from app.core.errors import ERROR_HTTP_STATUS, AppError, ErrorCode
+from app.core.logging import JsonFormatter
 
 SYNTHETIC_KEY = "synthetic-key-provider-test"
 MODEL_CONTENT = '{"indicators": [], "explanation": "Tidak ditemukan pola dari daftar indikator."}'
@@ -235,8 +236,7 @@ def test_debug_logs_and_exception_are_private(
     install_transport(monkeypatch, lambda _: httpx.Response(status, json=body))
     caplog.set_level(logging.DEBUG)
     for name in ("openai._base_client", "httpx", "httpx2", "httpcore.connection"):
-        monkeypatch.setattr(logging.getLogger(name), "disabled", False)
-        monkeypatch.setattr(logging.getLogger(name), "propagate", True)
+        # Konfigurasi DEBUG aplikasi mengubah level; guard disabled/propagate tetap dipertahankan.
         monkeypatch.setattr(logging.getLogger(name), "level", logging.DEBUG)
     adapter = provider.get_provider(settings_for_test(llm_base_url="https://private-url-canary.test/v1"))
     formatted_error = ""
@@ -250,6 +250,109 @@ def test_debug_logs_and_exception_are_private(
     public_output = caplog.text + captured.out + captured.err + formatted_error
     for value in (document, output, SYNTHETIC_KEY, "private-url-canary"):
         assert value not in public_output
+
+
+# Pemotongan dicatat sekali dengan metadata aman; provider tidak mengulang request atau memodifikasi konten.
+@pytest.mark.parametrize("content", [MODEL_CONTENT, '{"indicators": ['])
+def test_length_finish_reason_logs_safe_warning(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, content: str
+) -> None:
+    payload = completion_payload(content)
+    payload["choices"][0]["finish_reason"] = "length"
+    requests, _ = install_transport(monkeypatch, lambda _: httpx.Response(200, json=payload))
+    with caplog.at_level(logging.WARNING, logger="app.analysis.provider"):
+        result = provider.get_provider(settings_for_test()).complete([{"role": "user", "content": "private-document"}])
+    assert result.content == content
+    assert len(requests) == 1
+    records = [record for record in caplog.records if record.name == "app.analysis.provider"]
+    assert len(records) == 1
+    record = records[0]
+    assert record.levelno == logging.WARNING
+    safe_log = json.loads(JsonFormatter("ai-service").format(record))
+    assert safe_log["event"] == "ai.output_truncated"
+    assert safe_log["component"] == "llm"
+    assert safe_log["model"] == "synthetic-model"
+    assert safe_log["promptVersion"] == settings_for_test().prompt_version
+    assert safe_log["latencyMs"] == result.latency_ms
+    for value in (content, "private-document", SYNTHETIC_KEY):
+        assert value not in caplog.text + json.dumps(safe_log)
+
+
+# Respons normal, metadata finish_reason yang absen, dan nilai vendor lain tidak dianggap terpotong.
+@pytest.mark.parametrize("finish_reason", ["stop", None, "synthetic-vendor-reason"])
+def test_other_finish_reasons_do_not_log_truncation(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, finish_reason: str | None
+) -> None:
+    payload = completion_payload()
+    if finish_reason is None:
+        payload["choices"][0].pop("finish_reason")
+    else:
+        payload["choices"][0]["finish_reason"] = finish_reason
+    install_transport(monkeypatch, lambda _: httpx.Response(200, json=payload))
+    with caplog.at_level(logging.WARNING, logger="app.analysis.provider"):
+        assert provider.get_provider(settings_for_test()).complete([]).content == MODEL_CONTENT
+    assert not [record for record in caplog.records if getattr(record, "event", None) == "ai.output_truncated"]
+
+
+# Membuat provider berulang kali tidak menginisialisasi ulang konfigurasi logger di jalur request.
+def test_provider_construction_does_not_reconfigure_logging(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Inisialisasi logging hanya boleh terjadi ketika modul dimuat.
+    def unexpected_reconfiguration() -> None:
+        pytest.fail("Logging transport tidak boleh diinisialisasi ulang saat membuat provider.")
+
+    monkeypatch.setattr(provider, "_disable_transport_logging", unexpected_reconfiguration)
+    for _ in range(3):
+        assert isinstance(provider.get_provider(settings_for_test()), provider.OpenAICompatibleProvider)
+
+
+# Interpreter baru membuktikan perlindungan semua logger aktif sudah terpasang sebelum provider dibuat.
+def test_transport_logging_is_initialized_on_import() -> None:
+    code = (
+        "import logging; "
+        "names = ('openai', 'openai._base_client', 'httpx', 'httpcore', 'httpx2', 'httpcore2'); "
+        "[(setattr(logging.getLogger(name), 'disabled', False), "
+        "setattr(logging.getLogger(name), 'propagate', True), "
+        "logging.getLogger(name).setLevel(logging.DEBUG)) for name in names]; "
+        "from app.analysis import provider; "
+        "assert all(logging.getLogger(name).disabled for name in names); "
+        "assert all(not logging.getLogger(name).propagate for name in names); "
+        "late_child = logging.getLogger('httpcore2.late_child'); "
+        "assert late_child.parent is logging.getLogger('httpcore2')"
+    )
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, "Perlindungan log transport belum terpasang saat impor modul."
+
+
+# Pemotongan terdiagnosis sebelum error output, dengan satu retry pipeline dan tanpa retry tersembunyi SDK.
+@pytest.mark.parametrize("retry_succeeds", [False, True])
+def test_truncation_warning_survives_pipeline_retry(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, retry_succeeds: bool
+) -> None:
+    attempts = 0
+
+    # Respons kedua boleh pulih; bila tetap terpotong pipeline harus mengembalikan error sesuai SA.
+    def reply(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        recovered = retry_succeeds and attempts == 2
+        payload = completion_payload(MODEL_CONTENT if recovered else "private-truncated-json{")
+        payload["choices"][0]["finish_reason"] = "stop" if recovered else "length"
+        return httpx.Response(200, json=payload)
+
+    requests, _ = install_transport(monkeypatch, reply)
+    settings = settings_for_test()
+    with caplog.at_level(logging.WARNING, logger="app.analysis.provider"):
+        if retry_succeeds:
+            result = service.analyze_document("Surat sintetis.", settings, provider=provider.get_provider(settings))
+            assert result.category.value == "LOW"
+        else:
+            with pytest.raises(AppError) as error:
+                service.analyze_document("Surat sintetis.", settings, provider=provider.get_provider(settings))
+            assert error.value.code is ErrorCode.AI_OUTPUT_INVALID
+    assert len(requests) == 2
+    warnings = [record for record in caplog.records if getattr(record, "event", None) == "ai.output_truncated"]
+    assert len(warnings) == (1 if retry_succeeds else 2)
+    assert "private-truncated-json" not in caplog.text
 
 
 # Pemilihan provider nyata tidak mengimpor modul mock, dibuktikan dalam interpreter bersih.
