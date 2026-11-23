@@ -178,46 +178,87 @@ def test_contract_violations_unavailable(defect):
     assert (risk["state"], risk["reason"], risk["category"]) == ("UNAVAILABLE", "AI_SERVICE_UNAVAILABLE", None)
 
 
-# Pelanggaran skema dicatat sebagai reason=schema_violation dengan lokasi field saja (tanpa nilai) di log JSON.
+# Mengambil satu record ai.pipeline_failed dan memformatnya dengan JsonFormatter produksi.
+def pipeline_failed_log(caplog) -> dict:
+    [record] = [r for r in caplog.records if getattr(r, "event", None) == "ai.pipeline_failed"]
+    return json.loads(JsonFormatter(service="backend").format(record))
+
+
+# Pelanggaran skema (termasuk body bukan JSON dan OK tanpa teks) dicatat sebagai reason=schema_violation dengan
+# lokasi field saja; key tak dikenal ditulis `<unknown_field>`, nama key maupun nilainya tidak pernah disalin.
+# `fields=None` berarti pelanggaran tanpa lokasi field sehingga key `fields` tidak muncul di log.
 @pytest.mark.parametrize(
     ("defect", "path", "fields"),
     [
-        ("extraction_extra_field", EXTRACTION_PATH, ["unexpected"]),
+        ("extraction_extra_field", EXTRACTION_PATH, ["<unknown_field>"]),
+        ("analysis_nested_extra_field", ANALYSIS_PATH, ["meta.<unknown_field>"]),
         ("analysis_missing_field", ANALYSIS_PATH, ["explanation"]),
         ("unknown_indicator", ANALYSIS_PATH, ["indicatorDetails.0.code"]),
+        ("extraction_ok_text_null", EXTRACTION_PATH, ["text"]),
+        ("extraction_ok_text_empty", EXTRACTION_PATH, ["text"]),
+        ("extraction_not_json", EXTRACTION_PATH, None),
+        ("analysis_not_json", ANALYSIS_PATH, None),
     ],
 )
 def test_schema_violation_logs_field_locations(caplog, defect, path, fields):
     extraction = load_example("internal/i-01.extraction-ok.json")
     analysis = load_example("internal/api-08.response-high.json")
     if defect == "extraction_extra_field":
-        extraction["unexpected"] = "NILAI-RAHASIA-EKSTRAKSI"
+        extraction["KUNCI-RAHASIA-EKSTRAKSI"] = "NILAI-RAHASIA-EKSTRAKSI"
+    if defect == "analysis_nested_extra_field":
+        analysis["meta"]["KUNCI-RAHASIA-META"] = "NILAI-RAHASIA-META"
     if defect == "analysis_missing_field":
         del analysis["explanation"]
     if defect == "unknown_indicator":
         analysis["indicatorDetails"][0]["code"] = "NILAI-RAHASIA-KODE"
+    if defect == "extraction_ok_text_null":
+        extraction["text"] = None
+    if defect == "extraction_ok_text_empty":
+        extraction["text"] = ""
 
     # I-01 dan API-08 mengembalikan 200 dengan body yang melanggar skema sesuai skenario.
     def handler(request: httpx.Request) -> httpx.Response:
+        if defect.endswith("not_json") and request.url.path == path:
+            return httpx.Response(200, text="<html>NILAI-RAHASIA bukan JSON</html>")
         return httpx.Response(200, json=extraction if request.url.path == EXTRACTION_PATH else analysis)
 
     with caplog.at_level(logging.WARNING):
         risk = run_pipeline(httpx.MockTransport(handler))
-    assert (risk["state"], risk["reason"]) == ("UNAVAILABLE", "AI_SERVICE_UNAVAILABLE")
-    [record] = [r for r in caplog.records if getattr(r, "event", None) == "ai.pipeline_failed"]
-    logged = json.loads(JsonFormatter(service="backend").format(record))
+    assert (risk["state"], risk["reason"], risk["category"]) == ("UNAVAILABLE", "AI_SERVICE_UNAVAILABLE", None)
+    logged = pipeline_failed_log(caplog)
     assert logged["reason"] == "schema_violation"
-    assert logged["fields"] == fields
+    assert logged.get("fields") == fields
     assert (logged["path"], logged["status"], logged["errorCode"]) == (path, 200, "AI_SERVICE_UNAVAILABLE")
-    assert "NILAI-RAHASIA" not in json.dumps(logged) and "NILAI-RAHASIA" not in caplog.text
+    for marker in ("NILAI-RAHASIA", "KUNCI-RAHASIA"):
+        assert marker not in json.dumps(logged) and marker not in caplog.text
+
+
+# Body yang gagal di-decode (gzip rusak → httpx.DecodingError) dipetakan seperti kegagalan transport: UNAVAILABLE
+# tanpa schema_violation, dan pipeline tidak meneruskan exception.
+@pytest.mark.parametrize("path", [EXTRACTION_PATH, ANALYSIS_PATH])
+def test_decoding_error_unavailable(caplog, path):
+    extraction = load_example("internal/i-01.extraction-ok.json")
+
+    # Endpoint yang diuji mengirim header gzip dengan body bukan gzip; stream dibaca client, bukan di handler.
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == path:
+            headers = {"Content-Type": "application/json", "Content-Encoding": "gzip"}
+            return httpx.Response(200, headers=headers, stream=httpx.ByteStream(b"bukan-gzip"))
+        return httpx.Response(200, json=extraction)
+
+    with caplog.at_level(logging.WARNING):
+        risk = run_pipeline(httpx.MockTransport(handler))
+    assert (risk["state"], risk["reason"], risk["category"]) == ("UNAVAILABLE", "AI_SERVICE_UNAVAILABLE", None)
+    logged = pipeline_failed_log(caplog)
+    assert logged["path"] == path
+    assert "status" not in logged and "reason" not in logged and "fields" not in logged
 
 
 # Kegagalan non-skema (mis. kuota) tidak diberi reason schema_violation.
 def test_non_schema_failure_has_no_schema_reason(caplog):
     with caplog.at_level(logging.WARNING):
         run_pipeline(FakeAiService(extraction="ok", analysis="quota_exceeded").transport())
-    [record] = [r for r in caplog.records if getattr(r, "event", None) == "ai.pipeline_failed"]
-    logged = json.loads(JsonFormatter(service="backend").format(record))
+    logged = pipeline_failed_log(caplog)
     assert "reason" not in logged and "fields" not in logged
 
 

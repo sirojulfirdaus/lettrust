@@ -9,7 +9,7 @@ import logging
 from enum import StrEnum
 
 import httpx
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, ValidationInfo, field_validator
 
 from app.core.config import get_settings
 from app.core.schemas import ApiModel, ErrorCode, ErrorEnvelope
@@ -32,6 +32,8 @@ AI_ERROR_REASONS = {
     ErrorCode.AI_QUOTA_EXCEEDED: RiskReason.AI_QUOTA_EXCEEDED,
     ErrorCode.AI_OUTPUT_INVALID: RiskReason.AI_OUTPUT_INVALID,
 }
+# Pengganti nama key tak dikenal di log; nama key berasal dari respons ai-service sehingga tidak disalin.
+UNKNOWN_FIELD = "<unknown_field>"
 
 
 class ExtractionStatus(StrEnum):
@@ -59,6 +61,14 @@ class ExtractionResponse(ApiModel):
     truncated: bool
     language: str | None
     reason_detail: NoContentReason | None = None
+
+    # Status OK wajib membawa teks tidak kosong; selain itu respons melanggar kontrak I-01 (bentuk field tetap).
+    @field_validator("text")
+    @classmethod
+    def _ok_requires_text(cls, value: str | None, info: ValidationInfo) -> str | None:
+        if info.data.get("status") is ExtractionStatus.OK and not value:
+            raise ValueError("status OK wajib memiliki teks tidak kosong")
+        return value
 
 
 class RiskAnalysisRequest(ApiModel):
@@ -100,7 +110,7 @@ class AiServiceError(Exception):
     """Kegagalan pemanggilan ai-service yang sudah dipetakan ke reason SA §5.3.3 (tanpa isi dokumen)."""
 
     # Menyimpan reason, path, status HTTP (None untuk kegagalan transport), dan lokasi field yang melanggar
-    # skema backend (None bila bukan pelanggaran skema) untuk log.
+    # skema backend (None bila bukan pelanggaran skema; kosong bila tanpa lokasi, mis. body bukan JSON) untuk log.
     def __init__(
         self, reason: RiskReason, path: str, status: int | None = None, invalid_fields: list[str] | None = None
     ):
@@ -112,8 +122,17 @@ class AiServiceError(Exception):
 
 
 # Lokasi field yang gagal divalidasi (mis. `indicatorDetails.0.code`); nilai input tidak pernah diambil.
+# Key tak dikenal (`extra_forbidden`) ditulis sebagai UNKNOWN_FIELD; error tanpa lokasi (body bukan JSON
+# atau bukan objek) tidak menghasilkan entri.
 def _field_paths(exc: ValidationError, prefix: tuple[str | int, ...] = ()) -> list[str]:
-    return sorted({".".join(str(part) for part in (*prefix, *error["loc"])) for error in exc.errors()})
+    paths = set()
+    for error in exc.errors(include_input=False):
+        loc = error["loc"]
+        if error["type"] == "extra_forbidden":
+            loc = (*loc[:-1], UNKNOWN_FIELD)
+        if parts := (*prefix, *loc):
+            paths.add(".".join(str(part) for part in parts))
+    return sorted(paths)
 
 
 class AiServiceClient:
@@ -139,7 +158,8 @@ class AiServiceClient:
         response = await self._post(ANALYSIS_PATH, request_id, get_settings().ai_analysis_timeout_seconds, json=payload)
         return _parse(response, RiskAnalysisResponse, ANALYSIS_PATH)
 
-    # POST dengan X-Internal-Token, X-Request-ID, dan timeout per panggilan; kegagalan transport → AiServiceError.
+    # POST dengan X-Internal-Token, X-Request-ID, dan timeout per panggilan; kegagalan transport atau decoding
+    # body (mis. gzip rusak) → AiServiceError.
     async def _post(self, path: str, request_id: str, timeout: float, **kwargs) -> httpx.Response:
         headers = {
             "X-Internal-Token": get_settings().internal_api_token.get_secret_value(),
@@ -149,11 +169,12 @@ class AiServiceClient:
             return await self.http.post(path, headers=headers, timeout=timeout, **kwargs)
         except httpx.TimeoutException as exc:
             raise AiServiceError(RiskReason.AI_TIMEOUT, path) from exc
-        except httpx.TransportError as exc:
+        except httpx.RequestError as exc:
             raise AiServiceError(RiskReason.AI_SERVICE_UNAVAILABLE, path) from exc
 
 
-# Memvalidasi respons 200 ke model; selain 200 dipetakan dari kode envelope error (SA §5.3.3).
+# Memvalidasi respons 200 ke model (body bukan JSON juga pelanggaran skema); selain 200 dipetakan dari kode
+# envelope error (SA §5.3.3).
 def _parse[T: ApiModel](response: httpx.Response, model: type[T], path: str) -> T:
     if response.status_code == 200:
         try:
@@ -195,7 +216,8 @@ async def run_risk_pipeline(
         async with httpx.AsyncClient(base_url=get_settings().ai_service_url, transport=transport) as http:
             client = AiServiceClient(http)
             extraction = await client.extract(file_bytes, request_id)
-            if extraction.status is ExtractionStatus.NO_CONTENT or not extraction.text:
+            # OK tanpa teks sudah ditolak validator ExtractionResponse sebagai pelanggaran kontrak.
+            if extraction.status is ExtractionStatus.NO_CONTENT or extraction.text is None:
                 return _without_result(RiskState.NOT_PERFORMED, RiskReason.DOCUMENT_CONTENT_UNAVAILABLE)
             analysis = await client.analyze(extraction.text, request_id)
         # Kode indikator di luar taksonomi backend berarti respons ai-service melanggar kontrak.
@@ -216,7 +238,7 @@ async def run_risk_pipeline(
                 "status": exc.status,
                 "riskState": RiskState.UNAVAILABLE.value,
                 "reason": "schema_violation" if exc.invalid_fields is not None else None,
-                "fields": exc.invalid_fields,
+                "fields": exc.invalid_fields or None,
             },
         )
         return _without_result(RiskState.UNAVAILABLE, exc.reason)
