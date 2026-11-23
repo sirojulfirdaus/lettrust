@@ -181,6 +181,16 @@ function parseErrorEnvelope(payload: unknown): ErrorEnvelope | null {
   return null;
 }
 
+// Mengekstrak token Bearer dari header Authorization bila sudah disetel pemanggil.
+function extractBearerToken(headers: Headers): string | null {
+  const value = headers.get("Authorization");
+  if (!value) {
+    return null;
+  }
+  const match = /^Bearer\s+(.+)$/i.exec(value.trim());
+  return match ? match[1].trim() : null;
+}
+
 // Memanggil endpoint backend dengan token sesi dan mengembalikan body JSON bertipe.
 export async function apiFetch<T>(path: ApiPath, options: ApiFetchOptions = {}): Promise<T> {
   const {
@@ -199,10 +209,17 @@ export async function apiFetch<T>(path: ApiPath, options: ApiFetchOptions = {}):
     headers.set("X-Request-ID", generateRequestId());
   }
 
+  let sentToken: string | null = null;
   if (auth) {
-    const session = readSession();
-    if (session && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${session.accessToken}`);
+    const existingHeaderToken = extractBearerToken(headers);
+    if (existingHeaderToken !== null) {
+      sentToken = existingHeaderToken;
+    } else {
+      const session = readSession();
+      if (session) {
+        sentToken = session.accessToken;
+        headers.set("Authorization", `Bearer ${session.accessToken}`);
+      }
     }
   }
 
@@ -241,8 +258,14 @@ export async function apiFetch<T>(path: ApiPath, options: ApiFetchOptions = {}):
     const message = mapApiErrorMessage(code, response.status, envelope?.error.message);
 
     if (response.status === 401 && auth) {
-      clearSession();
-      (onUnauthorized ?? defaultRedirectToLogin)();
+      const activeToken = readSession()?.accessToken ?? null;
+      const isStaleForNewerSession = activeToken !== null && activeToken !== sentToken;
+      if (!isStaleForNewerSession) {
+        if (activeToken !== null) {
+          clearSession();
+        }
+        (onUnauthorized ?? defaultRedirectToLogin)();
+      }
     }
 
     throw new ApiError(response.status, code, requestId, message, details);
@@ -251,12 +274,21 @@ export async function apiFetch<T>(path: ApiPath, options: ApiFetchOptions = {}):
   return payload as T;
 }
 
-// Memanggil S-03 GET /api/v1/auth/me untuk memperoleh profil, role, dan membership sesi aktif.
+// Memanggil S-03 GET /api/v1/auth/me untuk memperoleh profil sesi aktif atau memverifikasi token baru sebelum disimpan.
 export async function fetchSessionProfile(
-  options?: Pick<ApiFetchOptions, "signal" | "onUnauthorized">,
+  options?: Pick<ApiFetchOptions, "signal" | "onUnauthorized"> & { accessToken?: string },
 ): Promise<MeResponse> {
+  const { accessToken, ...rest } = options ?? {};
+  if (accessToken) {
+    return apiFetch<MeResponse>("/api/v1/auth/me", {
+      method: "GET",
+      auth: false,
+      headers: { Authorization: `Bearer ${accessToken}` },
+      ...rest,
+    });
+  }
   return apiFetch<MeResponse>("/api/v1/auth/me", {
     method: "GET",
-    ...options,
+    ...rest,
   });
 }

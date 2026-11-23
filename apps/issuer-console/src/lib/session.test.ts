@@ -192,6 +192,72 @@ describe("API client dan penanganan error envelope", () => {
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
 
+  it("tidak menghapus sesi baru dan tidak redirect saat respons 401 lama untuk token A tiba setelah token B tersimpan", async () => {
+    const sessionA = createSession("jwt-token-A", 3600);
+    const sessionB = createSession("jwt-token-B", 3600);
+    saveSession(sessionA);
+
+    let resolveResponseA: ((response: Response) => void) | undefined;
+    const fetchMock = vi.fn().mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveResponseA = resolve;
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onUnauthorized = vi.fn();
+    const pendingRequestA = apiFetch("/api/v1/auth/me", { onUnauthorized });
+
+    // Pengguna login ulang dan menyimpan sesi B sebelum respons 401 untuk token A tiba.
+    saveSession(sessionB);
+    expect(resolveResponseA).toBeDefined();
+    resolveResponseA!(
+      new Response(JSON.stringify(errorUnauthenticated), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(pendingRequestA).rejects.toMatchObject({
+      status: 401,
+      code: "UNAUTHENTICATED",
+    });
+
+    expect(readSession()).toEqual(sessionB);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("tidak menghapus sesi baru saat request tanpa token mendapat 401 setelah pengguna login", async () => {
+    let resolveResponse: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveResponse = resolve;
+          }),
+      ),
+    );
+
+    const onUnauthorized = vi.fn();
+    const pending = apiFetch("/api/v1/auth/me", { onUnauthorized });
+
+    const sessionB = createSession("jwt-token-baru", 3600);
+    saveSession(sessionB);
+
+    resolveResponse!(
+      new Response(JSON.stringify(errorUnauthenticated), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+    expect(readSession()).toEqual(sessionB);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
   it("tidak memicu redirect sesi saat 401 INVALID_CREDENTIALS pada login (auth: false)", async () => {
     const onUnauthorized = vi.fn();
     vi.stubGlobal(
