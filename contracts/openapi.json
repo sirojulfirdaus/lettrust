@@ -723,6 +723,16 @@
               }
             }
           },
+          "422": {
+            "description": "Kode error: HR_NOT_AFFILIATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Kode error: INTERNAL_ERROR",
             "content": {

@@ -112,6 +112,22 @@ def test_stub_returns_501_envelope(
     assert response.headers["X-Request-ID"] == body["requestId"]
 
 
+# D-05: 422 validasi bawaan FastAPI tidak ada di OpenAPI; 422 bisnis HR_NOT_AFFILIATED tetap ada di API-03 saja.
+def test_openapi_keeps_only_business_422():
+    schema = app.openapi()
+    assert not {"HTTPValidationError", "ValidationError"} & set(schema["components"]["schemas"])
+    with_422 = {
+        (method.upper(), path): ops["responses"]["422"]
+        for path, methods in schema["paths"].items()
+        for method, ops in methods.items()
+        if "422" in ops["responses"]
+    }
+    assert set(with_422) == {("POST", "/api/v1/issuers/{issuerId}/hr-authorizations")}
+    response = with_422["POST", "/api/v1/issuers/{issuerId}/hr-authorizations"]
+    assert response["description"] == "Kode error: HR_NOT_AFFILIATED"
+    assert response["content"]["application/json"]["schema"]["$ref"].endswith("/ErrorEnvelope")
+
+
 # Validasi FastAPI dipetakan ke 400 VALIDATION_ERROR dengan rincian field camelCase.
 def test_validation_error_is_400(client):
     response = client.post("/api/v1/auth/register", json={"displayName": "R", "email": "bukan-email", "password": "x"})
