@@ -1,7 +1,7 @@
 // Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.02, §9.3.1, §9.8; SA §10.5 (S-02, S-03), §11.2.2
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, CheckCircle2, Info, Loader2 } from "lucide-react";
@@ -37,9 +37,13 @@ function LoginFormContent() {
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submittingRef.current) {
+      return;
+    }
     setFormError(null);
 
     const validation = validateLoginForm(email, password);
@@ -48,6 +52,7 @@ function LoginFormContent() {
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const { redirectTo } = await submitLoginFlow(email, password);
@@ -63,6 +68,7 @@ function LoginFormContent() {
         setFormError("Layanan sedang tidak tersedia. Coba lagi beberapa saat lagi.");
       }
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

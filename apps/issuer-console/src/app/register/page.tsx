@@ -1,7 +1,7 @@
 // Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.01, §9.8; SA §10.5 (S-01)
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Info, Loader2 } from "lucide-react";
@@ -35,9 +35,13 @@ export default function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [emailRegisteredConflict, setEmailRegisteredConflict] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submittingRef.current) {
+      return;
+    }
     setFormError(null);
     setEmailRegisteredConflict(false);
 
@@ -47,6 +51,7 @@ export default function RegisterPage() {
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       await submitRegisterFlow(displayName, email, password);
@@ -64,6 +69,7 @@ export default function RegisterPage() {
         setFormError("Layanan sedang tidak tersedia. Coba lagi beberapa saat lagi.");
       }
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
