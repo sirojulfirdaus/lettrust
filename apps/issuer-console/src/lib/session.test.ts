@@ -68,6 +68,7 @@ describe("manajemen sesi Console", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -143,6 +144,7 @@ describe("API client dan penanganan error envelope", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -285,6 +287,174 @@ describe("API client dan penanganan error envelope", () => {
     await expect(pending).rejects.toMatchObject({ status: 401 });
     expect(readSession()).toBeNull();
     expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("tetap membersihkan sesi dan redirect sekali saat token A kedaluwarsa di tengah request sebelum 401 tiba", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-23T05:00:00Z"));
+    saveSession(createSession("jwt-token-A", 60));
+
+    let resolveResponse: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveResponse = resolve;
+          }),
+      ),
+    );
+
+    const onUnauthorized = vi.fn();
+    const pending = apiFetch("/api/v1/auth/me", { onUnauthorized });
+
+    // Majukan jam melewati batas kedaluwarsa 60 detik saat request masih tertunda.
+    vi.advanceTimersByTime(120_000);
+    resolveResponse!(
+      new Response(JSON.stringify(errorUnauthenticated), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(pending).rejects.toMatchObject({
+      status: 401,
+      code: "UNAUTHENTICATED",
+    });
+    expect(storage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("tetap redirect sekali saat token A kedaluwarsa dan sudah dibersihkan readSession() sebelum 401 tiba", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-23T05:00:00Z"));
+    saveSession(createSession("jwt-token-A", 60));
+
+    let resolveResponse: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveResponse = resolve;
+          }),
+      ),
+    );
+
+    const onUnauthorized = vi.fn();
+    const pending = apiFetch("/api/v1/auth/me", { onUnauthorized });
+
+    // Majukan jam lalu simulasikan komponen lain (mis. ConsoleHeader) membaca sesi kedaluwarsa.
+    vi.advanceTimersByTime(120_000);
+    expect(readSession()).toBeNull();
+    expect(storage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+
+    resolveResponse!(
+      new Response(JSON.stringify(errorUnauthenticated), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("tidak memicu redirect saat token A kedaluwarsa lalu pengguna login ulang dengan token B sebelum 401 tiba", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-23T05:00:00Z"));
+    saveSession(createSession("jwt-token-A", 60));
+
+    let resolveResponse: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveResponse = resolve;
+          }),
+      ),
+    );
+
+    const onUnauthorized = vi.fn();
+    const pending = apiFetch("/api/v1/auth/me", { onUnauthorized });
+
+    vi.advanceTimersByTime(120_000);
+    const sessionB = createSession("jwt-token-B", 3600);
+    saveSession(sessionB);
+
+    resolveResponse!(
+      new Response(JSON.stringify(errorUnauthenticated), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+    expect(readSession()).toEqual(sessionB);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("tidak memicu redirect saat token A kedaluwarsa lalu pengguna logout eksplisit sebelum 401 tiba", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-23T05:00:00Z"));
+    saveSession(createSession("jwt-token-A", 60));
+
+    let resolveResponse: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveResponse = resolve;
+          }),
+      ),
+    );
+
+    const onUnauthorized = vi.fn();
+    const pending = apiFetch("/api/v1/auth/me", { onUnauthorized });
+
+    vi.advanceTimersByTime(120_000);
+    expect(readSession()).toBeNull();
+    clearSession();
+
+    resolveResponse!(
+      new Response(JSON.stringify(errorUnauthenticated), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("memancarkan SESSION_CHANGE_EVENT dan redirect saat request dimulai tepat setelah sesi kedaluwarsa", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-23T05:00:00Z"));
+    saveSession(createSession("jwt-token-A", 60));
+
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+    dispatchSpy.mockClear();
+
+    vi.advanceTimersByTime(120_000);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(errorUnauthenticated), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    const onUnauthorized = vi.fn();
+    await expect(apiFetch("/api/v1/auth/me", { onUnauthorized })).rejects.toMatchObject({
+      status: 401,
+    });
+
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("tidak memicu redirect sesi saat 401 INVALID_CREDENTIALS pada login (auth: false)", async () => {

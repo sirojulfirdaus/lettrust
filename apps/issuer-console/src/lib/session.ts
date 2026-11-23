@@ -12,6 +12,10 @@ export type Session = {
   expiresAt: string;
 };
 
+// Mencatat token terakhir yang terhapus karena kedaluwarsa per instance Storage
+// agar respons 401 tertunda untuk sesi tersebut tetap dibedakan dari logout manual.
+const expiredTokenByStorage = new WeakMap<Storage, string>();
+
 // Membentuk objek sesi dari token dan masa berlaku (detik) respons S-02.
 export function createSession(
   accessToken: string,
@@ -51,13 +55,8 @@ function notifySessionChange(): void {
   window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
 }
 
-// Membaca sesi aktif; mengembalikan null dan membersihkan storage bila tidak ada, rusak, atau kedaluwarsa.
-export function readSession(nowMs: number = Date.now()): Session | null {
-  const storage = getStorage();
-  if (!storage) {
-    return null;
-  }
-
+// Membaca objek sesi mentah dari storage tanpa menghapusnya bila kedaluwarsa.
+function readStoredSessionRaw(storage: Storage): Session | null {
   const raw = storage.getItem(SESSION_STORAGE_KEY);
   if (!raw) {
     return null;
@@ -80,7 +79,7 @@ export function readSession(nowMs: number = Date.now()): Session | null {
       expiresAt: (parsed as Record<string, string>).expiresAt,
     };
 
-    if (!session.accessToken.trim() || isSessionExpired(session, nowMs)) {
+    if (!session.accessToken.trim()) {
       storage.removeItem(SESSION_STORAGE_KEY);
       return null;
     }
@@ -92,22 +91,78 @@ export function readSession(nowMs: number = Date.now()): Session | null {
   }
 }
 
+// Membaca sesi aktif; mengembalikan null dan membersihkan storage bila tidak ada, rusak, atau kedaluwarsa.
+export function readSession(nowMs: number = Date.now()): Session | null {
+  const storage = getStorage();
+  if (!storage) {
+    return null;
+  }
+
+  const session = readStoredSessionRaw(storage);
+  if (!session) {
+    return null;
+  }
+
+  if (isSessionExpired(session, nowMs)) {
+    expiredTokenByStorage.set(storage, session.accessToken);
+    storage.removeItem(SESSION_STORAGE_KEY);
+    return null;
+  }
+
+  return session;
+}
+
 // Menyimpan sesi hasil login ke sessionStorage.
 export function saveSession(session: Session): void {
   const storage = getStorage();
   if (!storage) {
     return;
   }
+  expiredTokenByStorage.delete(storage);
   storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
   notifySessionChange();
 }
 
-// Menghapus sesi (logout atau respons 401).
+// Menghapus sesi secara eksplisit (logout atau pembersihan setelah 401).
 export function clearSession(): void {
   const storage = getStorage();
   if (!storage) {
     return;
   }
+  expiredTokenByStorage.delete(storage);
   storage.removeItem(SESSION_STORAGE_KEY);
   notifySessionChange();
+}
+
+// Memutuskan apakah respons 401 untuk sentToken masih relevan dengan sesi aktif atau sesi yang baru kedaluwarsa,
+// sekaligus membersihkan sesi bila relevan; mengembalikan false jika sesi sudah diganti atau di-logout manual.
+export function consumeUnauthorizedSession(sentToken: string | null): boolean {
+  const storage = getStorage();
+  if (!storage) {
+    return sentToken === null;
+  }
+
+  const stored = readStoredSessionRaw(storage);
+  if (stored !== null) {
+    if (stored.accessToken !== sentToken) {
+      return false;
+    }
+    clearSession();
+    return true;
+  }
+
+  if (sentToken === null) {
+    if (expiredTokenByStorage.delete(storage)) {
+      notifySessionChange();
+    }
+    return true;
+  }
+
+  if (expiredTokenByStorage.get(storage) === sentToken) {
+    expiredTokenByStorage.delete(storage);
+    notifySessionChange();
+    return true;
+  }
+
+  return false;
 }
