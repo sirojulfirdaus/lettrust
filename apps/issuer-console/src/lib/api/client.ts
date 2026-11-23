@@ -259,8 +259,7 @@ export async function apiFetch<T>(path: ApiPath, options: ApiFetchOptions = {}):
 
     if (response.status === 401 && auth) {
       const activeToken = readSession()?.accessToken ?? null;
-      const isStaleForNewerSession = activeToken !== null && activeToken !== sentToken;
-      if (!isStaleForNewerSession) {
+      if (activeToken === sentToken) {
         if (activeToken !== null) {
           clearSession();
         }

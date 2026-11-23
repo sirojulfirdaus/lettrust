@@ -258,6 +258,35 @@ describe("API client dan penanganan error envelope", () => {
     expect(onUnauthorized).not.toHaveBeenCalled();
   });
 
+  it("tidak memicu redirect saat respons 401 lama tiba setelah pengguna sudah keluar (logout)", async () => {
+    saveSession(createSession("jwt-sebelum-logout", 3600));
+    let resolveResponse: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveResponse = resolve;
+          }),
+      ),
+    );
+
+    const onUnauthorized = vi.fn();
+    const pending = apiFetch("/api/v1/auth/me", { onUnauthorized });
+
+    clearSession();
+    resolveResponse!(
+      new Response(JSON.stringify(errorUnauthenticated), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+    expect(readSession()).toBeNull();
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
   it("tidak memicu redirect sesi saat 401 INVALID_CREDENTIALS pada login (auth: false)", async () => {
     const onUnauthorized = vi.fn();
     vi.stubGlobal(

@@ -106,8 +106,11 @@ export function ConsoleHeader() {
             <>
               {navRoutes.map((route) => {
                 const isActive =
-                  pathname === route.path ||
-                  (route.path !== "/hr" && pathname.startsWith(`${route.path}/`));
+                  route.path === "/hr/proofs"
+                    ? pathname === "/hr/proofs" ||
+                      (pathname.startsWith("/hr/proofs/") && pathname !== "/hr/proofs/new")
+                    : pathname === route.path ||
+                      (route.path !== "/hr" && pathname.startsWith(`${route.path}/`));
                 return (
                   <Link
                     key={route.path}
