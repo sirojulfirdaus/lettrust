@@ -4,6 +4,7 @@
 import asyncio
 import json
 
+from fakes.proofs import FakeProofReader, found_active, install_fake_proof_reader
 from starlette.formparsers import MultiPartParser
 
 from app.core.body_limit import MULTIPART_OVERHEAD_BYTES, BodySizeLimitMiddleware, request_body_limit
@@ -33,8 +34,10 @@ def test_declared_content_length_over_limit(client):
     assert response.headers["X-Request-ID"] == body["requestId"]
 
 
-# Body di bawah batas (berkas 2 MB, di atas ambang spool default 1 MB) tetap sampai ke route stub (501).
-def test_body_under_limit_reaches_route(client, partner_headers):
+# Body di bawah batas (berkas 2 MB, di atas ambang spool default 1 MB) tetap sampai ke route dan diproses (200);
+# pembacaan bukti memakai FakeProofReader sehingga tidak ada registry yang dipanggil.
+def test_body_under_limit_reaches_route(client, partner_headers, monkeypatch):
+    install_fake_proof_reader(monkeypatch, FakeProofReader({"LTR-7K3M-9QX2-H4TD": found_active()}))
     pdf = b"%PDF-1.4\n" + b"0" * (2 * 1024 * 1024)
     response = client.post(
         "/api/v1/verifications",
@@ -42,8 +45,8 @@ def test_body_under_limit_reaches_route(client, partner_headers):
         data={"referenceCode": "LTR-7K3M-9QX2-H4TD", "includeRisk": "false"},
         files={"file": ("offer.pdf", pdf, "application/pdf")},
     )
-    assert response.status_code == 501
-    assert response.json()["error"]["code"] == "NOT_IMPLEMENTED"
+    assert response.status_code == 200, response.text
+    assert response.json()["integrityCheck"]["result"] == "MISMATCH"
 
 
 # Body stream tanpa Content-Length dihitung saat diterima; melewati batas → 413 dan respons app dibuang.

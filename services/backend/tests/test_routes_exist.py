@@ -46,7 +46,6 @@ STUB_REQUESTS = {
     "S-06": {},
     "API-05": {},
     "API-06": {"json": {"reasonCode": "OFFER_WITHDRAWN"}},
-    "API-07": {"data": {"referenceCode": "LTR-7K3M-9QX2-H4TD", "includeRisk": "false"}, "files": {"file": PDF}},
 }
 
 
@@ -99,14 +98,11 @@ def test_stub_returns_501_envelope(
     client: TestClient,
     endpoint_id: str,
     stub_console_tokens: dict[Role, str],
-    partner_headers: dict[str, str],
 ) -> None:
     _, method, path = next(e for e in ENDPOINTS if e[0] == endpoint_id)
-    # API-07 memakai token partner. Rute Console memakai JWT sesuai role yang disyaratkan.
-    headers = partner_headers
-    if endpoint_id != "API-07":
-        role = Role.ADMIN if endpoint_id in STUB_ADMIN_ENDPOINTS else Role.HR
-        headers = {"Authorization": f"Bearer {stub_console_tokens[role]}"}
+    # Rute Console memakai JWT sesuai role; API-07 sudah diimplementasikan dan diuji di test_verifications.
+    role = Role.ADMIN if endpoint_id in STUB_ADMIN_ENDPOINTS else Role.HR
+    headers = {"Authorization": f"Bearer {stub_console_tokens[role]}"}
     response = client.request(method, concrete(path), headers=headers, **STUB_REQUESTS[endpoint_id])
     assert response.status_code == 501, response.text
     body = response.json()
