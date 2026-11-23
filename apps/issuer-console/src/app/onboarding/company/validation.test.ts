@@ -40,6 +40,37 @@ describe("validasi formulir registrasi perusahaan", () => {
     ).toBeDefined();
   });
 
+  it("menghitung panjang companyName berdasarkan Unicode codepoint untuk karakter non-BMP", () => {
+    const exact120WithEmoji = `${"A".repeat(119)}🏢`;
+    expect(exact120WithEmoji.length).toBe(121);
+    expect([...exact120WithEmoji].length).toBe(120);
+    expect(
+      validateCompanyForm({
+        ...api01RegisterIssuerRequest,
+        companyName: exact120WithEmoji,
+      }).companyName,
+    ).toBeUndefined();
+
+    const over120WithEmoji = `${"A".repeat(120)}🏢`;
+    expect([...over120WithEmoji].length).toBe(121);
+    expect(
+      validateCompanyForm({
+        ...api01RegisterIssuerRequest,
+        companyName: over120WithEmoji,
+      }).companyName,
+    ).toBeDefined();
+
+    const twoCodepointsWithEmoji = "A🏢";
+    expect(twoCodepointsWithEmoji.length).toBe(3);
+    expect([...twoCodepointsWithEmoji].length).toBe(2);
+    expect(
+      validateCompanyForm({
+        ...api01RegisterIssuerRequest,
+        companyName: twoCodepointsWithEmoji,
+      }).companyName,
+    ).toBeDefined();
+  });
+
   it("menolak registrationNumber dengan panjang tidak valid atau karakter terlarang", () => {
     expect(
       validateCompanyForm({

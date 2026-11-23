@@ -11,29 +11,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  ApiError,
-  apiFetch,
-  fetchSessionProfile,
-  type RegisterIssuerResponse,
-} from "@/lib/api/client";
-import { readSession } from "@/lib/session";
-import {
-  mapValidationDetailsToFieldErrors,
-  normalizeCompanyPayload,
-  validateCompanyForm,
-  type CompanyFieldErrors,
-  type CompanyFormValues,
-} from "./validation";
+  loadOnboardingGuard,
+  submitCompanyRegistration,
+  type SubmitErrorState,
+} from "./onboarding-flow";
+import type { CompanyFieldErrors, CompanyFormValues } from "./validation";
 
 type PageLoadState =
   | { status: "loading" }
   | { status: "ready"; displayName: string }
   | { status: "error"; message: string };
-
-type SubmitErrorState = {
-  message: string;
-  showHrLink: boolean;
-};
 
 // Halaman registrasi perusahaan bagi akun HR yang belum terhubung dengan penerbit.
 export default function CompanyOnboardingPage() {
@@ -51,47 +38,24 @@ export default function CompanyOnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      router.replace("/login");
-      return;
-    }
-
     const controller = new AbortController();
-    fetchSessionProfile({
+    loadOnboardingGuard({
       signal: controller.signal,
       onUnauthorized: () => router.replace("/login?reason=session_expired"),
-    })
-      .then((profile) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (profile.role === "ADMIN") {
-          router.replace("/admin/issuers");
-          return;
-        }
-        if (profile.membership !== null) {
-          router.replace("/hr");
-          return;
-        }
-        setLoadState({ status: "ready", displayName: profile.displayName });
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (error instanceof ApiError && error.status === 401) {
-          return;
-        }
-        const detail =
-          error instanceof ApiError
-            ? error.message
-            : "Tidak dapat menghubungi layanan backend. Pastikan layanan aktif lalu coba lagi.";
-        setLoadState({
-          status: "error",
-          message: `Data profil sesi belum dapat dimuat. ${detail}`,
-        });
-      });
+    }).then((result) => {
+      if (result.kind === "aborted" || result.kind === "unauthorized") {
+        return;
+      }
+      if (result.kind === "redirect") {
+        router.replace(result.to);
+        return;
+      }
+      if (result.kind === "error") {
+        setLoadState({ status: "error", message: result.message });
+        return;
+      }
+      setLoadState({ status: "ready", displayName: result.displayName });
+    });
 
     return () => controller.abort();
   }, [attempt, router]);
@@ -125,75 +89,26 @@ export default function CompanyOnboardingPage() {
     }
 
     setSubmitError(null);
-    const clientErrors = validateCompanyForm(values);
-    if (Object.keys(clientErrors).length > 0) {
-      setFieldErrors(clientErrors);
-      return;
-    }
-
-    setFieldErrors({});
     setIsSubmitting(true);
 
     try {
-      const payload = normalizeCompanyPayload(values);
-      await apiFetch<RegisterIssuerResponse>("/api/v1/issuers", {
-        method: "POST",
-        body: payload,
+      const result = await submitCompanyRegistration(values, {
         onUnauthorized: () => router.replace("/login?reason=session_expired"),
       });
-      router.replace("/hr");
-    } catch (error: unknown) {
-      if (error instanceof ApiError) {
-        if (error.status === 401) {
-          return;
-        }
-        if (error.code === "ACCOUNT_ALREADY_AFFILIATED") {
-          setSubmitError({
-            message: "Akun Anda sudah terhubung dengan perusahaan.",
-            showHrLink: true,
-          });
-          return;
-        }
-        if (error.code === "REGISTRATION_NUMBER_ALREADY_EXISTS") {
-          setFieldErrors({
-            registrationNumber: "Nomor registrasi perusahaan sudah terdaftar.",
-          });
-          setSubmitError({
-            message: "Nomor registrasi perusahaan sudah terdaftar.",
-            showHrLink: false,
-          });
-          return;
-        }
-        if (error.code === "VALIDATION_ERROR") {
-          const mapped = mapValidationDetailsToFieldErrors(error.details);
-          setFieldErrors(mapped);
-          setSubmitError({
-            message:
-              Object.keys(mapped).length > 0
-                ? "Periksa kembali data perusahaan yang ditandai di bawah."
-                : "Periksa kembali data yang Anda masukkan.",
-            showHrLink: false,
-          });
-          return;
-        }
-        if (error.status === 403 || error.code === "FORBIDDEN_OPERATION") {
-          setSubmitError({
-            message: "Anda tidak memiliki izin untuk tindakan ini.",
-            showHrLink: false,
-          });
-          return;
-        }
-        setSubmitError({
-          message: error.message,
-          showHrLink: false,
-        });
+      if (result.kind === "validation_error") {
+        setFieldErrors(result.fieldErrors);
         return;
       }
-
-      setSubmitError({
-        message: "Gagal mengirim pendaftaran perusahaan. Periksa koneksi Anda lalu coba lagi.",
-        showHrLink: false,
-      });
+      if (result.kind === "unauthorized") {
+        return;
+      }
+      if (result.kind === "error") {
+        setFieldErrors(result.fieldErrors ?? {});
+        setSubmitError(result.submitError);
+        return;
+      }
+      setFieldErrors({});
+      router.replace(result.redirectTo);
     } finally {
       setIsSubmitting(false);
     }
@@ -295,7 +210,6 @@ export default function CompanyOnboardingPage() {
                 autoComplete="organization"
                 required
                 minLength={3}
-                maxLength={120}
                 disabled={isSubmitting}
                 value={values.companyName}
                 onChange={(event) => handleChange("companyName", event.target.value)}

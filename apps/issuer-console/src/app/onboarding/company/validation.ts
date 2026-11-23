@@ -26,22 +26,29 @@ export function normalizeCompanyPayload(values: CompanyFormValues): RegisterIssu
   };
 }
 
+// Menghitung panjang string berdasarkan jumlah Unicode codepoint agar selaras dengan len() Python/Pydantic.
+function unicodeLength(value: string): number {
+  return [...value].length;
+}
+
 // Memvalidasi seluruh field formulir registrasi perusahaan di sisi klien.
 export function validateCompanyForm(values: CompanyFormValues): CompanyFieldErrors {
   const errors: CompanyFieldErrors = {};
   const companyName = values.companyName.trim();
   const registrationNumber = values.registrationNumber.trim();
   const contactEmail = values.contactEmail.trim();
+  const companyNameLength = unicodeLength(companyName);
+  const registrationNumberLength = unicodeLength(registrationNumber);
 
-  if (companyName.length === 0) {
+  if (companyNameLength === 0) {
     errors.companyName = "Nama perusahaan wajib diisi.";
-  } else if (companyName.length < 3 || companyName.length > 120) {
+  } else if (companyNameLength < 3 || companyNameLength > 120) {
     errors.companyName = "Nama perusahaan harus terdiri dari 3 hingga 120 karakter.";
   }
 
-  if (registrationNumber.length === 0) {
+  if (registrationNumberLength === 0) {
     errors.registrationNumber = "Nomor registrasi perusahaan wajib diisi.";
-  } else if (registrationNumber.length < 3 || registrationNumber.length > 40) {
+  } else if (registrationNumberLength < 3 || registrationNumberLength > 40) {
     errors.registrationNumber = "Nomor registrasi harus terdiri dari 3 hingga 40 karakter.";
   } else if (!REGISTRATION_NUMBER_PATTERN.test(registrationNumber)) {
     errors.registrationNumber =

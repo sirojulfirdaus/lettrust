@@ -19,25 +19,25 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ApiError,
-  apiFetch,
-  fetchSessionProfile,
-  type MeResponse,
-  type ProofListResponse,
-} from "@/lib/api/client";
-import { canIssueProofs } from "@/lib/routes";
-import { readSession } from "@/lib/session";
+import type { MeResponse, ProofListResponse } from "@/lib/api/client";
+import { loadHrProfile, loadHrProofSummary } from "./hr-flow";
 import {
   formatProofTimestamp,
-  getHrStatusPresentation,
   getProofLifecyclePresentation,
+  type HrStatusPresentation,
+  type IssuerMembership,
   type StatusTone,
 } from "./hr-status";
 
 type ProfileState =
   | { status: "loading" }
-  | { status: "ready"; profile: MeResponse }
+  | {
+      status: "ready";
+      profile: MeResponse;
+      membership: IssuerMembership;
+      hrStatus: HrStatusPresentation;
+      shouldLoadProofs: boolean;
+    }
   | { status: "error"; message: string };
 
 type ProofSummaryState =
@@ -88,50 +88,36 @@ export default function HrHomePage() {
   const [proofState, setProofState] = useState<ProofSummaryState>({ status: "loading" });
 
   useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      router.replace("/login");
-      return;
-    }
-
     const controller = new AbortController();
-    fetchSessionProfile({
+    loadHrProfile({
       signal: controller.signal,
       onUnauthorized: () => router.replace("/login?reason=session_expired"),
-    })
-      .then((profile) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (profile.role === "ADMIN") {
-          router.replace("/admin/issuers");
-          return;
-        }
-        if (profile.membership === null) {
-          router.replace("/onboarding/company");
-          return;
-        }
-        setProfileState({ status: "ready", profile });
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (error instanceof ApiError && error.status === 401) {
-          return;
-        }
-        const message =
-          error instanceof ApiError
-            ? error.message
-            : "Tidak dapat menghubungi layanan backend. Pastikan layanan aktif lalu coba lagi.";
-        setProfileState({ status: "error", message });
+    }).then((result) => {
+      if (result.kind === "aborted" || result.kind === "unauthorized") {
+        return;
+      }
+      if (result.kind === "redirect") {
+        router.replace(result.to);
+        return;
+      }
+      if (result.kind === "error") {
+        setProfileState({ status: "error", message: result.message });
+        return;
+      }
+      setProfileState({
+        status: "ready",
+        profile: result.profile,
+        membership: result.membership,
+        hrStatus: result.status,
+        shouldLoadProofs: result.shouldLoadProofs,
       });
+    });
 
     return () => controller.abort();
   }, [profileAttempt, router]);
 
   const isAuthorizedIssuer =
-    profileState.status === "ready" && canIssueProofs(profileState.profile);
+    profileState.status === "ready" && profileState.shouldLoadProofs;
 
   useEffect(() => {
     if (!isAuthorizedIssuer) {
@@ -139,30 +125,19 @@ export default function HrHomePage() {
     }
 
     const controller = new AbortController();
-    apiFetch<ProofListResponse>("/api/v1/proofs", {
-      method: "GET",
-      query: { limit: 5, offset: 0 },
+    loadHrProofSummary({
       signal: controller.signal,
       onUnauthorized: () => router.replace("/login?reason=session_expired"),
-    })
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setProofState({ status: "ready", data });
-        }
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (error instanceof ApiError && error.status === 401) {
-          return;
-        }
-        const message =
-          error instanceof ApiError
-            ? error.message
-            : "Ringkasan bukti belum dapat dimuat. Coba lagi beberapa saat lagi.";
-        setProofState({ status: "error", message });
-      });
+    }).then((result) => {
+      if (result.kind === "aborted" || result.kind === "unauthorized") {
+        return;
+      }
+      if (result.kind === "error") {
+        setProofState({ status: "error", message: result.message });
+        return;
+      }
+      setProofState({ status: "ready", data: result.data });
+    });
 
     return () => controller.abort();
   }, [isAuthorizedIssuer, proofAttempt, router]);
@@ -212,13 +187,7 @@ export default function HrHomePage() {
     );
   }
 
-  const { profile } = profileState;
-  const membership = profile.membership;
-  if (!membership) {
-    return null;
-  }
-
-  const status = getHrStatusPresentation(membership);
+  const { profile, membership, hrStatus: status } = profileState;
 
   return (
     <div className="space-y-6">
