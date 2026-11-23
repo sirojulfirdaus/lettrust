@@ -1,7 +1,7 @@
 // Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.04, §9.3.1, §9.5, §9.9.3; SA §10.5 (S-03), §10.6 (S-06)
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MeResponse, ProofListResponse } from "@/lib/api/client";
-import { loadHrProfile, loadHrProofSummary } from "./hr-flow";
+import { loadHrHomeData, loadHrProofSummary } from "./hr-flow";
 import {
   formatProofTimestamp,
   getProofLifecyclePresentation,
@@ -36,11 +36,11 @@ type ProfileState =
       profile: MeResponse;
       membership: IssuerMembership;
       hrStatus: HrStatusPresentation;
-      shouldLoadProofs: boolean;
     }
   | { status: "error"; message: string };
 
 type ProofSummaryState =
+  | { status: "idle" }
   | { status: "loading" }
   | { status: "ready"; data: ProofListResponse }
   | { status: "error"; message: string };
@@ -81,15 +81,14 @@ function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
 // Halaman Beranda HR yang memuat status penerbit, otorisasi, dan ringkasan bukti dari backend.
 export default function HrHomePage() {
   const router = useRouter();
-  const [profileAttempt, setProfileAttempt] = useState(0);
+  const [homeAttempt, setHomeAttempt] = useState(0);
   const [profileState, setProfileState] = useState<ProfileState>({ status: "loading" });
-
-  const [proofAttempt, setProofAttempt] = useState(0);
-  const [proofState, setProofState] = useState<ProofSummaryState>({ status: "loading" });
+  const [proofState, setProofState] = useState<ProofSummaryState>({ status: "idle" });
+  const proofRetryControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    loadHrProfile({
+    loadHrHomeData({
       signal: controller.signal,
       onUnauthorized: () => router.replace("/login?reason=session_expired"),
     }).then((result) => {
@@ -100,7 +99,7 @@ export default function HrHomePage() {
         router.replace(result.to);
         return;
       }
-      if (result.kind === "error") {
+      if (result.kind === "profile_error") {
         setProfileState({ status: "error", message: result.message });
         return;
       }
@@ -109,23 +108,38 @@ export default function HrHomePage() {
         profile: result.profile,
         membership: result.membership,
         hrStatus: result.status,
-        shouldLoadProofs: result.shouldLoadProofs,
       });
+      if (result.proofsError !== null) {
+        setProofState({ status: "error", message: result.proofsError });
+      } else if (result.proofs !== null) {
+        setProofState({ status: "ready", data: result.proofs });
+      } else {
+        setProofState({ status: "idle" });
+      }
     });
 
-    return () => controller.abort();
-  }, [profileAttempt, router]);
+    return () => {
+      controller.abort();
+      proofRetryControllerRef.current?.abort();
+    };
+  }, [homeAttempt, router]);
 
-  const isAuthorizedIssuer =
-    profileState.status === "ready" && profileState.shouldLoadProofs;
+  // Memuat ulang data Beranda HR dari S-03 (dan S-06 bila berwenang).
+  const handleRetryProfile = () => {
+    proofRetryControllerRef.current?.abort();
+    setProfileState({ status: "loading" });
+    setProofState({ status: "idle" });
+    setHomeAttempt((n) => n + 1);
+  };
 
-  useEffect(() => {
-    if (!isAuthorizedIssuer) {
-      return;
-    }
-
+  // Memuat ulang ringkasan bukti penerbitan dari S-06 GET /api/v1/proofs tanpa memuat ulang kartu status.
+  const handleRetryProofs = () => {
+    proofRetryControllerRef.current?.abort();
     const controller = new AbortController();
-    loadHrProofSummary({
+    proofRetryControllerRef.current = controller;
+    setProofState({ status: "loading" });
+
+    void loadHrProofSummary({
       signal: controller.signal,
       onUnauthorized: () => router.replace("/login?reason=session_expired"),
     }).then((result) => {
@@ -138,20 +152,6 @@ export default function HrHomePage() {
       }
       setProofState({ status: "ready", data: result.data });
     });
-
-    return () => controller.abort();
-  }, [isAuthorizedIssuer, proofAttempt, router]);
-
-  // Memuat ulang data profil sesi dari S-03 GET /api/v1/auth/me.
-  const handleRetryProfile = () => {
-    setProfileState({ status: "loading" });
-    setProfileAttempt((n) => n + 1);
-  };
-
-  // Memuat ulang ringkasan bukti penerbitan dari S-06 GET /api/v1/proofs.
-  const handleRetryProofs = () => {
-    setProofState({ status: "loading" });
-    setProofAttempt((n) => n + 1);
   };
 
   if (profileState.status === "loading") {
@@ -310,7 +310,7 @@ export default function HrHomePage() {
           </CardHeader>
 
           <CardContent>
-            {proofState.status === "loading" ? (
+            {proofState.status === "loading" || proofState.status === "idle" ? (
               <div
                 role="status"
                 aria-live="polite"
