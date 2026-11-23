@@ -63,8 +63,8 @@ def resolve_reference_code(raw_code: str | None, has_file: bool, include_risk: b
 # Mengorkestrasi pemeriksaan bukti, integritas, dan analisis AI secara terpisah (SA §5.2 langkah 7–10).
 # Bukti dan AI berjalan paralel; AI_ONLY tidak memanggil pembacaan bukti/registry. `file.sha256` dihitung
 # core.files dari byte yang sama yang dikirim ke ekstraksi, dan dipakai integrity_from(mode, proof_check,
-# registry_document_hash, file_sha256) tanpa hash ulang. Hanya NotImplementedError (stub T3-05) dan pembatalan
-# request yang diteruskan (tugas AI dibatalkan, handler global → 500); kegagalan lain menjadi status komponen.
+# registry_document_hash, file_sha256) tanpa hash ulang. Hanya pembatalan request yang diteruskan (tugas AI
+# dibatalkan); kegagalan lain, termasuk stub T3-05 (NotImplementedError), menjadi status komponen.
 # `partner` disimpan untuk log verifikasi T1-06; belum ada penulisan DB di sini.
 async def verify_offer(
     partner: Partner,
@@ -91,8 +91,9 @@ async def verify_offer(
     )
 
 
-# Komponen proofCheck dan documentHash registry (SA §5.3.1). Kontrak T3-05: pembaca tidak raise. Pengaman kedua:
-# exception lain selain stub NotImplementedError menjadi UNAVAILABLE / REGISTRY_UNAVAILABLE (bukan NOT_FOUND).
+# Komponen proofCheck dan documentHash registry (SA §5.3.1). Kontrak T3-05: pembaca tidak raise. Pengaman kedua
+# (DLT-14): exception apa pun, termasuk stub NotImplementedError, menjadi UNAVAILABLE / REGISTRY_UNAVAILABLE (bukan
+# NOT_FOUND); stub dicatat dengan reason=not_implemented agar tetap terlihat di log.
 async def _proof_check(reference_code: str | None) -> tuple[ProofCheck, str | None]:
     if not reference_code:
         return PROOF_NOT_REQUESTED, None
@@ -100,12 +101,11 @@ async def _proof_check(reference_code: str | None) -> tuple[ProofCheck, str | No
         # Bergantung pada T3-05; diuji dengan FakeProofReader.
         read = await proofs_service.read_proof_for_verification(reference_code)
         return read.proof_check, read.registry_document_hash
-    except NotImplementedError:
-        raise
     except Exception as exc:
         _log_unexpected(
             "proof.read_failed",
             exc,
+            reason="not_implemented" if isinstance(exc, NotImplementedError) else "unexpected_error",
             errorCode=ProofReason.REGISTRY_UNAVAILABLE.value,
             lookup=ProofLookup.UNAVAILABLE.value,
         )
@@ -151,12 +151,10 @@ async def _risk_analysis(file: ValidatedFile | None, include_risk: bool, request
         return _without_result(RiskState.UNAVAILABLE, RiskReason.AI_SERVICE_UNAVAILABLE)
 
 
-# Log kegagalan tak terduga: reason=unexpected_error dan nama tipe exception saja (exc_info tanpa nilai/traceback,
-# sehingga pesan exception yang bisa memuat data tidak pernah tercatat).
-def _log_unexpected(event: str, exc: Exception, **fields: str) -> None:
-    logger.error(
-        event, exc_info=(type(exc), None, None), extra={"event": event, "reason": "unexpected_error", **fields}
-    )
+# Log kegagalan tak terduga: reason (default unexpected_error) dan nama tipe exception saja (exc_info tanpa
+# nilai/traceback, sehingga pesan exception yang bisa memuat data tidak pernah tercatat).
+def _log_unexpected(event: str, exc: Exception, reason: str = "unexpected_error", **fields: str) -> None:
+    logger.error(event, exc_info=(type(exc), None, None), extra={"event": event, "reason": reason, **fields})
 
 
 # riskAnalysis tanpa hasil: category dan metadata null, sama dengan contoh API-07.

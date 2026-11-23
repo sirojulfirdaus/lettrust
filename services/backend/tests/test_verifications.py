@@ -21,7 +21,6 @@ from fakes.proofs import (
     install_fake_proof_reader,
     registry_unavailable,
 )
-from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
 from app.core.logging import JsonFormatter
@@ -36,16 +35,21 @@ REQUEST_ID = "req_T105VERIFYTEST01"
 VERIFICATION_ID = re.compile(r"^VER-[0-9A-HJKMNP-TV-Z]{10}$")
 
 
+# Memasang FakeAiService pada pipeline ai_client yang dipanggil orkestrator.
+def install_fake_ai(monkeypatch, extraction="ok", analysis="high") -> FakeAiService:
+    fake = FakeAiService(extraction=extraction, analysis=analysis)
+    pipeline = functools.partial(ai_client.run_risk_pipeline, transport=fake.transport())
+    monkeypatch.setattr(ai_client, "run_risk_pipeline", pipeline)
+    return fake
+
+
 # Memasang FakeProofReader dan FakeAiService pada atribut modul yang dipanggil orkestrator; dipanggil sekali per test.
 @pytest.fixture
 def install(monkeypatch):
     # proof=None → reader tanpa entri (setiap kode NOT_FOUND); mode AI sesuai FakeAiService.
     def _install(proof=None, extraction="ok", analysis="high"):
         reader = install_fake_proof_reader(monkeypatch, FakeProofReader({CODE: proof} if proof else {}))
-        fake = FakeAiService(extraction=extraction, analysis=analysis)
-        pipeline = functools.partial(ai_client.run_risk_pipeline, transport=fake.transport())
-        monkeypatch.setattr(ai_client, "run_risk_pipeline", pipeline)
-        return reader, fake
+        return reader, install_fake_ai(monkeypatch, extraction, analysis)
 
     return _install
 
@@ -357,16 +361,35 @@ def test_found_without_hash_not_checked(client, partner_headers, install, caplog
     assert (logged["reason"], logged["exception"], logged["lookup"]) == ("unexpected_error", "ValueError", "FOUND")
 
 
-# Stub T3-05 (NotImplementedError) tidak disamarkan sebagai UNAVAILABLE: API-07 gagal 500 INTERNAL_ERROR.
-def test_proof_reader_stub_not_masked(client, partner_headers, install, monkeypatch):
-    install(analysis="low")
+# DLT-14: stub T3-05 (NotImplementedError) → 200 dengan proofCheck UNAVAILABLE / REGISTRY_UNAVAILABLE dan
+# integritas NOT_CHECKED; tugas AI tidak dibatalkan (COMPLETED). Log memakai reason=not_implemented tanpa pesan.
+def test_proof_reader_stub_unavailable(client, partner_headers, install, monkeypatch, caplog):
+    _, fake = install(analysis="low")
 
-    # Meniru stub proofs.service yang belum diimplementasikan.
+    # Meniru stub proofs.service yang belum diimplementasikan, dengan pesan berisi penanda sintetis.
     async def stub_reader(reference_code: str):
-        raise NotImplementedError("proofs.read_proof_for_verification belum diimplementasikan")
+        raise NotImplementedError("NILAI-RAHASIA belum diimplementasikan")
 
     monkeypatch.setattr("app.modules.proofs.service.read_proof_for_verification", stub_reader)
-    raw_client = TestClient(client.app, raise_server_exceptions=False)
-    response = post(raw_client, partner_headers, code=CODE, file=MATCHING_FILE_BYTES, include_risk=True)
-    assert response.status_code == 500
-    assert response.json()["error"]["code"] == "INTERNAL_ERROR"
+    with caplog.at_level(logging.WARNING):
+        response = post(client, partner_headers, code=CODE, file=MATCHING_FILE_BYTES, include_risk=True)
+    assert response.status_code == 200, response.text
+    assert_matches_example(response.json(), "api-07.registry-unavailable.json")
+    assert fake.requests and fake.requests[0].url.path == EXTRACTION_PATH
+    logged = formatted_log(caplog, "proof.read_failed")
+    assert (logged["reason"], logged["exception"]) == ("not_implemented", "NotImplementedError")
+    assert (logged["errorCode"], logged["lookup"]) == ("REGISTRY_UNAVAILABLE", "UNAVAILABLE")
+    assert "NILAI-RAHASIA" not in json.dumps(logged) and "NILAI-RAHASIA" not in caplog.text
+
+
+# Jalur nyata tanpa FakeProofReader: stub asli proofs.service dipanggil dan hasilnya sama dengan test di atas.
+# Bergantung pada T3-05: setelah pembaca nyata digabung, test ini diganti test integrasi registry.
+def test_real_proof_service_stub_unavailable(client, partner_headers, monkeypatch, caplog):
+    fake = install_fake_ai(monkeypatch, analysis="low")
+    with caplog.at_level(logging.WARNING):
+        response = post(client, partner_headers, code=CODE, file=MATCHING_FILE_BYTES, include_risk=True)
+    assert response.status_code == 200, response.text
+    assert_matches_example(response.json(), "api-07.registry-unavailable.json")
+    assert response.json()["riskAnalysis"]["state"] == "COMPLETED"
+    assert fake.requests
+    assert formatted_log(caplog, "proof.read_failed")["reason"] == "not_implemented"
