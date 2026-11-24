@@ -14,6 +14,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.config import Settings
 from app.core.errors import ErrorCode
 
+logger = logging.getLogger("app.analysis.provider")
+
 
 @dataclass(frozen=True)
 class CompletionResult:
@@ -60,6 +62,7 @@ class _CompletionChoice(BaseModel):
     """Memvalidasi satu pilihan chat tanpa mengunci metadata khusus vendor."""
 
     message: _CompletionMessage
+    finish_reason: str | None = None
 
 
 class _CompletionEnvelope(BaseModel):
@@ -70,6 +73,7 @@ class _CompletionEnvelope(BaseModel):
 
 # Memutus log SDK/transport agar URL, body, dan error provider tidak bocor saat DEBUG.
 def _disable_transport_logging() -> None:
+    # SDK terkunci memakai httpx2/httpcore2; logger transport aktual tetap perlu dilindungi.
     prefixes = ("openai", "httpx", "httpx2", "httpcore", "httpcore2")
     for name in (*prefixes, *tuple(logging.Logger.manager.loggerDict)):
         if name in prefixes or name.startswith(tuple(f"{prefix}." for prefix in prefixes)):
@@ -78,6 +82,10 @@ def _disable_transport_logging() -> None:
             logger.propagate = False
             if not logger.handlers:
                 logger.addHandler(logging.NullHandler())
+
+
+# Inisialisasi sekali per proses ketika modul dimuat, sebelum client dapat mengirim request.
+_disable_transport_logging()
 
 
 class LLMProvider(Protocol):
@@ -90,10 +98,9 @@ class LLMProvider(Protocol):
 class OpenAICompatibleProvider:
     """Provider nyata melalui SDK openai; URL, model, dan parameter dibaca dari konfigurasi."""
 
-    # Menyimpan konfigurasi tanpa koneksi; menonaktifkan log transport sebelum request pertama.
+    # Menyimpan konfigurasi tanpa koneksi; log transport sudah dilindungi saat modul dimuat.
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        _disable_transport_logging()
 
     # Mengirim sekali; retry output JSON/skema tidak valid menjadi tanggung jawab pipeline SA §7.3 (T5-04).
     def complete(self, messages: list[dict[str, str]]) -> CompletionResult:
@@ -131,10 +138,21 @@ class OpenAICompatibleProvider:
             # Jangan teruskan pesan SDK karena dapat memuat body respons atau secret.
             raise ProviderError(ErrorCode.AI_PROVIDER_ERROR.value) from None
 
-        return CompletionResult(
-            content=response.choices[0].message.content or "",
-            latency_ms=max(0, int((perf_counter() - started) * 1000)),
-        )
+        latency_ms = max(0, int((perf_counter() - started) * 1000))
+        choice = response.choices[0]
+        if choice.finish_reason == "length":
+            # Catat pemotongan tanpa isi respons; retry dan validasi tetap dimiliki pipeline T5-04.
+            logger.warning(
+                "ai.output_truncated",
+                extra={
+                    "event": "ai.output_truncated",
+                    "component": "llm",
+                    "model": self._settings.llm_model,
+                    "promptVersion": self._settings.prompt_version,
+                    "latencyMs": latency_ms,
+                },
+            )
+        return CompletionResult(content=choice.message.content or "", latency_ms=latency_ms)
 
 
 # Memilih provider dari konfigurasi; mock hanya bila LLM_PROVIDER=mock dan APP_ENV=test.

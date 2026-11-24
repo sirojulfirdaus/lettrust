@@ -32,16 +32,8 @@ ENDPOINTS = [
     ("S-07", "GET", "/api/v1/health"),
 ]
 PDF = ("offer.pdf", b"%PDF-1.4\n%synthetic\n", "application/pdf")
-STUB_ADMIN_ENDPOINTS = {"S-04", "S-05", "API-02", "API-03"}
 # Permintaan valid per endpoint stub agar validasi lolos dan stub tercapai.
 STUB_REQUESTS = {
-    "API-01": {
-        "json": {"companyName": "PT Contoh", "registrationNumber": "REG-DEMO-001", "contactEmail": "hr@contoh.test"}
-    },
-    "S-04": {},
-    "S-05": {},
-    "API-02": {"json": {"decision": "VERIFIED", "evidenceRef": "EVD-DEMO-001"}},
-    "API-03": {"json": {"hrId": "USR-7K3M9Q2H"}},
     "API-04": {"files": {"file": PDF}},
     "S-06": {},
     "API-05": {},
@@ -52,11 +44,6 @@ STUB_REQUESTS = {
 # Mengumpulkan (method, path) dari skema OpenAPI aplikasi (API publik FastAPI, stabil lintas versi).
 def registered_routes() -> set[tuple[str, str]]:
     return {(method.upper(), path) for path, ops in app.openapi()["paths"].items() for method in ops}
-
-
-# Mengisi parameter path dengan nilai contoh.
-def concrete(path: str) -> str:
-    return path.replace("{issuerId}", "ISS-4D8N2P6R").replace("{proofId}", PROOF_ID)
 
 
 # Setiap endpoint terdaftar dengan method yang benar.
@@ -70,14 +57,13 @@ def test_no_extra_routes():
     assert registered_routes() == {(m, p) for _, m, p in ENDPOINTS}
 
 
-# Menyiapkan akun sintetis dan JWT sah agar pemeriksaan stub mencapai handler yang dilindungi.
 @pytest.fixture(scope="module")
-def stub_console_tokens(client: TestClient) -> dict[Role, str]:
-    tokens = {}
+def stub_proof_headers(client: TestClient) -> dict[str, str]:
+    """Membuat HR berwenang lewat Issuers API agar tes dapat mencapai handler Proofs yang masih stub."""
+    user_ids = {Role.ADMIN: new_user_id(), Role.HR: new_user_id()}
     password_hash = hash_password("Stub#Demo2026")
     with get_session_factory().begin() as db:
-        for role in (Role.ADMIN, Role.HR):
-            user_id = new_user_id()
+        for role, user_id in user_ids.items():
             db.add(
                 User(
                     id=user_id,
@@ -88,8 +74,35 @@ def stub_console_tokens(client: TestClient) -> dict[Role, str]:
                     created_at=datetime.now(UTC),
                 )
             )
-            tokens[role], _ = create_access_token(user_id, role)
-    return tokens
+
+    admin_token, _ = create_access_token(user_ids[Role.ADMIN], Role.ADMIN)
+    hr_token, _ = create_access_token(user_ids[Role.HR], Role.HR)
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    hr_headers = {"Authorization": f"Bearer {hr_token}"}
+    registration = client.post(
+        "/api/v1/issuers",
+        headers=hr_headers,
+        json={
+            "companyName": "PT Demo Scaffold",
+            "registrationNumber": "REG-SCAFFOLD-PROOFS",
+            "contactEmail": "kontak@scaffold.test",
+        },
+    )
+    assert registration.status_code == 201
+    issuer_path = f"/api/v1/issuers/{registration.json()['issuerId']}"
+    decision = client.patch(
+        f"{issuer_path}/verification",
+        headers=admin_headers,
+        json={"decision": "VERIFIED", "evidenceRef": "EVD-SCAFFOLD-PROOFS"},
+    )
+    assert decision.status_code == 200
+    authorization = client.post(
+        f"{issuer_path}/hr-authorizations",
+        headers=admin_headers,
+        json={"hrId": user_ids[Role.HR]},
+    )
+    assert authorization.status_code == 201
+    return hr_headers
 
 
 # Endpoint stub mengembalikan 501 NOT_IMPLEMENTED dengan envelope SA §10.2 dan requestId.
@@ -97,13 +110,11 @@ def stub_console_tokens(client: TestClient) -> dict[Role, str]:
 def test_stub_returns_501_envelope(
     client: TestClient,
     endpoint_id: str,
-    stub_console_tokens: dict[Role, str],
+    stub_proof_headers: dict[str, str],
 ) -> None:
     _, method, path = next(e for e in ENDPOINTS if e[0] == endpoint_id)
-    # Rute Console memakai JWT sesuai role; API-07 sudah diimplementasikan dan diuji di test_verifications.
-    role = Role.ADMIN if endpoint_id in STUB_ADMIN_ENDPOINTS else Role.HR
-    headers = {"Authorization": f"Bearer {stub_console_tokens[role]}"}
-    response = client.request(method, concrete(path), headers=headers, **STUB_REQUESTS[endpoint_id])
+    proof_path = path.replace("{proofId}", PROOF_ID)
+    response = client.request(method, proof_path, headers=stub_proof_headers, **STUB_REQUESTS[endpoint_id])
     assert response.status_code == 501, response.text
     body = response.json()
     assert body["error"]["code"] == "NOT_IMPLEMENTED"

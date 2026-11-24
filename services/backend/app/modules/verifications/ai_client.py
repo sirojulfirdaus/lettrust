@@ -72,9 +72,10 @@ class ExtractionResponse(ApiModel):
 
 
 class RiskAnalysisRequest(ApiModel):
-    """Body API-08 (sama dengan ai-service `RiskAnalysisRequest`)."""
+    """Body API-08 (sama dengan ai-service `RiskAnalysisRequest`); `extractionMethod` opsional (D-20)."""
 
     document_content: str = Field(min_length=1)
+    extraction_method: ExtractionMethod | None = None
 
 
 class AnalysisIndicatorDetail(ApiModel):
@@ -152,9 +153,13 @@ class AiServiceClient:
         )
         return _parse(response, ExtractionResponse, EXTRACTION_PATH)
 
-    # Memanggil POST /internal/v1/risk-analyses (API-08) dengan teks hasil ekstraksi.
-    async def analyze(self, document_content: str, request_id: str) -> RiskAnalysisResponse:
-        payload = RiskAnalysisRequest(document_content=document_content).model_dump(by_alias=True)
+    # Memanggil POST /internal/v1/risk-analyses (API-08) dengan teks dan metode hasil ekstraksi; metode None tidak
+    # dikirim sehingga ai-service memakai default TEXT_LAYER (tanpa fuzzy).
+    async def analyze(
+        self, document_content: str, extraction_method: ExtractionMethod | None, request_id: str
+    ) -> RiskAnalysisResponse:
+        request = RiskAnalysisRequest(document_content=document_content, extraction_method=extraction_method)
+        payload = request.model_dump(by_alias=True, mode="json", exclude_none=True)
         response = await self._post(ANALYSIS_PATH, request_id, get_settings().ai_analysis_timeout_seconds, json=payload)
         return _parse(response, RiskAnalysisResponse, ANALYSIS_PATH)
 
@@ -219,7 +224,7 @@ async def run_risk_pipeline(
             # OK tanpa teks sudah ditolak validator ExtractionResponse sebagai pelanggaran kontrak.
             if extraction.status is ExtractionStatus.NO_CONTENT or extraction.text is None:
                 return _without_result(RiskState.NOT_PERFORMED, RiskReason.DOCUMENT_CONTENT_UNAVAILABLE)
-            analysis = await client.analyze(extraction.text, request_id)
+            analysis = await client.analyze(extraction.text, extraction.method, request_id)
         # Kode indikator di luar taksonomi backend berarti respons ai-service melanggar kontrak.
         details = []
         for index, item in enumerate(analysis.indicator_details):

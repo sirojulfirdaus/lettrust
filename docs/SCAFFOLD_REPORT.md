@@ -215,6 +215,8 @@ Semua pemeriksaan dijalankan terhadap stack nyata (Anvil nyata); tidak ada mock 
 | D-17 | `contracts/examples/index.json` menggantikan pemetaan prefiks di test backend sebagai satu-satunya pemetaan contoh → skema; contoh internal di `contracts/examples/internal/`. | Satu sumber untuk test backend, test ai-service, dan generator fixture. |
 | D-18 | `pyproject.toml` backend men-deselect marker `real_registry` secara default; `tests/conftest.py` menyimpan env registry asli (`REAL_REGISTRY_ENV`) sebelum ditimpa. | Suite conformance web3 hanya jalan eksplisit terhadap Anvil nyata; `pytest` dan `dev.py test` tetap hijau. |
 | D-19 | `dev.py test ai-service` juga me-mount `contracts/` (`CONTRACTS_DIR`). | Test contoh internal ai-service membaca `contracts/examples`. |
+| D-20 | Request API-08 mendapat field opsional `extractionMethod` (`TEXT_LAYER`/`OCR`/`MIXED`, default `TEXT_LAYER`); backend meneruskan `method` dari I-01 dan tidak mengirim field bila `null`. Fuzzy matching kutipan hanya untuk `OCR`/`MIXED`. Request D2 tanpa field tetap valid. | SA §10.8 hanya memuat `documentContent`, padahal SA §7.5 mensyaratkan fuzzy hanya untuk OCR/MIXED; default `TEXT_LAYER` konservatif (tanpa fuzzy). **Disetujui Dws (24/11).** |
+| D-21 | `explanation` API-08 memakai templat (bukan teks model) juga bila ada indikator dibuang (`droppedIndicators > 0`), lebih dari tiga kalimat, atau memuat kata vonis (`asli`, `palsu`, `aman`, `penipuan`, `authentic`, `fake`, `safe`, `scam`, `fraud`). | SA §7.7 hanya mensyaratkan tidak kosong dan ≤ 600 karakter; aturan tambahan menjaga SA §7.4.2 (hanya indikator yang ditemukan) dan larangan vonis. Explanation sah yang menyebut kata tersebut ikut diganti templat. |
 
 ## 7. Known Issues dan Keputusan untuk Manusia
 
