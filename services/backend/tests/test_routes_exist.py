@@ -32,10 +32,7 @@ ENDPOINTS = [
     ("S-07", "GET", "/api/v1/health"),
 ]
 # Permintaan valid per endpoint stub agar validasi lolos dan stub tercapai.
-STUB_REQUESTS = {
-    "S-06": {},
-    "API-05": {},
-}
+STUB_REQUESTS = {}
 
 
 # Mengumpulkan (method, path) dari skema OpenAPI aplikasi (API publik FastAPI, stabil lintas versi).
