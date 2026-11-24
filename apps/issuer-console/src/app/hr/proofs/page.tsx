@@ -202,8 +202,8 @@ export default function ProofListPage() {
                         Belum ada bukti penerbitan
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Terbitkan bukti pertama Anda agar pelamar dapat memverifikasi keaslian
-                        dokumen offer letter.
+                        Terbitkan bukti pertama Anda untuk membantu pihak penerima memverifikasi
+                        bukti penerbitan surat penawaran kerja Anda.
                       </p>
                     </div>
                     <Button asChild className="cursor-pointer">
