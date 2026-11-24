@@ -178,6 +178,19 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+// Menyalin teks ke clipboard hanya jika Clipboard API tersedia dan berhasil menulis.
+export async function copyTextToClipboard(value: string): Promise<boolean> {
+  if (typeof navigator === "undefined" || typeof navigator.clipboard?.writeText !== "function") {
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Memeriksa hak akses HR melalui S-03 GET /api/v1/auth/me sebelum menampilkan halaman penerbitan bukti.
 export async function loadHrProofsGuard(options?: {
   signal?: AbortSignal;
@@ -320,7 +333,11 @@ export async function loadProofDetail(options: {
       return { kind: "not_found", message: "Bukti tidak ditemukan." };
     }
     if (error instanceof ApiError) {
-      return { kind: "error", code: error.code, message: error.message };
+      return {
+        kind: "error",
+        code: error.code,
+        message: getProofDetailReadErrorMessage({ code: error.code, message: error.message }),
+      };
     }
     return {
       kind: "error",
@@ -342,6 +359,16 @@ export function mergeRevokeResultIntoProofDetail(
     revocationReasonCode: current.revocationReasonCode,
     revokeTransaction: revokeResult.transaction,
   };
+}
+
+// Menyusun pesan gagal baca awal detail API-05 agar kegagalan registry tidak menampilkan pesan gagal tulis.
+export function getProofDetailReadErrorMessage(
+  error: Pick<Extract<ProofDetailLoadResult, { kind: "error" }>, "code" | "message">,
+): string {
+  if (error.code === "REGISTRY_UNAVAILABLE" || error.code === "REGISTRY_TRANSACTION_FAILED") {
+    return "Detail bukti dari registry belum dapat dimuat saat ini. Silakan coba lagi beberapa saat lagi.";
+  }
+  return error.message;
 }
 
 // Menyusun pesan gagal muat ulang detail berbasis pembacaan agar tidak memakai pesan gagal tulis dari registry.
