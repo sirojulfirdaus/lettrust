@@ -12,7 +12,7 @@ import {
   s03SessionHrUnaffiliated,
 } from "@/fixtures/api";
 import { buildApiUrl } from "@/lib/api/client";
-import { createSession, saveSession } from "@/lib/session";
+import { clearSession, createSession, saveSession } from "@/lib/session";
 import { loadOnboardingGuard, submitCompanyRegistration } from "./onboarding-flow";
 
 // Storage in-memory untuk meniru window.sessionStorage saat pengujian Vitest.
@@ -222,5 +222,34 @@ describe("alur halaman onboarding perusahaan", () => {
         showHrLink: false,
       },
     });
+  });
+
+  it("mengabaikan respons 201 yang terlambat setelah logout atau abort agar tidak mengganggu halaman login", async () => {
+    saveSession(createSession("jwt-hr-unaffiliated", 3600));
+
+    let resolveLateResponse: ((value: Response) => void) | undefined;
+    const fetchMock = vi.fn().mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveLateResponse = resolve;
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const lateSubmitPromise = submitCompanyRegistration(api01RegisterIssuerRequest);
+
+    clearSession();
+    resolveLateResponse?.(jsonResponse(api01RegisterIssuerResponse, 201));
+
+    expect(await lateSubmitPromise).toEqual({ kind: "aborted" });
+
+    saveSession(createSession("jwt-hr-unaffiliated", 3600));
+    const controller = new AbortController();
+    const abortedSubmitPromise = submitCompanyRegistration(api01RegisterIssuerRequest, {
+      signal: controller.signal,
+    });
+    controller.abort();
+    resolveLateResponse?.(jsonResponse(api01RegisterIssuerResponse, 201));
+
+    expect(await abortedSubmitPromise).toEqual({ kind: "aborted" });
   });
 });

@@ -33,6 +33,7 @@ export type OnboardingSubmitResult =
   | { kind: "validation_error"; fieldErrors: CompanyFieldErrors }
   | { kind: "success"; data: RegisterIssuerResponse; redirectTo: "/hr" }
   | { kind: "unauthorized" }
+  | { kind: "aborted" }
   | { kind: "error"; submitError: SubmitErrorState; fieldErrors?: CompanyFieldErrors };
 
 // Memeriksa sesi dan profil S-03 untuk menentukan akses atau arah redirect halaman onboarding.
@@ -81,22 +82,33 @@ export async function loadOnboardingGuard(options?: {
 // Memvalidasi dan mengirim data pendaftaran perusahaan ke API-01 POST /api/v1/issuers.
 export async function submitCompanyRegistration(
   values: CompanyFormValues,
-  options?: { onUnauthorized?: () => void },
+  options?: { signal?: AbortSignal; onUnauthorized?: () => void },
 ): Promise<OnboardingSubmitResult> {
   const clientErrors = validateCompanyForm(values);
   if (Object.keys(clientErrors).length > 0) {
     return { kind: "validation_error", fieldErrors: clientErrors };
   }
 
+  const submittedToken = readSession()?.accessToken ?? null;
+  const isStaleOrAborted = () =>
+    Boolean(options?.signal?.aborted) || (readSession()?.accessToken ?? null) !== submittedToken;
+
   try {
     const payload = normalizeCompanyPayload(values);
     const data = await apiFetch<RegisterIssuerResponse>("/api/v1/issuers", {
       method: "POST",
       body: payload,
+      signal: options?.signal,
       onUnauthorized: options?.onUnauthorized,
     });
+    if (isStaleOrAborted()) {
+      return { kind: "aborted" };
+    }
     return { kind: "success", data, redirectTo: "/hr" };
   } catch (error: unknown) {
+    if (isStaleOrAborted()) {
+      return { kind: "aborted" };
+    }
     if (error instanceof ApiError) {
       if (error.status === 401) {
         return { kind: "unauthorized" };

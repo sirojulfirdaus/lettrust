@@ -1,7 +1,7 @@
 // Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.03, §9.8; SA §10.5 (API-01)
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Building2, Info, Loader2 } from "lucide-react";
@@ -36,6 +36,8 @@ export default function CompanyOnboardingPage() {
   const [fieldErrors, setFieldErrors] = useState<CompanyFieldErrors>({});
   const [submitError, setSubmitError] = useState<SubmitErrorState | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitGuardRef = useRef(false);
+  const submitControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,7 +59,10 @@ export default function CompanyOnboardingPage() {
       setLoadState({ status: "ready", displayName: result.displayName });
     });
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      submitControllerRef.current?.abort();
+    };
   }, [attempt, router]);
 
   // Memuat ulang pemeriksaan profil sesi dari backend.
@@ -84,22 +89,26 @@ export default function CompanyOnboardingPage() {
   // Memvalidasi formulir lalu mengirim pendaftaran perusahaan ke API-01 POST /api/v1/issuers.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isSubmitting) {
+    if (submitGuardRef.current || isSubmitting) {
       return;
     }
 
+    submitGuardRef.current = true;
+    const controller = new AbortController();
+    submitControllerRef.current = controller;
     setSubmitError(null);
     setIsSubmitting(true);
 
     try {
       const result = await submitCompanyRegistration(values, {
+        signal: controller.signal,
         onUnauthorized: () => router.replace("/login?reason=session_expired"),
       });
-      if (result.kind === "validation_error") {
-        setFieldErrors(result.fieldErrors);
+      if (result.kind === "aborted" || result.kind === "unauthorized") {
         return;
       }
-      if (result.kind === "unauthorized") {
+      if (result.kind === "validation_error") {
+        setFieldErrors(result.fieldErrors);
         return;
       }
       if (result.kind === "error") {
@@ -110,7 +119,13 @@ export default function CompanyOnboardingPage() {
       setFieldErrors({});
       router.replace(result.redirectTo);
     } finally {
-      setIsSubmitting(false);
+      submitGuardRef.current = false;
+      if (submitControllerRef.current === controller) {
+        submitControllerRef.current = null;
+      }
+      if (!controller.signal.aborted) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -238,7 +253,6 @@ export default function CompanyOnboardingPage() {
                 type="text"
                 required
                 minLength={3}
-                maxLength={40}
                 disabled={isSubmitting}
                 value={values.registrationNumber}
                 onChange={(event) => handleChange("registrationNumber", event.target.value)}
