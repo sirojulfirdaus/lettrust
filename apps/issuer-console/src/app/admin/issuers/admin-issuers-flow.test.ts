@@ -188,13 +188,13 @@ describe("alur admin penerbit (S-04, S-05, API-02, API-03)", () => {
     });
   });
 
-  it("mengotorisasi HR via API-03 serta menangani 422 HR_NOT_AFFILIATED, ISSUER_NOT_VERIFIED, dan HR_ALREADY_AUTHORIZED", async () => {
+  it("mengotorisasi HR via API-03 serta menangani 422 HR_NOT_AFFILIATED, 409 ISSUER_NOT_VERIFIED, dan 409 HR_ALREADY_AUTHORIZED", async () => {
     saveSession(createSession("jwt-admin", 3600));
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(api03AuthorizeHrResponse, 200))
       .mockResolvedValueOnce(jsonResponse(errorHrNotAffiliated, 422))
-      .mockResolvedValueOnce(jsonResponse(errorIssuerNotVerified, 422))
+      .mockResolvedValueOnce(jsonResponse(errorIssuerNotVerified, 409))
       .mockResolvedValueOnce(jsonResponse(errorHrAlreadyAuthorized, 409));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -227,7 +227,7 @@ describe("alur admin penerbit (S-04, S-05, API-02, API-03)", () => {
     expect(notVerified).toEqual({
       kind: "error",
       code: "ISSUER_NOT_VERIFIED",
-      status: 422,
+      status: 409,
       message: "Penerbit belum terverifikasi sehingga HR belum dapat diotorisasi.",
     });
 

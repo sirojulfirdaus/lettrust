@@ -81,7 +81,11 @@ export default function IssuerListPage() {
     };
   }, [attempt, filter, offset, router]);
 
+  // Mengubah filter status penerbit; abaikan jika filter aktif pada halaman pertama tidak berubah.
   const handleSelectFilter = (nextFilter: IssuerListFilter) => {
+    if (nextFilter === filter && offset === 0) {
+      return;
+    }
     setState({ status: "loading" });
     setFilter(nextFilter);
     setOffset(0);

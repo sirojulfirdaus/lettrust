@@ -32,6 +32,7 @@ export default function IssuerDetailPage() {
   const issuerId = decodeURIComponent(rawIssuerId);
 
   const [refreshCount, setRefreshCount] = useState(0);
+  const [decisionConflictMessage, setDecisionConflictMessage] = useState<string | null>(null);
   const [state, setState] = useState<DetailState>({ status: "loading" });
 
   useEffect(() => {
@@ -174,6 +175,14 @@ export default function IssuerDetailPage() {
         </Button>
       </div>
 
+      {decisionConflictMessage ? (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" aria-hidden="true" />
+          <AlertTitle>Keputusan verifikasi sudah ditetapkan</AlertTitle>
+          <AlertDescription>{decisionConflictMessage}</AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card>
         <CardHeader className="border-b">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -248,6 +257,7 @@ export default function IssuerDetailPage() {
           issuerId={issuer.issuerId}
           companyName={issuer.companyName}
           onSuccess={handleRefresh}
+          onConflict={(message) => setDecisionConflictMessage(message)}
         />
       ) : null}
 

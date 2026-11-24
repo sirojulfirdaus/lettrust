@@ -29,6 +29,7 @@ interface VerificationDecisionDialogProps {
   issuerId: string;
   companyName: string;
   onSuccess: () => void;
+  onConflict: (message: string) => void;
 }
 
 // Panel keputusan verifikasi penerbit dengan validasi input dan dialog konfirmasi sebelum mengirim API-02.
@@ -36,6 +37,7 @@ export function VerificationDecisionDialog({
   issuerId,
   companyName,
   onSuccess,
+  onConflict,
 }: VerificationDecisionDialogProps) {
   const router = useRouter();
   const [decision, setDecision] = useState<IssuerDecision>("VERIFIED");
@@ -68,6 +70,7 @@ export function VerificationDecisionDialog({
     setConfirmOpen(true);
   };
 
+  // Mengirim keputusan verifikasi API-02 dan meneruskan konflik 409 ke induk sebelum komponen ditutup.
   const handleConfirmSubmit = async () => {
     if (submitGuardRef.current) {
       return;
@@ -93,11 +96,14 @@ export function VerificationDecisionDialog({
         return;
       }
       if (result.kind === "error") {
+        if (result.code === "ISSUER_DECISION_ALREADY_MADE") {
+          onConflict(result.message);
+          setConfirmOpen(false);
+          onSuccess();
+          return;
+        }
         setSubmitError(result.message);
         setConfirmOpen(false);
-        if (result.code === "ISSUER_DECISION_ALREADY_MADE") {
-          onSuccess();
-        }
         return;
       }
 
