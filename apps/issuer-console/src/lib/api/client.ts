@@ -19,7 +19,15 @@ export type UserSummary = components["schemas"]["UserSummary"];
 export type RegisterIssuerRequest = components["schemas"]["RegisterIssuerRequest"];
 export type RegisterIssuerResponse = components["schemas"]["RegisterIssuerResponse"];
 export type IssuerDetailResponse = components["schemas"]["IssuerDetailResponse"];
+export type LifecycleStatus = components["schemas"]["LifecycleStatus"];
+export type ProofListItem = components["schemas"]["ProofListItem"];
 export type ProofListResponse = components["schemas"]["ProofListResponse"];
+export type IssueProofResponse = components["schemas"]["IssueProofResponse"];
+export type ProofStatusResponse = components["schemas"]["ProofStatusResponse"];
+export type RevocationReasonCode = components["schemas"]["RevocationReasonCode"];
+export type RevokeProofRequest = components["schemas"]["RevokeProofRequest"];
+export type RevokeProofResponse = components["schemas"]["RevokeProofResponse"];
+export type TransactionRef = components["schemas"]["TransactionRef"];
 
 // Pesan kesalahan Console sesuai PRD §9.8.
 const ERROR_MESSAGES: Record<string, string> = {
@@ -32,6 +40,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   HR_NOT_AFFILIATED: "Akun HR tidak terhubung dengan penerbit ini.",
   HR_ALREADY_AUTHORIZED: "Akun HR ini sudah diotorisasi.",
   PROOF_ALREADY_REVOKED: "Bukti ini sudah dicabut sebelumnya.",
+  PROOF_NOT_FOUND: "Bukti tidak ditemukan.",
   DUPLICATE_ACTIVE_DOCUMENT: "Berkas yang sama sudah memiliki bukti aktif.",
   IDEMPOTENCY_KEY_CONFLICT:
     "Permintaan bertentangan dengan permintaan sebelumnya. Mulai ulang proses penerbitan.",
@@ -42,6 +51,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNSUPPORTED_MEDIA_TYPE: "Berkas harus berformat PDF.",
   FILE_TOO_LARGE: "Ukuran berkas melebihi batas yang diizinkan.",
   EMPTY_FILE: "Berkas kosong tidak dapat diproses.",
+  MULTIPLE_FILES: "Unggah hanya satu berkas PDF.",
   RATE_LIMITED: "Terlalu banyak permintaan. Coba lagi beberapa saat lagi.",
   UNAUTHENTICATED: "Sesi Anda telah berakhir. Silakan masuk kembali.",
   FORBIDDEN_OPERATION: "Anda tidak memiliki izin untuk tindakan ini.",
