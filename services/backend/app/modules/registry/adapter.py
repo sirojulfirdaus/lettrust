@@ -86,6 +86,11 @@ class IssuerMismatchOnChain(RegistryError):
 class RegistryTransactionPending(RegistryError):
     """Konfirmasi pengiriman belum pasti → REGISTRY_TRANSACTION_FAILED (503); direkonsiliasi pada pengulangan."""
 
+    # Membawa hash broadcast bila tersedia agar pemulihan tidak menebak apakah transaksi masih di mempool.
+    def __init__(self, message: str = "Konfirmasi transaksi belum pasti.", *, tx_hash: str | None = None) -> None:
+        self.tx_hash = tx_hash
+        super().__init__(message)
+
 
 class RegistryAdapter(Protocol):
     """Kontrak adapter registry yang dipakai modul proofs (SA §6.4)."""
@@ -243,6 +248,56 @@ class Web3RegistryAdapter:
     def find_revoke_tx(self, proof_id: str) -> TxResult | None:
         return self._find_tx("ProofRevoked", "revokedAt", proof_id_to_bytes32(proof_id))
 
+    # Memastikan kegagalan lewat hash; data lama tanpa hash diperiksa terhadap antrean Anvil node lokal.
+    def is_transaction_failed_or_dropped(self, tx_hash: str | None, proof_id: str | None = None) -> bool:
+        with SIGNER_LOCK:
+            try:
+                web3 = self._web3()
+                if tx_hash is None:
+                    return proof_id is not None and self._revoke_absent_from_pool(web3, proof_id)
+                try:
+                    receipt = web3.eth.get_transaction_receipt(tx_hash)
+                except TransactionNotFound:
+                    try:
+                        web3.eth.get_transaction(tx_hash)
+                    except TransactionNotFound:
+                        return True
+                    return False
+                return receipt["status"] == 0
+            except _RPC_ERRORS as exc:
+                raise RegistryUnavailable("Status transaksi registry belum dapat dipastikan.") from exc
+
+    # Menolak pemulihan data lama bila revoke masih pending/queued atau isi antrean tidak dapat dipastikan.
+    def _revoke_absent_from_pool(self, web3: Web3, proof_id: str) -> bool:
+        response = web3.provider.make_request("txpool_content", [])
+        pool = response.get("result")
+        address = self.resolve_contract_address()
+        if "error" in response or not isinstance(pool, Mapping) or address is None:
+            raise RegistryUnavailable("Antrean transaksi registry tidak dapat diperiksa.")
+        prefix = Web3.to_hex(Web3.keccak(text="revokeProof(bytes32,bytes32)")[:4])
+        call_prefix = prefix + proof_id_to_bytes32(proof_id).hex()
+        for group in ("pending", "queued"):
+            senders = pool.get(group)
+            if not isinstance(senders, Mapping):
+                raise RegistryUnavailable("Antrean transaksi registry belum lengkap.")
+            for nonces in senders.values():
+                if not isinstance(nonces, Mapping):
+                    raise RegistryUnavailable("Antrean transaksi registry belum lengkap.")
+                for transaction in nonces.values():
+                    if not isinstance(transaction, Mapping):
+                        raise RegistryUnavailable("Antrean transaksi registry belum lengkap.")
+                    target = transaction.get("to")
+                    if not isinstance(target, str):
+                        raise RegistryUnavailable("Tujuan transaksi antrean tidak dapat dipastikan.")
+                    if target.lower() != address.lower():
+                        continue
+                    data = transaction.get("input", transaction.get("data"))
+                    if not isinstance(data, str):
+                        raise RegistryUnavailable("Operasi transaksi antrean tidak dapat dipastikan.")
+                    if data.lower().startswith(call_prefix):
+                        return False
+        return True
+
     # Mengunci seluruh alur nonce hingga receipt agar transaksi registrar tidak saling bertabrakan.
     def _transact(self, operation: str, args: tuple[bytes, ...]) -> TxResult:
         with SIGNER_LOCK:
@@ -264,6 +319,7 @@ class Web3RegistryAdapter:
                     raise error from exc
                 raise RegistryUnavailable("Transaksi registry tidak dapat diproses melalui RPC.") from exc
 
+            tx_hash = Web3.keccak(signed.raw_transaction)
             try:
                 tx_hash = web3.eth.send_raw_transaction(signed.raw_transaction)
             except _RPC_ERRORS as exc:
@@ -271,7 +327,9 @@ class Web3RegistryAdapter:
                 if error is not None:
                     raise error from exc
                 # Node mungkin sudah menerima transaksi meskipun balasan broadcast tidak sampai.
-                raise RegistryTransactionPending("Pengiriman transaksi registry belum dapat dikonfirmasi.") from exc
+                raise RegistryTransactionPending(
+                    "Pengiriman transaksi registry belum dapat dikonfirmasi.", tx_hash=Web3.to_hex(tx_hash)
+                ) from exc
 
             try:
                 receipt = self._wait_for_receipt(tx_hash)
@@ -280,8 +338,13 @@ class Web3RegistryAdapter:
                 if receipt["status"] != 1:
                     raise RegistryTransactionPending("Status receipt registry belum dapat dipastikan.")
                 return self._confirmed_result(contract, operation, args, tx_hash, receipt)
+            except RegistryTransactionPending as exc:
+                exc.tx_hash = Web3.to_hex(tx_hash)
+                raise
             except _RPC_ERRORS as exc:
-                raise RegistryTransactionPending("Konfirmasi transaksi registry belum lengkap.") from exc
+                raise RegistryTransactionPending(
+                    "Konfirmasi transaksi registry belum lengkap.", tx_hash=Web3.to_hex(tx_hash)
+                ) from exc
 
     # Membatasi setiap polling dan jedanya dengan sisa anggaran; gangguan setelah broadcast tetap Pending.
     def _wait_for_receipt(self, tx_hash: bytes) -> TxReceipt:

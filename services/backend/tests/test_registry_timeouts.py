@@ -13,6 +13,7 @@ import pytest
 from conftest import REAL_REGISTRY_ENV
 from pydantic import SecretStr
 from web3 import Web3
+from web3.exceptions import TransactionNotFound
 
 from app.core.config import get_settings
 from app.core.ids import new_proof_id
@@ -116,6 +117,105 @@ def test_receipt_budget_caps_the_http_request(adapter: Web3RegistryAdapter, endp
     assert elapsed < 0.35
 
 
+# Status hanya boleh dianggap gagal pasti ketika receipt gagal atau receipt dan transaksi sama-sama tidak ada.
+@pytest.mark.parametrize(
+    ("receipt_status", "visible", "retry_allowed"),
+    [
+        (0, True, True),
+        (1, True, False),
+        (None, True, False),
+        (None, False, True),
+    ],
+)
+def test_transaction_retry_requires_definite_failure(
+    adapter: Web3RegistryAdapter,
+    monkeypatch: pytest.MonkeyPatch,
+    receipt_status: int | None,
+    visible: bool,
+    retry_allowed: bool,
+) -> None:
+    web3 = adapter._web3()
+
+    # Memisahkan receipt hilang dari receipt yang memastikan transaksi gagal.
+    def receipt(_value: str) -> dict[str, int]:
+        if receipt_status is None:
+            raise TransactionNotFound("Receipt sintetis belum ditemukan")
+        return {"status": receipt_status}
+
+    # Transaksi yang masih terlihat tidak boleh dianggap gugur walaupun receipt belum tersedia.
+    def transaction(_value: str) -> dict[str, None]:
+        if not visible:
+            raise TransactionNotFound("Transaksi sintetis tidak ditemukan")
+        return {"blockNumber": None}
+
+    monkeypatch.setattr(web3.eth, "get_transaction_receipt", receipt)
+    monkeypatch.setattr(web3.eth, "get_transaction", transaction)
+    monkeypatch.setattr(adapter, "_web3", lambda: web3)
+    assert adapter.is_transaction_failed_or_dropped("0x" + "55" * 32) is retry_allowed
+
+
+# RPC gagal saat membaca receipt atau mempool harus tetap tidak pasti, bukan izin menghapus percobaan.
+@pytest.mark.parametrize("method", ["get_transaction_receipt", "get_transaction"])
+def test_transaction_lookup_outage_is_not_dropped(
+    adapter: Web3RegistryAdapter, monkeypatch: pytest.MonkeyPatch, method: str
+) -> None:
+    web3 = adapter._web3()
+    reached: list[str] = []
+
+    # Receipt belum tersedia sehingga pengecekan dapat dilanjutkan ke transaksi pending.
+    def missing(_value: str) -> None:
+        raise TransactionNotFound("Receipt sintetis belum ditemukan")
+
+    # Gangguan transport tidak menyatakan transaksi hilang dari node.
+    def unavailable(_value: str) -> None:
+        reached.append(method)
+        raise OSError("RPC tidak tersedia dalam tes")
+
+    monkeypatch.setattr(web3.eth, "get_transaction_receipt", missing)
+    monkeypatch.setattr(web3.eth, method, unavailable)
+    monkeypatch.setattr(adapter, "_web3", lambda: web3)
+    with pytest.raises(RegistryUnavailable):
+        adapter.is_transaction_failed_or_dropped("0x" + "55" * 32)
+    assert reached == [method]
+
+
+# Data lama tanpa hash tidak boleh dilepas selama revoke masih menunggu nonce atau mining di Anvil.
+@pytest.mark.parametrize("group", ["pending", "queued"])
+def test_legacy_attempt_checks_both_pool_queues(
+    adapter: Web3RegistryAdapter, monkeypatch: pytest.MonkeyPatch, group: str
+) -> None:
+    web3 = adapter._web3()
+    proof_id = "0x" + "55" * 32
+    selector = Web3.to_hex(Web3.keccak(text="revokeProof(bytes32,bytes32)")[:4])
+    transaction = {"to": "0x" + "44" * 20, "input": selector + proof_id[2:] + "66" * 32}
+    pool = {"pending": {}, "queued": {}}
+    pool[group] = {"0x" + "77" * 20: {"5": transaction}}
+    monkeypatch.setattr(web3.provider, "make_request", lambda *_args: {"result": pool})
+    monkeypatch.setattr(adapter, "_web3", lambda: web3)
+    assert adapter.is_transaction_failed_or_dropped(None, proof_id) is False
+    pool[group] = {}
+    assert adapter.is_transaction_failed_or_dropped(None, proof_id) is True
+
+
+# Node yang tidak menyediakan antrean lengkap tidak memberi bukti cukup untuk menghapus percobaan lama.
+@pytest.mark.parametrize(
+    "reply",
+    [
+        {"error": {"code": -32601}},
+        {"result": {"pending": {}}},
+        {"result": {"pending": {}, "queued": None}},
+    ],
+)
+def test_legacy_pool_outage_stays_uncertain(
+    adapter: Web3RegistryAdapter, monkeypatch: pytest.MonkeyPatch, reply: dict[str, Any]
+) -> None:
+    web3 = adapter._web3()
+    monkeypatch.setattr(web3.provider, "make_request", lambda *_args: reply)
+    monkeypatch.setattr(adapter, "_web3", lambda: web3)
+    with pytest.raises(RegistryUnavailable):
+        adapter.is_transaction_failed_or_dropped(None, "0x" + "55" * 32)
+
+
 # Membuat adapter terhadap Anvil container dengan konfigurasi asli yang disimpan sebelum env unit test ditimpa.
 @pytest.fixture
 def real_registry() -> Web3RegistryAdapter:
@@ -159,7 +259,7 @@ def test_real_proof_survives_receipt_transport_failure(
         return web3
 
     monkeypatch.setattr(real_registry, "_web3", client)
-    with pytest.raises(RegistryTransactionPending):
+    with pytest.raises(RegistryTransactionPending) as pending:
         if method == "issue_proof":
             real_registry.issue_proof(proof_id, document_hash, issuer_ref)
         else:
@@ -170,7 +270,38 @@ def test_real_proof_survives_receipt_transport_failure(
     assert record.status == (OnChainStatus.ACTIVE if method == "issue_proof" else OnChainStatus.REVOKED)
     found = real_registry.find_issue_tx(proof_id) if method == "issue_proof" else real_registry.find_revoke_tx(proof_id)
     assert found is not None
+    assert pending.value.tx_hash == found.tx_hash
     assert found.block_timestamp == (record.issued_at if method == "issue_proof" else record.revoked_at)
+
+
+# Hash lokal tetap tersedia ketika node menerima transaksi tetapi balasan broadcast terputus.
+@pytest.mark.real_registry
+@pytest.mark.parametrize("method", ["issue_proof", "revoke_proof"])
+def test_real_broadcast_reply_loss_preserves_hash(
+    real_registry: Web3RegistryAdapter, monkeypatch: pytest.MonkeyPatch, method: str
+) -> None:
+    proof_id, document_hash, issuer_ref = proof_input()
+    if method == "revoke_proof":
+        real_registry.issue_proof(proof_id, document_hash, issuer_ref)
+    web3 = real_registry._web3()
+    original_send = web3.eth.send_raw_transaction
+
+    # Menghilangkan balasan saja; transaksi tetap dikirim ke Anvil nyata tanpa mencetak payload atau signer.
+    def interrupted(raw_transaction: bytes) -> None:
+        original_send(raw_transaction)
+        raise OSError("Balasan broadcast terputus dalam tes")
+
+    monkeypatch.setattr(web3.eth, "send_raw_transaction", interrupted)
+    monkeypatch.setattr(real_registry, "_web3", lambda timeout=None: web3)
+    with pytest.raises(RegistryTransactionPending) as pending:
+        if method == "issue_proof":
+            real_registry.issue_proof(proof_id, document_hash, issuer_ref)
+        else:
+            real_registry.revoke_proof(proof_id, issuer_ref)
+    found = real_registry.find_issue_tx(proof_id) if method == "issue_proof" else real_registry.find_revoke_tx(proof_id)
+    assert found is not None
+    assert pending.value.tx_hash == found.tx_hash
+    assert real_registry.is_transaction_failed_or_dropped(found.tx_hash) is False
 
 
 # Membuktikan timestamp receipt nyata tetap berhasil ketika pembacaan blok terkonfirmasi sengaja diganggu.

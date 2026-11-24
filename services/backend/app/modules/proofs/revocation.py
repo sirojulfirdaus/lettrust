@@ -49,6 +49,27 @@ def revoke_proof(
             raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
         retry_pending = proof.revoke_idempotency_key is not None
         if retry_pending:
+            # Kapabilitas opsional menjaga mock bersama dan adapter tanpa pelacakan tetap konservatif.
+            check_transaction = getattr(registry, "is_transaction_failed_or_dropped", None)
+            if check_transaction is None and proof.revoke_tx_hash is not None:
+                raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
+            if check_transaction is not None:
+                try:
+                    retry_allowed = (
+                        check_transaction(proof.revoke_tx_hash)
+                        if proof.revoke_tx_hash is not None
+                        else check_transaction(None, proof_id)
+                    )
+                except registry_adapter.RegistryUnavailable:
+                    raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+                record = _read_record(registry, proof, hr.issuer_ref)
+                if record.status == registry_adapter.OnChainStatus.REVOKED:
+                    return _recover(db, registry, proof, record, payload, idempotency_key)
+                if not retry_allowed or record.status != registry_adapter.OnChainStatus.ACTIVE:
+                    raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
+                _clear_pending(db, proof)
+                retry_pending = False
+        if retry_pending:
             if idempotency_key is None or proof.revoke_idempotency_key != idempotency_key:
                 # Tanpa kunci yang cocok, tunggu konfirmasi; jangan kirim ulang atau timpa audit semula.
                 raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
@@ -62,7 +83,10 @@ def revoke_proof(
             db.commit()
         try:
             tx = registry.revoke_proof(proof_id, hr.issuer_ref)
-        except registry_adapter.RegistryTransactionPending:
+        except registry_adapter.RegistryTransactionPending as exc:
+            if exc.tx_hash is not None:
+                proof.revoke_tx_hash = exc.tx_hash
+                db.commit()
             raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED) from None
         except registry_adapter.ProofNotActiveOnChain:
             # Receipt sebelumnya dapat terkonfirmasi di antara pembacaan dan pengiriman ulang.
@@ -111,6 +135,11 @@ def _recover(
     payload: RevokeProofRequest,
     key: str | None,
 ) -> RevokeProofResponse:
+    conflict = None
+    if key is None or key != proof.revoke_idempotency_key:
+        conflict = ErrorCode.PROOF_ALREADY_REVOKED
+    elif payload.reason_code != proof.revoke_reason_code:
+        conflict = ErrorCode.IDEMPOTENCY_KEY_CONFLICT
     if (
         proof.status == "REVOKED"
         and proof.revoked_at is not None
@@ -120,17 +149,21 @@ def _recover(
     ):
         response = _revoke_response(proof)
     else:
+        # Status chain sudah pasti; receipt yang belum lengkap tidak boleh menutupi konflik request.
+        proof.status = "REVOKED"
+        proof.revoked_at = datetime.fromtimestamp(record.revoked_at, UTC)
+        proof.revoke_block = None
+        proof.updated_at = datetime.now(UTC)
+        db.commit()
         try:
             tx = registry.find_revoke_tx(proof.proof_id)
         except registry_adapter.RegistryUnavailable:
-            raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+            raise AppError(conflict or ErrorCode.REGISTRY_UNAVAILABLE) from None
         if tx is None or tx.block_timestamp != record.revoked_at:
-            raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
+            raise AppError(conflict or ErrorCode.REGISTRY_TRANSACTION_FAILED)
         response = _finalize(db, proof, tx)
-    if key is None or key != proof.revoke_idempotency_key:
-        raise AppError(ErrorCode.PROOF_ALREADY_REVOKED)
-    if payload.reason_code != proof.revoke_reason_code:
-        raise AppError(ErrorCode.IDEMPOTENCY_KEY_CONFLICT)
+    if conflict is not None:
+        raise AppError(conflict)
     return response
 
 
@@ -161,5 +194,8 @@ def _clear_pending(db: Session, proof: Proof) -> None:
     proof.revoke_idempotency_key = None
     proof.revoke_reason_code = None
     proof.revoked_by = None
+    proof.revoke_tx_hash = None
+    proof.revoke_block = None
+    proof.revoked_at = None
     proof.updated_at = datetime.now(UTC)
     db.commit()
