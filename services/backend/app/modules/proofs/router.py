@@ -124,4 +124,7 @@ async def revoke_proof(
     db: Annotated[Session, Depends(get_db)],
     idempotency_key: IdempotencyKeyHeader = None,
 ) -> RevokeProofResponse:
-    raise not_implemented()
+    # Menjalankan pencabutan idempoten di threadpool agar RPC dan lock tidak menahan event loop.
+    from app.modules.proofs import revocation
+
+    return await run_in_threadpool(revocation.revoke_proof, db, hr, proof_id, payload, idempotency_key)

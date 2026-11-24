@@ -35,7 +35,6 @@ ENDPOINTS = [
 STUB_REQUESTS = {
     "S-06": {},
     "API-05": {},
-    "API-06": {"json": {"reasonCode": "OFFER_WITHDRAWN"}},
 }
 
 
@@ -53,6 +52,17 @@ def test_route_registered(endpoint_id, method, path):
 # Tidak ada endpoint /api/v1 tambahan di luar katalog (Never invent endpoints).
 def test_no_extra_routes():
     assert registered_routes() == {(m, p) for _, m, p in ENDPOINTS}
+
+
+# API-06 yang sudah diimplementasikan menolak bukti tidak ada dengan envelope 404, bukan respons stub.
+def test_revoke_unknown_proof_returns_404(client: TestClient, stub_proof_headers: dict[str, str]) -> None:
+    response = client.post(
+        f"/api/v1/proofs/{PROOF_ID}/revocations",
+        headers=stub_proof_headers,
+        json={"reasonCode": "OFFER_WITHDRAWN"},
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "PROOF_NOT_FOUND"
 
 
 @pytest.fixture(scope="module")
