@@ -1,9 +1,14 @@
-# Owner: Dws (PIC 1) | Status: COMPLETE | Ref: PRD FR-02, FR-03.10, FR-03.11, FR-05.10, FR-06.01–FR-06.06; SA §5.2, §5.6
+# Owner: Dws (PIC 1) | Status: COMPLETE | Ref: PRD FR-02, FR-03.10, FR-03.11, FR-05.10, FR-06.01–FR-06.06, FR-06.08;
+# SA §5.2, §5.6, §9.2
 """Orkestrasi API-07: bukti, integritas, dan AI diproses terpisah dan paralel."""
 
 import asyncio
 import logging
+import time
+from datetime import UTC, datetime
+from enum import Enum
 
+from app.core.db import get_session_factory
 from app.core.errors import AppError
 from app.core.files import ValidatedFile
 from app.core.ids import InvalidReferenceCodeError, new_verification_id, normalize_reference_code
@@ -14,6 +19,7 @@ from app.modules.partners.models import Partner
 from app.modules.proofs import service as proofs_service
 from app.modules.verifications import ai_client
 from app.modules.verifications.integrity import integrity_from
+from app.modules.verifications.models import VerificationLog
 from app.modules.verifications.schemas import (
     IntegrityCheck,
     IntegrityReason,
@@ -65,7 +71,7 @@ def resolve_reference_code(raw_code: str | None, has_file: bool, include_risk: b
 # core.files dari byte yang sama yang dikirim ke ekstraksi, dan dipakai integrity_from(mode, proof_check,
 # registry_document_hash, file_sha256) tanpa hash ulang. Hanya pembatalan request yang diteruskan (tugas AI
 # dibatalkan); kegagalan lain, termasuk stub T3-05 (NotImplementedError), menjadi status komponen.
-# `partner` disimpan untuk log verifikasi T1-06; belum ada penulisan DB di sini.
+# Setiap respons yang dihasilkan dicatat ke verification_logs (T1-06) atas nama `partner`.
 async def verify_offer(
     partner: Partner,
     reference_code: str | None,
@@ -73,6 +79,7 @@ async def verify_offer(
     include_risk: bool,
     request_id: str,
 ) -> VerificationResponse:
+    started = time.monotonic()
     mode = VerificationMode.REFERENCE_CHECK if reference_code else VerificationMode.AI_ONLY
     risk_task = asyncio.create_task(_risk_analysis(file, include_risk, request_id))
     try:
@@ -82,13 +89,54 @@ async def verify_offer(
         raise
     risk_analysis = await risk_task
     integrity = _integrity_check(mode, proof_check, registry_hash, file)
-    return VerificationResponse(
+    response = VerificationResponse(
         verification_id=new_verification_id(),
         mode=mode,
         proof_check=proof_check,
         integrity_check=integrity,
         risk_analysis=risk_analysis,
     )
+    await _record_log(partner.id, response, round((time.monotonic() - started) * 1000))
+    return response
+
+
+# Log verifikasi minimal (FR-06.08, SA §9.2): hanya enum hasil, mode, durasi, partner, dan verificationId; tidak
+# ada kode referensi, hash berkas, teks, atau berkas. Ditulis di threadpool agar event loop tidak terblokir.
+# Kegagalan tulis tidak mengubah respons API-07; hanya dicatat sebagai nama tipe exception.
+async def _record_log(partner_id: str, response: VerificationResponse, duration_ms: int) -> None:
+    proof, integrity, risk = response.proof_check, response.integrity_check, response.risk_analysis
+    row = VerificationLog(
+        id=response.verification_id,
+        partner_id=partner_id,
+        mode=response.mode.value,
+        lookup=proof.lookup.value,
+        lifecycle_status=_enum_value(proof.lifecycle_status),
+        integrity_result=integrity.result.value,
+        risk_state=risk.state.value,
+        risk_category=_enum_value(risk.category),
+        proof_reason=_enum_value(proof.reason),
+        integrity_reason=_enum_value(integrity.reason),
+        risk_reason=_enum_value(risk.reason),
+        duration_ms=duration_ms,
+        created_at=datetime.now(UTC),
+    )
+    try:
+        await asyncio.to_thread(_insert_log, row)
+    except Exception as exc:
+        logger.error(
+            "verification.log_failed", exc_info=(type(exc), None, None), extra={"event": "verification.log_failed"}
+        )
+
+
+# Menyimpan satu baris log dalam transaksi sendiri (session sinkron, dipanggil dari threadpool).
+def _insert_log(row: VerificationLog) -> None:
+    with get_session_factory().begin() as db:
+        db.add(row)
+
+
+# Nilai string enum, atau None bila komponen tidak memiliki nilai tersebut.
+def _enum_value(value: Enum | None) -> str | None:
+    return value.value if value is not None else None
 
 
 # Komponen proofCheck dan documentHash registry (SA §5.3.1). Kontrak T3-05: pembaca tidak raise. Pengaman kedua
