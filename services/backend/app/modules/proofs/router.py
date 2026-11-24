@@ -1,5 +1,4 @@
-# Owner: Zan (PIC 3) | Status: STUB | Ref: PRD FR-03.01–FR-03.09, FR-04.01–FR-04.07; SA §10.4, §10.6, §8.3
-# TODO: Hubungkan handler S-06, API-05, dan API-06 ke proofs.service.
+# Owner: Zan (PIC 3) | Status: COMPLETE | Ref: PRD FR-03.01–FR-03.09, FR-04.01–FR-04.07; SA §10.4, §10.6, §8.3
 """Router SVC-02: API-04, S-06, API-05, API-06."""
 
 from typing import Annotated
@@ -9,7 +8,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
 from app.core.db import get_db
-from app.core.errors import AppError, error_responses, not_implemented
+from app.core.errors import AppError, error_responses
 from app.core.files import read_uploaded_pdf
 from app.core.schemas import ErrorCode
 from app.modules.issuers.dependencies import AuthorizedHrContext, authorized_hr
@@ -78,7 +77,7 @@ async def list_proofs(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ProofListResponse:
-    raise not_implemented()
+    return await run_in_threadpool(service.list_proofs, db, hr, status_filter, limit, offset)
 
 
 # API-05 getProofStatus: status bukti dibaca dari registry.
@@ -98,7 +97,7 @@ async def get_proof_status(
     hr: Annotated[AuthorizedHrContext, Depends(authorized_hr)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ProofStatusResponse:
-    raise not_implemented()
+    return await run_in_threadpool(service.get_proof_status, db, hr, proof_id)
 
 
 # API-06 revokeProof: pencabutan bukti ACTIVE milik penerbit HR.

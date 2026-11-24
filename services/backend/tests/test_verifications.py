@@ -389,19 +389,6 @@ def test_proof_reader_stub_unavailable(client, partner_headers, install, monkeyp
     assert "NILAI-RAHASIA" not in json.dumps(logged) and "NILAI-RAHASIA" not in caplog.text
 
 
-# Jalur nyata tanpa FakeProofReader: stub asli proofs.service dipanggil dan hasilnya sama dengan test di atas.
-# Bergantung pada T3-05: setelah pembaca nyata digabung, test ini diganti test integrasi registry.
-def test_real_proof_service_stub_unavailable(client, partner_headers, monkeypatch, caplog):
-    fake = install_fake_ai(monkeypatch, analysis="low")
-    with caplog.at_level(logging.WARNING):
-        response = post(client, partner_headers, code=CODE, file=MATCHING_FILE_BYTES, include_risk=True)
-    assert response.status_code == 200, response.text
-    assert_matches_example(response.json(), "api-07.registry-unavailable.json")
-    assert response.json()["riskAnalysis"]["state"] == "COMPLETED"
-    assert fake.requests
-    assert formatted_log(caplog, "proof.read_failed")["reason"] == "not_implemented"
-
-
 # Membaca baris verification_logs untuk satu verificationId sebagai dict kolom → nilai (None bila tidak ada).
 def logged_row(verification_id: str) -> dict | None:
     with get_session_factory()() as db:
