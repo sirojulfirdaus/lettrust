@@ -7,9 +7,18 @@ from unittest.mock import Mock
 
 import pytest
 from web3 import Web3
-from web3.exceptions import ContractCustomError, ContractLogicError, TimeExhausted, Web3RPCError
+from web3.exceptions import (
+    ContractCustomError,
+    ContractLogicError,
+    TimeExhausted,
+    TransactionIndexingInProgress,
+    TransactionNotFound,
+    Web3Exception,
+    Web3RPCError,
+)
 
 from app.core.config import get_settings
+from app.modules.registry import adapter as registry_adapter
 from app.modules.registry.adapter import (
     SIGNER_LOCK,
     IssuerMismatchOnChain,
@@ -34,7 +43,11 @@ READ_OPERATIONS = ["get_proof", "find_issue_tx", "find_revoke_tx"]
 @pytest.fixture
 def adapter() -> Web3RegistryAdapter:
     settings = get_settings().model_copy(
-        update={"registry_contract_address": CONTRACT_ADDRESS, "registry_tx_receipt_timeout_seconds": 0.25}
+        update={
+            "registry_contract_address": CONTRACT_ADDRESS,
+            "registry_rpc_timeout_seconds": 0.15,
+            "registry_tx_receipt_timeout_seconds": 0.25,
+        }
     )
     return Web3RegistryAdapter(settings)
 
@@ -49,8 +62,20 @@ def rpc(adapter: Web3RegistryAdapter, monkeypatch: pytest.MonkeyPatch) -> Mock:
     web3.eth.account.from_key.return_value.address = "0x" + "66" * 20
     web3.eth.account.from_key.return_value.sign_transaction.return_value.raw_transaction = b"signed-transaction-test"
     web3.eth.send_raw_transaction.return_value = TX_HASH
-    web3.eth.wait_for_transaction_receipt.return_value = {"status": 1, "blockNumber": 42}
-    web3.eth.get_block.return_value = {"timestamp": 1_790_000_000}
+    web3.eth.get_transaction_receipt.return_value = {"status": 1, "blockNumber": 42}
+    contract = web3.eth.contract.return_value
+    contract.address = CONTRACT_ADDRESS
+    fields = {
+        "proofId": bytes.fromhex("11" * 32),
+        "issuerRef": bytes.fromhex(ISSUER_REF),
+        "documentHash": bytes.fromhex(DOCUMENT_HASH),
+        "issuedAt": 1_790_000_000,
+        "revokedAt": 1_790_000_000,
+    }
+    for event_name in ("ProofIssued", "ProofRevoked"):
+        getattr(contract.events, event_name).return_value.process_receipt.return_value = [
+            {"address": CONTRACT_ADDRESS, "args": fields}
+        ]
     monkeypatch.setattr(adapter, "_web3", Mock(return_value=web3))
     return web3
 
@@ -137,7 +162,7 @@ def test_custom_revert_matches_registry_protocol(
 
 # Memastikan receipt yang belum terkonfirmasi menghasilkan Pending dan tidak diperlakukan sebagai kegagalan pasti.
 def test_receipt_timeout_is_pending(adapter: Web3RegistryAdapter, rpc: Mock) -> None:
-    rpc.eth.wait_for_transaction_receipt.side_effect = TimeExhausted("receipt timeout")
+    rpc.eth.get_transaction_receipt.side_effect = TimeExhausted("receipt timeout")
     with pytest.raises(RegistryTransactionPending):
         adapter.issue_proof(PROOF_ID, DOCUMENT_HASH, ISSUER_REF)
     rpc.eth.get_block.assert_not_called()
@@ -146,7 +171,7 @@ def test_receipt_timeout_is_pending(adapter: Web3RegistryAdapter, rpc: Mock) -> 
 
 # Memastikan receipt status nol tidak menghasilkan TxResult atau pembacaan blok sukses.
 def test_failed_receipt_is_transaction_failed(adapter: Web3RegistryAdapter, rpc: Mock) -> None:
-    rpc.eth.wait_for_transaction_receipt.return_value = {"status": 0, "blockNumber": 42}
+    rpc.eth.get_transaction_receipt.return_value = {"status": 0, "blockNumber": 42}
     with pytest.raises(RegistryTransactionFailed):
         adapter.issue_proof(PROOF_ID, DOCUMENT_HASH, ISSUER_REF)
     rpc.eth.get_block.assert_not_called()
@@ -170,16 +195,111 @@ def test_write_lock_and_confirmation_cover_the_whole_transaction(
     signed = signer.sign_transaction.return_value
     signer.sign_transaction.side_effect = lambda _: locked_result("sign", signed)
     rpc.eth.send_raw_transaction.side_effect = lambda _: locked_result("broadcast", TX_HASH)
-    rpc.eth.wait_for_transaction_receipt.side_effect = lambda *_, **__: locked_result(
-        "receipt", {"status": 1, "blockNumber": 42}
-    )
+    rpc.eth.get_transaction_receipt.side_effect = lambda _: locked_result("receipt", {"status": 1, "blockNumber": 42})
 
     result = write_proof(adapter, method)
 
     assert result == TxResult("0x" + "55" * 32, 42, 1_790_000_000)
     assert stages == ["nonce", "sign", "broadcast", "receipt"]
     rpc.eth.get_transaction_count.assert_called_once_with(signer.address, "pending")
-    rpc.eth.wait_for_transaction_receipt.assert_called_once_with(TX_HASH, timeout=0.25, poll_latency=0.1)
+    rpc.eth.get_transaction_receipt.assert_called_once_with(TX_HASH)
+    rpc.eth.get_block.assert_not_called()
+    assert not SIGNER_LOCK.locked()
+
+
+# Memastikan gangguan polling setelah broadcast tetap Pending agar backend dapat merekonsiliasi bukti.
+@pytest.mark.parametrize("method", ["issue_proof", "revoke_proof"])
+def test_confirmation_rpc_failure_remains_pending(adapter: Web3RegistryAdapter, rpc: Mock, method: str) -> None:
+    rpc.eth.get_transaction_receipt.side_effect = OSError("confirmation transport timeout")
+    with pytest.raises(RegistryTransactionPending):
+        write_proof(adapter, method)
+    rpc.eth.send_raw_transaction.assert_called_once()
+    assert not SIGNER_LOCK.locked()
+
+
+# Memastikan balasan broadcast yang hilang tidak dianggap sebagai kegagalan pasti transaksi.
+@pytest.mark.parametrize("method", ["issue_proof", "revoke_proof"])
+def test_broadcast_acknowledgement_failure_is_pending(adapter: Web3RegistryAdapter, rpc: Mock, method: str) -> None:
+    rpc.eth.send_raw_transaction.side_effect = OSError("broadcast acknowledgement lost")
+    with pytest.raises(RegistryTransactionPending):
+        write_proof(adapter, method)
+    rpc.eth.get_transaction_receipt.assert_not_called()
+    assert not SIGNER_LOCK.locked()
+
+
+# Memastikan receipt sukses cukup untuk mengembalikan timestamp tanpa RPC blok yang mungkin sedang gagal.
+@pytest.mark.parametrize("method", ["issue_proof", "revoke_proof"])
+def test_confirmed_receipt_uses_its_event_timestamp(adapter: Web3RegistryAdapter, rpc: Mock, method: str) -> None:
+    rpc.eth.get_block.side_effect = OSError("block endpoint unavailable")
+    assert write_proof(adapter, method) == TxResult("0x" + "55" * 32, 42, 1_790_000_000)
+    rpc.eth.get_block.assert_not_called()
+
+
+# Memastikan receipt sukses tanpa event lengkap tetap dapat direkonsiliasi dan tidak menjadi kegagalan pasti.
+def test_missing_receipt_event_is_pending(adapter: Web3RegistryAdapter, rpc: Mock) -> None:
+    rpc.eth.contract.return_value.events.ProofIssued.return_value.process_receipt.return_value = []
+    with pytest.raises(RegistryTransactionPending):
+        adapter.issue_proof(PROOF_ID, DOCUMENT_HASH, ISSUER_REF)
+    rpc.eth.get_block.assert_not_called()
+
+
+# Memastikan polling kedua memakai sisa anggaran dan lock dilepas tepat setelah anggaran habis.
+def test_receipt_polling_uses_remaining_budget(
+    adapter: Web3RegistryAdapter, rpc: Mock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clock = [0.0]
+    timeouts: list[float] = []
+
+    # Memajukan jam virtual untuk mengukur anggaran tanpa bergantung pada kecepatan mesin tes.
+    def advance(seconds: float) -> None:
+        clock[0] += seconds
+
+    # Merekam batas per request yang diberikan adapter kepada transport konfirmasi.
+    def client(timeout: float | None = None) -> Mock:
+        if timeout is not None:
+            timeouts.append(timeout)
+        return rpc
+
+    # Menyimulasikan transaksi belum ditemukan lalu timeout pada sisa anggaran berikutnya.
+    def receipt(_tx_hash: bytes) -> None:
+        if len(timeouts) == 1:
+            advance(0.12)
+            raise TransactionNotFound("not indexed yet")
+        advance(timeouts[-1])
+        raise OSError("receipt transport timeout")
+
+    monkeypatch.setattr(registry_adapter, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(registry_adapter, "sleep", advance)
+    monkeypatch.setattr(adapter, "_web3", client)
+    rpc.eth.get_transaction_receipt.side_effect = receipt
+    with pytest.raises(RegistryTransactionPending):
+        adapter.issue_proof(PROOF_ID, DOCUMENT_HASH, ISSUER_REF)
+    assert timeouts == pytest.approx([0.15, 0.03])
+    assert clock[0] == pytest.approx(0.25)
+    assert not SIGNER_LOCK.locked()
+
+
+# Memastikan transaksi belum terindeks menghabiskan anggaran lewat jeda terbatas, tanpa polling sesudah deadline.
+@pytest.mark.parametrize("pending_error", [TransactionNotFound, TransactionIndexingInProgress])
+def test_unindexed_receipt_stops_at_deadline(
+    adapter: Web3RegistryAdapter, rpc: Mock, monkeypatch: pytest.MonkeyPatch, pending_error: type[Web3Exception]
+) -> None:
+    clock = [0.0]
+    delays: list[float] = []
+
+    # Merekam jeda dan memajukan jam virtual sampai batas receipt tercapai.
+    def advance(seconds: float) -> None:
+        delays.append(seconds)
+        clock[0] += seconds
+
+    monkeypatch.setattr(registry_adapter, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(registry_adapter, "sleep", advance)
+    rpc.eth.get_transaction_receipt.side_effect = pending_error("receipt not indexed")
+    with pytest.raises(RegistryTransactionPending):
+        adapter.issue_proof(PROOF_ID, DOCUMENT_HASH, ISSUER_REF)
+    assert clock[0] == pytest.approx(0.25)
+    assert delays == pytest.approx([0.1, 0.1, 0.05])
+    assert rpc.eth.get_transaction_receipt.call_count == 3
     assert not SIGNER_LOCK.locked()
 
 

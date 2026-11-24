@@ -9,11 +9,14 @@ from dataclasses import dataclass
 from enum import IntEnum
 from functools import lru_cache
 from pathlib import Path
+from time import monotonic, sleep
 from typing import Any, Protocol
 
 from web3 import Web3
 from web3.contract.contract import Contract
-from web3.exceptions import ContractLogicError, TimeExhausted, Web3Exception
+from web3.exceptions import ContractLogicError, TransactionIndexingInProgress, TransactionNotFound, Web3Exception
+from web3.logs import DISCARD
+from web3.types import TxReceipt
 
 from app.core.config import Settings, get_settings
 from app.modules.registry.codec import bytes32_to_hex64, hex64_to_bytes32, proof_id_to_bytes32
@@ -81,7 +84,7 @@ class IssuerMismatchOnChain(RegistryError):
 
 
 class RegistryTransactionPending(RegistryError):
-    """Receipt timeout → REGISTRY_TRANSACTION_FAILED (503); direkonsiliasi pada pengulangan."""
+    """Konfirmasi pengiriman belum pasti → REGISTRY_TRANSACTION_FAILED (503); direkonsiliasi pada pengulangan."""
 
 
 class RegistryAdapter(Protocol):
@@ -158,10 +161,18 @@ class Web3RegistryAdapter:
     def __init__(self, settings: Settings):
         self._settings = settings
 
-    # Membuat client Web3 dengan timeout RPC dari konfigurasi.
-    def _web3(self) -> Web3:
-        timeout = self._settings.registry_rpc_timeout_seconds
-        return Web3(Web3.HTTPProvider(self._settings.registry_rpc_url, request_kwargs={"timeout": timeout}))
+    # Membatasi satu request RPC tanpa retry implisit; polling memakai sisa anggaran receipt bila lebih kecil.
+    def _web3(self, timeout: float | None = None) -> Web3:
+        rpc_timeout = self._settings.registry_rpc_timeout_seconds
+        if timeout is not None:
+            rpc_timeout = min(rpc_timeout, timeout)
+        return Web3(
+            Web3.HTTPProvider(
+                self._settings.registry_rpc_url,
+                request_kwargs={"timeout": rpc_timeout},
+                exception_retry_configuration=None,
+            )
+        )
 
     # Menentukan alamat contract dari override env atau berkas deployment; None bila belum tersedia.
     def resolve_contract_address(self) -> str | None:
@@ -247,27 +258,74 @@ class Web3RegistryAdapter:
                     }
                 )
                 signed = signer.sign_transaction(transaction)
-                tx_hash = web3.eth.send_raw_transaction(signed.raw_transaction)
-                try:
-                    receipt = web3.eth.wait_for_transaction_receipt(
-                        tx_hash, timeout=self._settings.registry_tx_receipt_timeout_seconds, poll_latency=0.1
-                    )
-                except TimeExhausted as exc:
-                    raise RegistryTransactionPending("Receipt registry belum terkonfirmasi.") from exc
-                if receipt["status"] != 1:
-                    raise RegistryTransactionFailed()
-                block_number = int(receipt["blockNumber"])
-                block = web3.eth.get_block(block_number)
-                return TxResult(
-                    tx_hash=Web3.to_hex(tx_hash),
-                    block_number=block_number,
-                    block_timestamp=int(block["timestamp"]),
-                )
             except _RPC_ERRORS as exc:
                 error = _transaction_error(exc, operation) if isinstance(exc, Web3Exception) else None
                 if error is not None:
                     raise error from exc
                 raise RegistryUnavailable("Transaksi registry tidak dapat diproses melalui RPC.") from exc
+
+            try:
+                tx_hash = web3.eth.send_raw_transaction(signed.raw_transaction)
+            except _RPC_ERRORS as exc:
+                error = _transaction_error(exc, operation) if isinstance(exc, Web3Exception) else None
+                if error is not None:
+                    raise error from exc
+                # Node mungkin sudah menerima transaksi meskipun balasan broadcast tidak sampai.
+                raise RegistryTransactionPending("Pengiriman transaksi registry belum dapat dikonfirmasi.") from exc
+
+            try:
+                receipt = self._wait_for_receipt(tx_hash)
+                if receipt["status"] == 0:
+                    raise RegistryTransactionFailed()
+                if receipt["status"] != 1:
+                    raise RegistryTransactionPending("Status receipt registry belum dapat dipastikan.")
+                return self._confirmed_result(contract, operation, args, tx_hash, receipt)
+            except _RPC_ERRORS as exc:
+                raise RegistryTransactionPending("Konfirmasi transaksi registry belum lengkap.") from exc
+
+    # Membatasi setiap polling dan jedanya dengan sisa anggaran; gangguan setelah broadcast tetap Pending.
+    def _wait_for_receipt(self, tx_hash: bytes) -> TxReceipt:
+        deadline = monotonic() + self._settings.registry_tx_receipt_timeout_seconds
+        while True:
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                raise RegistryTransactionPending("Receipt registry belum terkonfirmasi.")
+            try:
+                web3 = self._web3(timeout=min(self._settings.registry_rpc_timeout_seconds, remaining))
+                receipt = web3.eth.get_transaction_receipt(tx_hash)
+                if receipt is not None:
+                    return receipt
+            except (TransactionNotFound, TransactionIndexingInProgress):
+                pass
+            except _RPC_ERRORS as exc:
+                raise RegistryTransactionPending("Receipt registry belum dapat dikonfirmasi melalui RPC.") from exc
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                raise RegistryTransactionPending("Receipt registry belum terkonfirmasi.")
+            sleep(min(0.1, remaining))
+
+    # Mengambil timestamp dari event receipt terkonfirmasi tanpa RPC tambahan yang dapat mengaburkan keberhasilan.
+    def _confirmed_result(
+        self, contract: Contract, operation: str, args: tuple[bytes, ...], tx_hash: bytes, receipt: TxReceipt
+    ) -> TxResult:
+        event_name, timestamp_field = (
+            ("ProofIssued", "issuedAt") if operation == "issueProof" else ("ProofRevoked", "revokedAt")
+        )
+        event = getattr(contract.events, event_name)()
+        for log in event.process_receipt(receipt, errors=DISCARD):
+            fields = log["args"]
+            if log["address"].lower() != contract.address.lower():
+                continue
+            if fields["proofId"] != args[0] or fields["issuerRef"] != args[-1]:
+                continue
+            if operation == "issueProof" and fields["documentHash"] != args[1]:
+                continue
+            return TxResult(
+                tx_hash=Web3.to_hex(tx_hash),
+                block_number=int(receipt["blockNumber"]),
+                block_timestamp=int(fields[timestamp_field]),
+            )
+        raise RegistryTransactionPending("Event konfirmasi registry belum tersedia pada receipt.")
 
     # Membaca log event yang difilter proofId; None hanya diberikan setelah pencarian RPC berhasil.
     def _find_tx(self, event_name: str, timestamp_field: str, proof_id: bytes) -> TxResult | None:
