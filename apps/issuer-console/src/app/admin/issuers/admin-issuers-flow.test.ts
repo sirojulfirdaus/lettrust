@@ -11,6 +11,8 @@ import {
   errorIssuerDecisionAlreadyMade,
   errorIssuerNotFound,
   errorIssuerNotVerified,
+  s03SessionAdmin,
+  s03SessionHrAuthorized,
   s04IssuerList,
   s04IssuerListEmpty,
   s04IssuerListPending,
@@ -135,17 +137,20 @@ describe("alur admin penerbit (S-04, S-05, API-02, API-03)", () => {
     });
   });
 
-  it("memuat detail penerbit S-05 serta menangani 404 ISSUER_NOT_FOUND", async () => {
+  it("memuat detail penerbit S-05 setelah verifikasi peran ADMIN serta menangani 404 ISSUER_NOT_FOUND", async () => {
     saveSession(createSession("jwt-admin", 3600));
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce(jsonResponse(s03SessionAdmin, 200))
       .mockResolvedValueOnce(jsonResponse(s05IssuerDetailPending, 200))
+      .mockResolvedValueOnce(jsonResponse(s03SessionAdmin, 200))
       .mockResolvedValueOnce(jsonResponse(errorIssuerNotFound, 404));
     vi.stubGlobal("fetch", fetchMock);
 
     const ready = await loadIssuerDetail({ issuerId: s05IssuerDetailPending.issuerId });
     expect(ready).toEqual({ kind: "ready", data: s05IssuerDetailPending });
-    expect(fetchMock.mock.calls[0][0]).toBe(
+    expect(fetchMock.mock.calls[0][0]).toBe(buildApiUrl("/api/v1/auth/me"));
+    expect(fetchMock.mock.calls[1][0]).toBe(
       buildApiUrl("/api/v1/issuers/{issuerId}", {
         issuerId: s05IssuerDetailPending.issuerId,
       }),
@@ -156,6 +161,28 @@ describe("alur admin penerbit (S-04, S-05, API-02, API-03)", () => {
       kind: "not_found",
       message: "Penerbit tidak ditemukan.",
     });
+    expect(fetchMock.mock.calls[2][0]).toBe(buildApiUrl("/api/v1/auth/me"));
+    expect(fetchMock.mock.calls[3][0]).toBe(
+      buildApiUrl("/api/v1/issuers/{issuerId}", {
+        issuerId: "ISS-MISSING",
+      }),
+    );
+  });
+
+  it("menolak akses HR di loadIssuerDetail sebelum memanggil S-05", async () => {
+    saveSession(createSession("jwt-hr", 3600));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(s03SessionHrAuthorized, 200));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await loadIssuerDetail({ issuerId: s05IssuerDetailPending.issuerId });
+    expect(result).toEqual({
+      kind: "forbidden",
+      message: "Anda tidak memiliki izin untuk tindakan ini.",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(buildApiUrl("/api/v1/auth/me"));
   });
 
   it("menyimpan keputusan verifikasi API-02 dan menangani ISSUER_DECISION_ALREADY_MADE", async () => {
@@ -192,7 +219,7 @@ describe("alur admin penerbit (S-04, S-05, API-02, API-03)", () => {
     saveSession(createSession("jwt-admin", 3600));
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse(api03AuthorizeHrResponse, 200))
+      .mockResolvedValueOnce(jsonResponse(api03AuthorizeHrResponse, 201))
       .mockResolvedValueOnce(jsonResponse(errorHrNotAffiliated, 422))
       .mockResolvedValueOnce(jsonResponse(errorIssuerNotVerified, 409))
       .mockResolvedValueOnce(jsonResponse(errorHrAlreadyAuthorized, 409));

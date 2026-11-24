@@ -1,5 +1,10 @@
 // Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.05, FR-01.06, §9.5, §9.8; SA §10.5 (S-04, S-05, API-02, API-03)
-import { ApiError, apiFetch, type IssuerDetailResponse } from "@/lib/api/client";
+import {
+  ApiError,
+  apiFetch,
+  fetchSessionProfile,
+  type IssuerDetailResponse,
+} from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 import { readSession } from "@/lib/session";
 
@@ -139,7 +144,7 @@ export async function loadIssuerList(options: {
   }
 }
 
-// Memuat detail penerbit beserta anggota HR terafiliasi dari S-05 GET /api/v1/issuers/{issuerId}.
+// Memverifikasi peran ADMIN lewat S-03 sebelum memuat detail penerbit dari S-05 GET /api/v1/issuers/{issuerId}.
 export async function loadIssuerDetail(options: {
   issuerId: string;
   signal?: AbortSignal;
@@ -150,6 +155,18 @@ export async function loadIssuerDetail(options: {
   }
 
   try {
+    const profile = await fetchSessionProfile({
+      signal: options.signal,
+      onUnauthorized: options.onUnauthorized,
+    });
+
+    if (options.signal?.aborted) {
+      return { kind: "aborted" };
+    }
+    if (profile.role !== "ADMIN") {
+      return { kind: "forbidden", message: "Anda tidak memiliki izin untuk tindakan ini." };
+    }
+
     const data = await apiFetch<IssuerDetailResponse>("/api/v1/issuers/{issuerId}", {
       method: "GET",
       pathParams: { issuerId: options.issuerId },
