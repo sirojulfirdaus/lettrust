@@ -7,6 +7,7 @@ import { Check, CheckCircle2, Copy, ExternalLink, FilePlus2 } from "lucide-react
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { copyTextToClipboard } from "@/app/hr/proofs/proofs-flow";
 import { ProofStatusBadge, formatProofTimestamp } from "@/components/proofs/proof-status-badge";
 import type { IssueProofResponse } from "@/lib/api/client";
 
@@ -30,22 +31,21 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
     };
   }, []);
 
-  // Menyalin nilai teks ke clipboard dengan umpan balik singkat untuk pengguna.
+  // Menyalin nilai teks ke clipboard dan menampilkan status tersalin hanya setelah writeText berhasil.
   const handleCopy = async (field: CopyField, value: string) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
-      }
-      setCopiedField(field);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setCopiedField(null);
-      }, 2000);
-    } catch {
-      setCopiedField(null);
+    const copied = await copyTextToClipboard(value);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
+    if (!copied) {
+      setCopiedField(null);
+      return;
+    }
+    setCopiedField(field);
+    timerRef.current = setTimeout(() => {
+      setCopiedField(null);
+    }, 2000);
   };
 
   return (

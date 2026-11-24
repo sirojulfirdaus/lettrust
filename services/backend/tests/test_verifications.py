@@ -4,6 +4,7 @@
 
 import asyncio
 import functools
+import hashlib
 import json
 import logging
 import re
@@ -21,11 +22,17 @@ from fakes.proofs import (
     install_fake_proof_reader,
     registry_unavailable,
 )
+from sqlalchemy import func, select
+from sqlalchemy.exc import OperationalError
 
 from app.core.config import get_settings
+from app.core.db import get_session_factory
 from app.core.logging import JsonFormatter
+from app.core.security import hash_token
+from app.modules.partners.models import Partner
 from app.modules.proofs.service import ProofVerificationRead
-from app.modules.verifications import ai_client
+from app.modules.verifications import ai_client, orchestrator
+from app.modules.verifications.models import VerificationLog
 
 URL = "/api/v1/verifications"
 CODE = "LTR-7K3M-9QX2-H4TD"
@@ -393,3 +400,149 @@ def test_real_proof_service_stub_unavailable(client, partner_headers, monkeypatc
     assert response.json()["riskAnalysis"]["state"] == "COMPLETED"
     assert fake.requests
     assert formatted_log(caplog, "proof.read_failed")["reason"] == "not_implemented"
+
+
+# Membaca baris verification_logs untuk satu verificationId sebagai dict kolom → nilai (None bila tidak ada).
+def logged_row(verification_id: str) -> dict | None:
+    with get_session_factory()() as db:
+        row = db.get(VerificationLog, verification_id)
+        return None if row is None else {c.name: getattr(row, c.name) for c in VerificationLog.__table__.columns}
+
+
+# Jumlah seluruh baris verification_logs.
+def log_count() -> int:
+    with get_session_factory()() as db:
+        return db.scalar(select(func.count()).select_from(VerificationLog))
+
+
+# Kolom enum yang diharapkan dari body API-07 (SA §9.2).
+def expected_log(body: dict) -> dict:
+    proof, integrity, risk = body["proofCheck"], body["integrityCheck"], body["riskAnalysis"]
+    return {
+        "id": body["verificationId"],
+        "mode": body["mode"],
+        "lookup": proof["lookup"],
+        "lifecycle_status": proof["lifecycleStatus"],
+        "proof_reason": proof["reason"],
+        "integrity_result": integrity["result"],
+        "integrity_reason": integrity["reason"],
+        "risk_state": risk["state"],
+        "risk_category": risk["category"],
+        "risk_reason": risk["reason"],
+    }
+
+
+# id partner pemilik PARTNER_TOKEN uji.
+def current_partner_id() -> str:
+    token = get_settings().partner_token.get_secret_value()
+    with get_session_factory()() as db:
+        return db.scalar(select(Partner.id).where(Partner.token_hash == hash_token(token)))
+
+
+# T1-06: setiap API-07 200 (Mode Dengan Kode, Mode Tanpa Kode, dan hasil parsial) mencatat tepat satu baris berisi
+# enum hasil yang sama dengan respons, partner pemanggil, durasi, dan waktu.
+@pytest.mark.parametrize(
+    ("setup", "request_kwargs", "expected"),
+    [
+        pytest.param(
+            {"proof": found_active()},
+            {"code": CODE, "file": MATCHING_FILE_BYTES, "include_risk": True},
+            ("REFERENCE_CHECK", "FOUND", "ACTIVE", "MATCH", "COMPLETED", "HIGH"),
+            id="reference-check",
+        ),
+        pytest.param(
+            {"analysis": "low"},
+            {"file": MATCHING_FILE_BYTES, "include_risk": True},
+            ("AI_ONLY", "NOT_REQUESTED", None, "NOT_CHECKED", "COMPLETED", "LOW"),
+            id="ai-only",
+        ),
+        pytest.param(
+            {"proof": registry_unavailable(), "extraction": "timeout"},
+            {"code": CODE, "file": MATCHING_FILE_BYTES, "include_risk": True},
+            ("REFERENCE_CHECK", "UNAVAILABLE", None, "NOT_CHECKED", "UNAVAILABLE", None),
+            id="partial-double-outage",
+        ),
+    ],
+)
+def test_verification_logged(client, partner_headers, install, setup, request_kwargs, expected):
+    install(**setup)
+    before = log_count()
+    response = post(client, partner_headers, **request_kwargs)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    row = logged_row(body["verificationId"])
+    assert log_count() == before + 1
+    assert row is not None
+    columns = ("mode", "lookup", "lifecycle_status", "integrity_result", "risk_state", "risk_category")
+    assert tuple(row[c] for c in columns) == expected
+    assert {k: row[k] for k in expected_log(body)} == expected_log(body)
+    assert row["partner_id"] == current_partner_id()
+    assert isinstance(row["duration_ms"], int) and row["duration_ms"] >= 0
+    assert row["created_at"] is not None
+
+
+# Respons error (400 validasi, 401 token) tidak mencatat log verifikasi.
+@pytest.mark.parametrize(
+    ("headers", "request_kwargs", "status"),
+    [
+        (None, {}, 400),
+        (None, {"file": MATCHING_FILE_BYTES}, 400),
+        ({"Authorization": "Bearer token-salah"}, {"file": MATCHING_FILE_BYTES, "include_risk": True}, 401),
+    ],
+    ids=["no-input", "ai-only-without-risk", "bad-token"],
+)
+def test_error_responses_not_logged(client, partner_headers, install, headers, request_kwargs, status):
+    install()
+    before = log_count()
+    response = post(client, headers or partner_headers, **request_kwargs)
+    assert response.status_code == status, response.text
+    assert log_count() == before
+
+
+# Factory session sintetis yang gagal saat transaksi dibuka; pesannya memuat penanda yang tidak boleh tercatat.
+class BrokenSessionFactory:
+    """Meniru DB yang terkunci saat log verifikasi ditulis."""
+
+    # Membuka transaksi selalu gagal dengan OperationalError.
+    def begin(self):
+        raise OperationalError("INSERT INTO verification_logs NILAI-RAHASIA", {}, Exception("database is locked"))
+
+
+# Kegagalan tulis log tidak mengubah respons API-07 (tetap 200, hasil sama dengan contoh); hanya log ERROR
+# verification.log_failed dengan nama tipe exception, tanpa pesan.
+def test_log_write_failure_keeps_response(client, partner_headers, install, monkeypatch, caplog):
+    install(proof=found_active(), analysis="low")
+    monkeypatch.setattr(orchestrator, "get_session_factory", BrokenSessionFactory)
+    with caplog.at_level(logging.WARNING):
+        response = post(client, partner_headers, code=CODE, file=MATCHING_FILE_BYTES, include_risk=True)
+    assert response.status_code == 200, response.text
+    assert_matches_example(response.json(), "api-07.reference-match-ai.json")
+    assert logged_row(response.json()["verificationId"]) is None
+    [record] = [r for r in caplog.records if getattr(r, "event", None) == "verification.log_failed"]
+    assert record.levelno == logging.ERROR
+    logged = formatted_log(caplog, "verification.log_failed")
+    assert logged["exception"] == "OperationalError"
+    assert "NILAI-RAHASIA" not in json.dumps(logged) and "NILAI-RAHASIA" not in caplog.text
+
+
+# Baris log tidak memuat isi berkas, teks dokumen hasil ekstraksi, hash berkas, kode referensi (utuh atau sebagian),
+# maupun token partner.
+def test_log_has_no_sensitive_values(client, partner_headers, install):
+    install(proof=found_active())
+    marked_file = b"%PDF-1.4\n%NILAI-RAHASIA-T106\n"
+    response = post(client, partner_headers, code=CODE, file=marked_file, include_risk=True)
+    assert response.status_code == 200, response.text
+    row = logged_row(response.json()["verificationId"])
+    assert row is not None and row["integrity_result"] == "MISMATCH"
+    stored = json.dumps(row, default=str)
+    extracted_text = load_example("internal/i-01.extraction-ok.json")["text"]
+    sensitive = [
+        "NILAI-RAHASIA",
+        CODE,
+        CODE.replace("-", ""),
+        CODE.removeprefix("LTR-"),
+        hashlib.sha256(marked_file).hexdigest(),
+        get_settings().partner_token.get_secret_value(),
+        *[line for line in extracted_text.splitlines() if len(line) > 8],
+    ]
+    assert [value for value in sensitive if value in stored] == []

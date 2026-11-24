@@ -29,6 +29,7 @@ import {
 import { RevokeDialog } from "@/components/proofs/revoke-dialog";
 import type { ProofStatusResponse, RevokeProofResponse } from "@/lib/api/client";
 import {
+  copyTextToClipboard,
   getProofDetailRefreshErrorMessage,
   loadProofDetail,
   mergeRevokeResultIntoProofDetail,
@@ -138,22 +139,21 @@ export default function ProofDetailPage() {
     };
   }, [proofId, reloadCount, router]);
 
-  // Menyalin nilai teks ke clipboard dengan umpan balik singkat.
+  // Menyalin nilai teks ke clipboard dan menampilkan status tersalin hanya setelah writeText berhasil.
   const handleCopy = async (field: CopyField, value: string) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
-      }
-      setCopiedField(field);
-      if (copyTimerRef.current) {
-        clearTimeout(copyTimerRef.current);
-      }
-      copyTimerRef.current = setTimeout(() => {
-        setCopiedField(null);
-      }, 2000);
-    } catch {
-      setCopiedField(null);
+    const copied = await copyTextToClipboard(value);
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = null;
     }
+    if (!copied) {
+      setCopiedField(null);
+      return;
+    }
+    setCopiedField(field);
+    copyTimerRef.current = setTimeout(() => {
+      setCopiedField(null);
+    }, 2000);
   };
 
   // Memperbarui tampilan segera setelah API-06 201 lalu menyegarkan detail dari registry (API-05) di latar belakang.

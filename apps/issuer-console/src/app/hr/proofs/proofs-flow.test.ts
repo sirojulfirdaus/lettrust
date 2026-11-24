@@ -30,8 +30,10 @@ import { buildApiUrl } from "@/lib/api/client";
 import { clearSession, createSession, saveSession } from "@/lib/session";
 import {
   MAX_PROOF_FILE_BYTES,
+  copyTextToClipboard,
   formatFileSize,
   generateIdempotencyKey,
+  getProofDetailReadErrorMessage,
   getProofDetailRefreshErrorMessage,
   isValidRevocationReasonCode,
   loadHrProofsGuard,
@@ -250,11 +252,16 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
       kind: "forbidden",
       message: "Anda tidak memiliki izin untuk tindakan ini.",
     });
-    expect(await loadProofDetail({ proofId: "0xdown" })).toEqual({
+    const registryDownResult = await loadProofDetail({ proofId: "0xdown" });
+    expect(registryDownResult).toEqual({
       kind: "error",
       code: "REGISTRY_UNAVAILABLE",
-      message: "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
+      message:
+        "Detail bukti dari registry belum dapat dimuat saat ini. Silakan coba lagi beberapa saat lagi.",
     });
+    if (registryDownResult.kind === "error") {
+      expect(registryDownResult.message).not.toContain("Pencatatan ke registry gagal");
+    }
   });
 
   it("mengirim API-04 POST /api/v1/proofs dengan FormData dan Idempotency-Key lalu memetakan semua error PRD §9.8", async () => {
@@ -518,5 +525,36 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
         message: "Terlalu banyak permintaan. Coba lagi beberapa saat lagi.",
       }),
     ).toBe("Terlalu banyak permintaan. Coba lagi beberapa saat lagi.");
+  });
+
+  it("memetakan pesan gagal baca awal API-05 dan hanya mengembalikan true saat clipboard writeText berhasil", async () => {
+    expect(
+      getProofDetailReadErrorMessage({
+        code: "REGISTRY_TRANSACTION_FAILED",
+        message: "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
+      }),
+    ).toBe(
+      "Detail bukti dari registry belum dapat dimuat saat ini. Silakan coba lagi beberapa saat lagi.",
+    );
+
+    expect(
+      getProofDetailReadErrorMessage({
+        code: "RATE_LIMITED",
+        message: "Terlalu banyak permintaan. Coba lagi beberapa saat lagi.",
+      }),
+    ).toBe("Terlalu banyak permintaan. Coba lagi beberapa saat lagi.");
+
+    vi.stubGlobal("navigator", {});
+    expect(await copyTextToClipboard("REF-001")).toBe(false);
+
+    const writeTextReject = vi.fn().mockRejectedValue(new Error("Clipboard denied"));
+    vi.stubGlobal("navigator", { clipboard: { writeText: writeTextReject } });
+    expect(await copyTextToClipboard("REF-001")).toBe(false);
+    expect(writeTextReject).toHaveBeenCalledWith("REF-001");
+
+    const writeTextResolve = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText: writeTextResolve } });
+    expect(await copyTextToClipboard("REF-001")).toBe(true);
+    expect(writeTextResolve).toHaveBeenCalledWith("REF-001");
   });
 });
