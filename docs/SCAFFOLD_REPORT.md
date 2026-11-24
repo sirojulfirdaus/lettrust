@@ -50,7 +50,7 @@ lettrust/
 ├── blockchain/                Dockerfile, foundry.toml, src/OfferProofRegistry.sol, test/OfferProofRegistry.t.sol,
 │                              script/Deploy.s.sol, scripts/deploy-if-needed.sh, lib/forge-std/
 ├── ai-eval/                   README.md, templates/README.md, dataset/manifest.csv, scripts/*.py, results/.gitkeep
-├── fixtures/README.md
+├── fixtures/                   README.md, FX-01–FX-10.pdf, fixture_builder.py, test_*.py
 ├── contracts/                 README.md, openapi.json, examples/*.json (8 berkas)
 ├── scripts/                   dev.py, export_abi.py, scn/README.md
 └── docs/                      prd/, SYSTEM_ARCHITECTURE.md, SCAFFOLD_REPORT.md, testing/{README.md,test-cases.md,evidence/.gitkeep},
@@ -59,7 +59,7 @@ lettrust/
 
 ## 4. Tabel File
 
-Status: COMPLETE = berfungsi sekarang; STUB = signature/docstring dengan kegagalan eksplisit; GEN = hasil generator (tanpa header kepemilikan).
+Status: COMPLETE = berfungsi sekarang; STUB = signature/docstring dengan kegagalan eksplisit; GEN = hasil generator (tanpa header kepemilikan); PARSIAL = artefak tersedia tetapi cakupan atau prasyarat finalisasi belum lengkap.
 
 ### Root, launcher, kontrak, dokumentasi
 
@@ -79,9 +79,12 @@ Status: COMPLETE = berfungsi sekarang; STUB = signature/docstring dengan kegagal
 | `contracts/README.md` | Dws | COMPLETE | SA §20.2 | Konvensi prefiks contoh |
 | `docs/testing/README.md`, `test-cases.md`, `evidence/.gitkeep` | Pash | STUB | PRD §12.4–§12.5 | Seksi SCN-01…SCN-22 (+07a/07b), tanpa baris TC |
 | `docs/evaluation/protocol.md` | B (PIC 5) | STUB | PRD §10.4 | Heading saja |
-| `fixtures/README.md` | B | STUB | PRD §12.4.1 | Tabel FX-01…FX-10 |
-| `ai-eval/README.md`, `templates/README.md`, `dataset/manifest.csv`, `results/.gitkeep` | B | STUB | SA §7.9 | manifest hanya header |
-| `ai-eval/scripts/{generate_pdfs,make_scans,freeze_testset,baseline,run_eval,metrics}.py` | B | STUB | SA §7.9 | Docstring + `NotImplementedError` |
+| `fixtures/README.md`, `FX-01.pdf`…`FX-10.pdf`, `fixture_builder.py`, `test_*.py` | B | COMPLETE | PRD §12.4.1; PLAN T5-06 | Sumber sintetis mandiri, renderer T5-05, checksum, test ekstraksi/OCR dan validasi unggahan; kategori LLM tetap target skenario, bukan hasil terukur |
+| `ai-eval/README.md`, `templates/README.md` | B | COMPLETE | SA §7.9 | Dokumentasi format templat dan perintah tooling; status data/evaluasi tetap terpisah |
+| `ai-eval/dataset/manifest.csv`, `ai-eval/dataset/pdf/`, `ai-eval/results/.gitkeep` | B | PARSIAL | PRD §10.4; PLAN T5-05 | 36 PDF Indonesia draf; EN, tinjauan manusia dan ID model bantu terverifikasi belum lengkap; jangan freeze atau memakai metrik test split sebagai hasil laporan |
+| `ai-eval/scripts/{generate_pdfs,make_scans}.py` | B | COMPLETE | SA §7.9; PLAN T5-05 | Generator deterministik; penyelesaian tooling tidak berarti T5-05 selesai penuh |
+| `ai-eval/scripts/generate_fixtures.py` | B | COMPLETE | SA §7.9; PLAN T5-06 | Entry point `dev.py eval` ke `fixtures/fixture_builder.py`; disetujui pengguna, tanpa perubahan launcher atau kontrak |
+| `ai-eval/scripts/{freeze_testset,baseline,run_eval,metrics}.py` | B | STUB | SA §7.9 | Tugas evaluasi lanjutan; belum dijalankan pada test split |
 
 ### Blockchain
 
