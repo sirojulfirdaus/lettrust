@@ -344,6 +344,16 @@ export function mergeRevokeResultIntoProofDetail(
   };
 }
 
+// Menyusun pesan gagal muat ulang detail berbasis pembacaan agar tidak memakai pesan gagal tulis dari registry.
+export function getProofDetailRefreshErrorMessage(
+  error: Pick<Extract<ProofDetailLoadResult, { kind: "error" }>, "code" | "message">,
+): string {
+  if (error.code === "RATE_LIMITED") {
+    return error.message;
+  }
+  return "Detail bukti terbaru dari registry belum dapat dimuat ulang. Data yang sudah tercatat tidak berubah; silakan coba muat ulang beberapa saat lagi.";
+}
+
 // Mengirim unggahan PDF ke API-04 POST /api/v1/proofs dengan header Idempotency-Key.
 export async function submitIssueProof(options: {
   file: File;

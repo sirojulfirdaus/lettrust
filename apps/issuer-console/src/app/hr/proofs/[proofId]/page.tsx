@@ -28,7 +28,11 @@ import {
 } from "@/components/proofs/proof-status-badge";
 import { RevokeDialog } from "@/components/proofs/revoke-dialog";
 import type { ProofStatusResponse, RevokeProofResponse } from "@/lib/api/client";
-import { loadProofDetail, mergeRevokeResultIntoProofDetail } from "../proofs-flow";
+import {
+  getProofDetailRefreshErrorMessage,
+  loadProofDetail,
+  mergeRevokeResultIntoProofDetail,
+} from "../proofs-flow";
 
 type ProofDetailState =
   | { status: "loading" }
@@ -117,8 +121,8 @@ export default function ProofDetailPage() {
       }
       if (result.kind === "error") {
         if (isBackgroundRefresh) {
-          // Pertahankan data yang sudah tampil agar hasil pencabutan terkonfirmasi tidak tertutup error refresh.
-          setRefreshWarningMessage(result.message);
+          // Gunakan pesan khusus gagal baca agar tidak bertentangan dengan konfirmasi pencabutan 201.
+          setRefreshWarningMessage(getProofDetailRefreshErrorMessage(result));
           return;
         }
         setState({ status: "error", message: result.message });
@@ -265,6 +269,8 @@ export default function ProofDetailPage() {
   }
 
   const proof = state.data;
+  const isStaleActiveAfterConflict =
+    isRevokeLockedByConflict && proof.lifecycleStatus === "ACTIVE";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -314,8 +320,10 @@ export default function ProofDetailPage() {
           <AlertTitle className="text-status-warning">Pembaruan detail tertunda</AlertTitle>
           <AlertDescription className="space-y-3 text-foreground">
             <p>
-              {refreshWarningMessage} Data terakhir yang terkonfirmasi tetap ditampilkan di bawah
-              ini.
+              {refreshWarningMessage}{" "}
+              {isStaleActiveAfterConflict
+                ? "Tampilan di bawah masih menggunakan status sebelum konflik sambil menunggu sinkronisasi dari registry."
+                : "Data terakhir yang terkonfirmasi tetap ditampilkan di bawah ini."}
             </p>
             <Button
               type="button"
@@ -366,13 +374,31 @@ export default function ProofDetailPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <ProofStatusBadge status={proof.lifecycleStatus} />
-              <Badge variant="secondary" className="gap-1">
-                <ShieldCheck className="size-3.5" aria-hidden="true" />
-                <span>Sumber: {proof.source}</span>
-              </Badge>
+              {isStaleActiveAfterConflict ? (
+                <Badge
+                  variant="outline"
+                  className="gap-1.5 border-status-warning/40 bg-status-warning/10 px-2.5 py-0.5 text-status-warning"
+                >
+                  <AlertTriangle className="size-3.5" aria-hidden="true" />
+                  <span>Status perlu disinkronkan (sudah dicabut)</span>
+                </Badge>
+              ) : (
+                <>
+                  <ProofStatusBadge status={proof.lifecycleStatus} />
+                  <Badge variant="secondary" className="gap-1">
+                    <ShieldCheck className="size-3.5" aria-hidden="true" />
+                    <span>Sumber: {proof.source}</span>
+                  </Badge>
+                </>
+              )}
             </div>
           </div>
+          {isStaleActiveAfterConflict ? (
+            <p className="text-xs text-muted-foreground">
+              Status terakhir yang ditampilkan di bawah ini berasal dari sebelum konflik pencabutan
+              hingga muat ulang detail dari registry berhasil.
+            </p>
+          ) : null}
         </CardHeader>
 
         <CardContent className="space-y-5">

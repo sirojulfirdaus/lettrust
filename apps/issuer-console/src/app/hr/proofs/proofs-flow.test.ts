@@ -32,6 +32,7 @@ import {
   MAX_PROOF_FILE_BYTES,
   formatFileSize,
   generateIdempotencyKey,
+  getProofDetailRefreshErrorMessage,
   isValidRevocationReasonCode,
   loadHrProofsGuard,
   loadProofDetail,
@@ -499,5 +500,23 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
     expect(mergedFromRevoked.revocationReasonCode).toBe(
       api05ProofStatusRevoked.revocationReasonCode,
     );
+  });
+
+  it("memakai pesan gagal baca saat refresh detail latar belakang gagal dengan REGISTRY_UNAVAILABLE", () => {
+    const refreshMessage = getProofDetailRefreshErrorMessage({
+      code: "REGISTRY_UNAVAILABLE",
+      message: "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
+    });
+    expect(refreshMessage).toBe(
+      "Detail bukti terbaru dari registry belum dapat dimuat ulang. Data yang sudah tercatat tidak berubah; silakan coba muat ulang beberapa saat lagi.",
+    );
+    expect(refreshMessage).not.toContain("Pencatatan ke registry gagal");
+
+    expect(
+      getProofDetailRefreshErrorMessage({
+        code: "RATE_LIMITED",
+        message: "Terlalu banyak permintaan. Coba lagi beberapa saat lagi.",
+      }),
+    ).toBe("Terlalu banyak permintaan. Coba lagi beberapa saat lagi.");
   });
 });
