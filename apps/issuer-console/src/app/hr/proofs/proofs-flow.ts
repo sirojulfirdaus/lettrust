@@ -330,6 +330,20 @@ export async function loadProofDetail(options: {
   }
 }
 
+// Menggabungkan hasil konfirmasi pencabutan API-06 ke detail bukti tanpa mengarang reasonCode lokal.
+export function mergeRevokeResultIntoProofDetail(
+  current: ProofStatusResponse,
+  revokeResult: RevokeProofResponse,
+): ProofStatusResponse {
+  return {
+    ...current,
+    lifecycleStatus: revokeResult.lifecycleStatus,
+    revokedAt: revokeResult.revokedAt,
+    revocationReasonCode: current.revocationReasonCode,
+    revokeTransaction: revokeResult.transaction,
+  };
+}
+
 // Mengirim unggahan PDF ke API-04 POST /api/v1/proofs dengan header Idempotency-Key.
 export async function submitIssueProof(options: {
   file: File;
@@ -339,6 +353,7 @@ export async function submitIssueProof(options: {
 }): Promise<IssueProofSubmitResult> {
   const session = readSession();
   if (!session) {
+    options.onUnauthorized?.();
     return { kind: "unauthorized" };
   }
   const submittedToken = session.accessToken;
@@ -406,6 +421,7 @@ export async function submitRevokeProof(options: {
 }): Promise<RevokeProofSubmitResult> {
   const session = readSession();
   if (!session) {
+    options.onUnauthorized?.();
     return { kind: "unauthorized" };
   }
   const submittedToken = session.accessToken;

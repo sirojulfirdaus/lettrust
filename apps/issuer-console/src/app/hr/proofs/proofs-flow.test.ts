@@ -36,6 +36,7 @@ import {
   loadHrProofsGuard,
   loadProofDetail,
   loadProofList,
+  mergeRevokeResultIntoProofDetail,
   submitIssueProof,
   submitRevokeProof,
   validateProofPdfFile,
@@ -451,5 +452,52 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
     const unauthRes = await loadProofList({ onUnauthorized });
     expect(unauthRes).toEqual({ kind: "unauthorized" });
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("memanggil onUnauthorized dan mengembalikan unauthorized saat sesi sudah kosong sebelum submit issue/revoke", async () => {
+    clearSession();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onIssueUnauthorized = vi.fn();
+    const file = createSyntheticFile("offer.pdf", 256, "application/pdf");
+    const issueRes = await submitIssueProof({
+      file,
+      idempotencyKey: "idem-no-session-issue",
+      onUnauthorized: onIssueUnauthorized,
+    });
+    expect(issueRes).toEqual({ kind: "unauthorized" });
+    expect(onIssueUnauthorized).toHaveBeenCalledTimes(1);
+
+    const onRevokeUnauthorized = vi.fn();
+    const revokeRes = await submitRevokeProof({
+      proofId: api05ProofStatusActive.proofId,
+      reasonCode: "OFFER_WITHDRAWN",
+      idempotencyKey: "idem-no-session-revoke",
+      onUnauthorized: onRevokeUnauthorized,
+    });
+    expect(revokeRes).toEqual({ kind: "unauthorized" });
+    expect(onRevokeUnauthorized).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("menggabungkan RevokeProofResponse ke detail bukti tanpa mengarang reasonCode lokal", () => {
+    const mergedFromActive = mergeRevokeResultIntoProofDetail(
+      api05ProofStatusActive,
+      api06RevokeResponse,
+    );
+    expect(mergedFromActive.lifecycleStatus).toBe("REVOKED");
+    expect(mergedFromActive.revokedAt).toBe(api06RevokeResponse.revokedAt);
+    expect(mergedFromActive.revokeTransaction).toEqual(api06RevokeResponse.transaction);
+    expect(mergedFromActive.revocationReasonCode).toBeNull();
+    expect(mergedFromActive.documentHash).toBe(api05ProofStatusActive.documentHash);
+
+    const mergedFromRevoked = mergeRevokeResultIntoProofDetail(
+      api05ProofStatusRevoked,
+      api06RevokeResponse,
+    );
+    expect(mergedFromRevoked.revocationReasonCode).toBe(
+      api05ProofStatusRevoked.revocationReasonCode,
+    );
   });
 });

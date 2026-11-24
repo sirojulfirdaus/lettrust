@@ -38,6 +38,7 @@ type SubmitErrorState = {
 export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState<string>("");
+  const [isAttemptLocked, setIsAttemptLocked] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<SubmitErrorState | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -54,9 +55,9 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     };
   }, []);
 
-  // Memvalidasi berkas yang dipilih dan membuat Idempotency-Key baru untuk upaya penerbitan ini.
+  // Memvalidasi berkas yang dipilih dan membuat Idempotency-Key baru saat tidak ada upaya tertunda.
   const handleFilesSelected = (files: FileList | File[] | null) => {
-    if (isSubmittingRef.current) {
+    if (isSubmittingRef.current || isAttemptLocked) {
       return;
     }
     setSubmitError(null);
@@ -72,11 +73,26 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     setIdempotencyKey(generateIdempotencyKey());
   };
 
-  // Mengosongkan berkas terpilih agar pengguna dapat memilih berkas PDF lain.
+  // Mengosongkan berkas terpilih agar pengguna dapat memilih berkas PDF lain saat tidak terkunci.
   const handleClearFile = () => {
+    if (isSubmittingRef.current || isAttemptLocked) {
+      return;
+    }
+    setSelectedFile(null);
+    setIdempotencyKey("");
+    setValidationError(null);
+    setSubmitError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Membuang upaya tertunda secara eksplisit, mereset Idempotency-Key, dan membuka kembali pemilih berkas.
+  const handleStartNewAttempt = () => {
     if (isSubmittingRef.current) {
       return;
     }
+    setIsAttemptLocked(false);
     setSelectedFile(null);
     setIdempotencyKey("");
     setValidationError(null);
@@ -91,6 +107,7 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     if (isSubmittingRef.current || !selectedFile) {
       return;
     }
+    setIsAttemptLocked(false);
     setIdempotencyKey(generateIdempotencyKey());
     setSubmitError(null);
   };
@@ -123,17 +140,24 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     isSubmittingRef.current = false;
     setIsSubmitting(false);
 
-    if (result.kind === "aborted" || result.kind === "unauthorized") {
+    if (result.kind === "aborted") {
+      return;
+    }
+
+    if (result.kind === "unauthorized") {
+      setConfirmOpen(false);
       return;
     }
 
     setConfirmOpen(false);
 
     if (result.kind === "success") {
+      setIsAttemptLocked(false);
       onIssued(result.data);
       return;
     }
 
+    setIsAttemptLocked(result.canRetrySameKey);
     setSubmitError({
       code: result.code,
       message: result.message,
@@ -141,6 +165,8 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
       requiresResetKey: result.requiresResetKey,
     });
   };
+
+  const isFilePickerDisabled = isSubmitting || isAttemptLocked;
 
   return (
     <Card>
@@ -156,7 +182,7 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
         <div
           onDragOver={(event) => {
             event.preventDefault();
-            if (!isSubmitting) {
+            if (!isFilePickerDisabled) {
               setIsDragging(true);
             }
           }}
@@ -164,14 +190,16 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
           onDrop={(event) => {
             event.preventDefault();
             setIsDragging(false);
-            if (!isSubmitting) {
+            if (!isFilePickerDisabled) {
               handleFilesSelected(event.dataTransfer.files);
             }
           }}
           className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
             isDragging
               ? "border-primary bg-primary/5"
-              : "border-border bg-muted/30 hover:border-primary/50"
+              : isFilePickerDisabled
+                ? "border-border bg-muted/40 opacity-90"
+                : "border-border bg-muted/30 hover:border-primary/50"
           }`}
         >
           <input
@@ -179,7 +207,7 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
             id="proof-pdf-input"
             type="file"
             accept=".pdf,application/pdf"
-            disabled={isSubmitting}
+            disabled={isFilePickerDisabled}
             onChange={(event) => handleFilesSelected(event.target.files)}
             className="sr-only"
           />
@@ -199,8 +227,10 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
                   {selectedFile.name}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Ukuran: {formatFileSize(selectedFile.size)} (PDF siap diverifikasi sebelum
-                  penerbitan)
+                  Ukuran: {formatFileSize(selectedFile.size)}{" "}
+                  {isAttemptLocked
+                    ? "(dikunci sementara untuk menjaga kunci idempotensi percobaan ulang)"
+                    : "(PDF siap diverifikasi sebelum penerbitan)"}
                 </p>
               </div>
             ) : (
@@ -218,9 +248,9 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
               <Button
                 type="button"
                 variant={selectedFile ? "outline" : "default"}
-                disabled={isSubmitting}
+                disabled={isFilePickerDisabled}
                 onClick={() => fileInputRef.current?.click()}
-                className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                className={isFilePickerDisabled ? "cursor-not-allowed" : "cursor-pointer"}
               >
                 {selectedFile ? "Ganti Berkas PDF" : "Pilih Berkas PDF"}
               </Button>
@@ -228,14 +258,22 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
                 <Button
                   type="button"
                   variant="ghost"
-                  disabled={isSubmitting}
+                  disabled={isFilePickerDisabled}
                   onClick={handleClearFile}
-                  className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                  className={isFilePickerDisabled ? "cursor-not-allowed" : "cursor-pointer"}
                 >
                   Hapus Pilihan
                 </Button>
               ) : null}
             </div>
+
+            {isAttemptLocked ? (
+              <p className="text-xs text-muted-foreground">
+                Kunci idempotensi upaya sebelumnya dipertahankan agar percobaan ulang tetap aman.
+                Gunakan &ldquo;Coba lagi&rdquo; atau klik &ldquo;Mulai ulang upaya baru&rdquo; untuk
+                mengganti berkas.
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -259,17 +297,29 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
               <p>{submitError.message}</p>
               <div className="flex flex-wrap gap-2">
                 {submitError.canRetrySameKey ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={isSubmitting || !selectedFile}
-                    onClick={() => void executeSubmit()}
-                    className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
-                  >
-                    <RefreshCw className="size-3.5" aria-hidden="true" />
-                    Coba lagi
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={isSubmitting || !selectedFile}
+                      onClick={() => void executeSubmit()}
+                      className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                    >
+                      <RefreshCw className="size-3.5" aria-hidden="true" />
+                      Coba lagi
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={isSubmitting}
+                      onClick={handleStartNewAttempt}
+                      className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                    >
+                      Mulai ulang upaya baru
+                    </Button>
+                  </>
                 ) : null}
                 {submitError.requiresResetKey ? (
                   <Button

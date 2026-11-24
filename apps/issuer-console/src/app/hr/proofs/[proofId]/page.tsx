@@ -13,6 +13,7 @@ import {
   Copy,
   FileSearch,
   Loader2,
+  RefreshCw,
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
@@ -26,8 +27,8 @@ import {
   getRevocationReasonLabel,
 } from "@/components/proofs/proof-status-badge";
 import { RevokeDialog } from "@/components/proofs/revoke-dialog";
-import type { ProofStatusResponse, RevocationReasonCode, RevokeProofResponse } from "@/lib/api/client";
-import { loadProofDetail } from "../proofs-flow";
+import type { ProofStatusResponse, RevokeProofResponse } from "@/lib/api/client";
+import { loadProofDetail, mergeRevokeResultIntoProofDetail } from "../proofs-flow";
 
 type ProofDetailState =
   | { status: "loading" }
@@ -61,9 +62,16 @@ export default function ProofDetailPage() {
       : { status: "not_found", message: "Bukti tidak ditemukan." },
   );
   const [revokeConflictMessage, setRevokeConflictMessage] = useState<string | null>(null);
-  const [revokeSuccessMessage, setRevokeSuccessMessage] = useState<string | null>(null);
+  const [isRevokeLockedByConflict, setIsRevokeLockedByConflict] = useState(false);
+  const [revokeSuccess, setRevokeSuccess] = useState<{
+    blockNumber: number;
+    txHash: string;
+  } | null>(null);
+  const [isRefreshingDetail, setIsRefreshingDetail] = useState(false);
+  const [refreshWarningMessage, setRefreshWarningMessage] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedProofIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -78,6 +86,7 @@ export default function ProofDetailPage() {
       return;
     }
 
+    const isBackgroundRefresh = loadedProofIdRef.current === proofId;
     const controller = new AbortController();
     void loadProofDetail({
       proofId,
@@ -85,24 +94,38 @@ export default function ProofDetailPage() {
       onUnauthorized: () => router.replace("/login?reason=session_expired"),
     }).then((result) => {
       if (result.kind === "aborted" || result.kind === "unauthorized") {
+        setIsRefreshingDetail(false);
         return;
       }
       if (result.kind === "redirect") {
+        setIsRefreshingDetail(false);
         router.replace(result.to);
         return;
       }
+      setIsRefreshingDetail(false);
       if (result.kind === "not_found") {
+        loadedProofIdRef.current = null;
+        setRefreshWarningMessage(null);
         setState({ status: "not_found", message: result.message });
         return;
       }
       if (result.kind === "forbidden") {
+        loadedProofIdRef.current = null;
+        setRefreshWarningMessage(null);
         setState({ status: "forbidden", message: result.message });
         return;
       }
       if (result.kind === "error") {
+        if (isBackgroundRefresh) {
+          // Pertahankan data yang sudah tampil agar hasil pencabutan terkonfirmasi tidak tertutup error refresh.
+          setRefreshWarningMessage(result.message);
+          return;
+        }
         setState({ status: "error", message: result.message });
         return;
       }
+      loadedProofIdRef.current = proofId;
+      setRefreshWarningMessage(null);
       setState({ status: "ready", data: result.data });
     });
 
@@ -129,34 +152,42 @@ export default function ProofDetailPage() {
     }
   };
 
-  // Memperbarui tampilan saat pencabutan berhasil dan menyegarkan data dari registry (API-05).
-  const handleRevoked = (result: RevokeProofResponse, reasonCode: RevocationReasonCode) => {
+  // Memperbarui tampilan segera setelah API-06 201 lalu menyegarkan detail dari registry (API-05) di latar belakang.
+  const handleRevoked = (result: RevokeProofResponse) => {
     setRevokeConflictMessage(null);
-    setRevokeSuccessMessage(
-      `Bukti berhasil dicabut dan terkonfirmasi pada blok #${result.transaction.blockNumber}.`,
-    );
+    setIsRevokeLockedByConflict(false);
+    setRefreshWarningMessage(null);
+    setRevokeSuccess({
+      blockNumber: result.transaction.blockNumber,
+      txHash: result.transaction.hash,
+    });
     setState((prev) => {
       if (prev.status !== "ready") {
         return prev;
       }
       return {
         status: "ready",
-        data: {
-          ...prev.data,
-          lifecycleStatus: result.lifecycleStatus,
-          revokedAt: result.revokedAt,
-          revocationReasonCode: reasonCode,
-          revokeTransaction: result.transaction,
-        },
+        data: mergeRevokeResultIntoProofDetail(prev.data, result),
       };
     });
+    setIsRefreshingDetail(true);
     setReloadCount((n) => n + 1);
   };
 
-  // Menyimpan pesan konflik 409 PROOF_ALREADY_REVOKED di halaman detail agar tetap tampil setelah refresh.
+  // Mengunci aksi cabut segera saat 409 PROOF_ALREADY_REVOKED lalu menyegarkan detail dari registry.
   const handleAlreadyRevoked = (message: string) => {
-    setRevokeSuccessMessage(null);
+    setRevokeSuccess(null);
     setRevokeConflictMessage(message);
+    setIsRevokeLockedByConflict(true);
+    setRefreshWarningMessage(null);
+    setIsRefreshingDetail(true);
+    setReloadCount((n) => n + 1);
+  };
+
+  // Memicu muat ulang detail di latar belakang tanpa menghapus data yang sudah tampil.
+  const handleBackgroundReload = () => {
+    setRefreshWarningMessage(null);
+    setIsRefreshingDetail(true);
     setReloadCount((n) => n + 1);
   };
 
@@ -253,11 +284,19 @@ export default function ProofDetailPage() {
         </Button>
       </div>
 
-      {revokeSuccessMessage ? (
+      {revokeSuccess ? (
         <Alert className="border-status-positive/30 bg-status-positive/10 text-foreground">
           <CheckCircle2 className="size-4 text-status-positive" aria-hidden="true" />
           <AlertTitle className="text-status-positive">Bukti dicabut</AlertTitle>
-          <AlertDescription className="text-foreground">{revokeSuccessMessage}</AlertDescription>
+          <AlertDescription className="space-y-1 text-foreground">
+            <p>
+              Bukti berhasil dicabut dan terkonfirmasi pada blok #{revokeSuccess.blockNumber}.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Hash transaksi:{" "}
+              <span className="font-mono break-all text-foreground">{revokeSuccess.txHash}</span>
+            </p>
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -266,6 +305,33 @@ export default function ProofDetailPage() {
           <AlertTriangle className="size-4 text-status-warning" aria-hidden="true" />
           <AlertTitle className="text-status-warning">Status bukti telah berubah</AlertTitle>
           <AlertDescription className="text-foreground">{revokeConflictMessage}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {refreshWarningMessage ? (
+        <Alert className="border-status-warning/40 bg-status-warning/10 text-foreground">
+          <AlertCircle className="size-4 text-status-warning" aria-hidden="true" />
+          <AlertTitle className="text-status-warning">Pembaruan detail tertunda</AlertTitle>
+          <AlertDescription className="space-y-3 text-foreground">
+            <p>
+              {refreshWarningMessage} Data terakhir yang terkonfirmasi tetap ditampilkan di bawah
+              ini.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isRefreshingDetail}
+              onClick={handleBackgroundReload}
+              className={isRefreshingDetail ? "cursor-not-allowed" : "cursor-pointer"}
+            >
+              <RefreshCw
+                className={`size-3.5 ${isRefreshingDetail ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
+              Muat ulang detail
+            </Button>
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -408,6 +474,10 @@ export default function ProofDetailPage() {
                       ({proof.revocationReasonCode})
                     </span>
                   </p>
+                ) : isRefreshingDetail ? (
+                  <p className="text-xs text-muted-foreground">
+                    Memuat alasan pencabutan dari server...
+                  </p>
                 ) : null}
                 {proof.revokeTransaction ? (
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
@@ -446,6 +516,7 @@ export default function ProofDetailPage() {
           key={proof.proofId}
           proofId={proof.proofId}
           referenceCode={proof.referenceCode}
+          disabled={isRevokeLockedByConflict}
           onRevoked={handleRevoked}
           onAlreadyRevoked={handleAlreadyRevoked}
           onUnauthorized={() => router.replace("/login?reason=session_expired")}

@@ -30,7 +30,8 @@ import {
 type RevokeDialogProps = {
   proofId: string;
   referenceCode: string;
-  onRevoked: (result: RevokeProofResponse, reasonCode: RevocationReasonCode) => void;
+  disabled?: boolean;
+  onRevoked: (result: RevokeProofResponse) => void;
   onAlreadyRevoked: (message: string) => void;
   onUnauthorized: () => void;
 };
@@ -46,12 +47,14 @@ type RevokeErrorState = {
 export function RevokeDialog({
   proofId,
   referenceCode,
+  disabled = false,
   onRevoked,
   onAlreadyRevoked,
   onUnauthorized,
 }: RevokeDialogProps) {
   const [reasonCode, setReasonCode] = useState<RevocationReasonCode>("OFFER_WITHDRAWN");
   const [idempotencyKey, setIdempotencyKey] = useState<string>(() => generateIdempotencyKey());
+  const [isAttemptLocked, setIsAttemptLocked] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<RevokeErrorState | null>(null);
@@ -65,9 +68,12 @@ export function RevokeDialog({
     };
   }, []);
 
+  const isReasonLocked = isSubmitting || isAttemptLocked || disabled;
+  const isActionDisabled = isSubmitting || disabled;
+
   // Mengirim permintaan pencabutan API-06 dengan penjaga double-submit dan Idempotency-Key tetap saat retry.
   const executeRevoke = async () => {
-    if (isSubmittingRef.current || !isValidRevocationReasonCode(reasonCode)) {
+    if (disabled || isSubmittingRef.current || !isValidRevocationReasonCode(reasonCode)) {
       return;
     }
 
@@ -90,22 +96,30 @@ export function RevokeDialog({
     isSubmittingRef.current = false;
     setIsSubmitting(false);
 
-    if (result.kind === "aborted" || result.kind === "unauthorized") {
+    if (result.kind === "aborted") {
+      return;
+    }
+
+    if (result.kind === "unauthorized") {
+      setConfirmOpen(false);
       return;
     }
 
     setConfirmOpen(false);
 
     if (result.kind === "success") {
-      onRevoked(result.data, reasonCode);
+      setIsAttemptLocked(false);
+      onRevoked(result.data);
       return;
     }
 
     if (result.kind === "already_revoked") {
+      setIsAttemptLocked(false);
       onAlreadyRevoked(result.message);
       return;
     }
 
+    setIsAttemptLocked(result.canRetrySameKey);
     setSubmitError({
       code: result.code,
       message: result.message,
@@ -128,11 +142,15 @@ export function RevokeDialog({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <fieldset className="space-y-3" disabled={isSubmitting}>
+        <fieldset className="space-y-3" disabled={isReasonLocked}>
           <legend className="text-sm font-medium text-foreground">Alasan Pencabutan</legend>
           <RadioGroup
             value={reasonCode}
+            disabled={isReasonLocked}
             onValueChange={(value) => {
+              if (isReasonLocked) {
+                return;
+              }
               if (isValidRevocationReasonCode(value)) {
                 setReasonCode(value);
                 setSubmitError(null);
@@ -145,16 +163,21 @@ export function RevokeDialog({
               return (
                 <div
                   key={option.code}
-                  className="flex items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/40"
+                  className={`flex items-start gap-3 rounded-lg border bg-card p-3 transition-colors ${
+                    isReasonLocked ? "opacity-75" : "hover:bg-muted/40"
+                  }`}
                 >
                   <RadioGroupItem
                     value={option.code}
                     id={optionId}
-                    className="mt-0.5 cursor-pointer"
+                    disabled={isReasonLocked}
+                    className={`mt-0.5 ${isReasonLocked ? "cursor-not-allowed" : "cursor-pointer"}`}
                   />
                   <Label
                     htmlFor={optionId}
-                    className="flex cursor-pointer flex-col items-start gap-0.5 font-normal"
+                    className={`flex flex-col items-start gap-0.5 font-normal ${
+                      isReasonLocked ? "cursor-not-allowed" : "cursor-pointer"
+                    }`}
                   >
                     <span className="text-sm font-medium text-foreground">{option.label}</span>
                     <span className="text-xs text-muted-foreground">{option.description}</span>
@@ -163,6 +186,12 @@ export function RevokeDialog({
               );
             })}
           </RadioGroup>
+          {isAttemptLocked ? (
+            <p className="text-xs text-muted-foreground">
+              Alasan pencabutan dikunci sementara agar percobaan ulang menggunakan kunci idempotensi
+              yang sama tetap konsisten dengan permintaan sebelumnya.
+            </p>
+          ) : null}
         </fieldset>
 
         {submitError ? (
@@ -177,9 +206,9 @@ export function RevokeDialog({
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={isSubmitting}
+                    disabled={isActionDisabled}
                     onClick={() => void executeRevoke()}
-                    className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                    className={isActionDisabled ? "cursor-not-allowed" : "cursor-pointer"}
                   >
                     <RefreshCw className="size-3.5" aria-hidden="true" />
                     Coba lagi
@@ -190,12 +219,13 @@ export function RevokeDialog({
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={isSubmitting}
+                    disabled={isActionDisabled}
                     onClick={() => {
+                      setIsAttemptLocked(false);
                       setIdempotencyKey(generateIdempotencyKey());
                       setSubmitError(null);
                     }}
-                    className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                    className={isActionDisabled ? "cursor-not-allowed" : "cursor-pointer"}
                   >
                     Mulai ulang
                   </Button>
@@ -209,9 +239,13 @@ export function RevokeDialog({
           <Button
             type="button"
             variant="destructive"
-            disabled={isSubmitting}
-            onClick={() => setConfirmOpen(true)}
-            className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+            disabled={isActionDisabled}
+            onClick={() => {
+              if (!isActionDisabled) {
+                setConfirmOpen(true);
+              }
+            }}
+            className={isActionDisabled ? "cursor-not-allowed" : "cursor-pointer"}
           >
             {isSubmitting ? (
               <>
