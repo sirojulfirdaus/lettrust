@@ -31,10 +31,8 @@ ENDPOINTS = [
     ("API-07", "POST", "/api/v1/verifications"),
     ("S-07", "GET", "/api/v1/health"),
 ]
-PDF = ("offer.pdf", b"%PDF-1.4\n%synthetic\n", "application/pdf")
 # Permintaan valid per endpoint stub agar validasi lolos dan stub tercapai.
 STUB_REQUESTS = {
-    "API-04": {"files": {"file": PDF}},
     "S-06": {},
     "API-05": {},
     "API-06": {"json": {"reasonCode": "OFFER_WITHDRAWN"}},
