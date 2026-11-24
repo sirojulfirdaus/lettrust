@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
 from app.core.ids import new_proof_id, new_reference_code
-from app.core.schemas import ErrorCode
+from app.core.schemas import ErrorCode, ErrorDetail
 from app.modules.issuers.dependencies import AuthorizedHrContext
 from app.modules.proofs.models import Proof
 from app.modules.proofs.schemas import (
@@ -43,7 +43,12 @@ class ProofVerificationRead:
 def issue_proof(
     db: Session, hr: AuthorizedHrContext, document_hash: str, idempotency_key: str | None
 ) -> IssueProofResponse:
-    """Menerbitkan bukti idempoten dari hash PDF yang telah divalidasi dan receipt registry."""
+    """Menerbitkan bukti idempoten dari hash PDF tervalidasi dengan kunci eksplisit yang tidak kosong."""
+    if idempotency_key is not None and not idempotency_key.strip():
+        raise AppError(
+            ErrorCode.VALIDATION_ERROR,
+            details=[ErrorDetail(field="Idempotency-Key", issue="string_too_short")],
+        )
     key = uuid4().hex if idempotency_key is None else idempotency_key
     lock = _ISSUE_LOCKS[hash((hr.issuer_id, key)) % len(_ISSUE_LOCKS)]
     # Lepas koneksi dari pembacaan otorisasi sebelum menunggu kunci penerbitan.

@@ -165,6 +165,17 @@ def test_missing_key_creates_independent_attempts(client: TestClient, registry: 
     assert len({proof.idempotency_key for proof in issuer_proofs(issuer_id)}) == len(registry.proofs) == 2
 
 
+@pytest.mark.parametrize("key", ["", "   "], ids=["empty", "whitespace"])
+def test_blank_key_rejected_before_reserving_proof(client: TestClient, registry: MockRegistryAdapter, key: str) -> None:
+    """Menolak kunci kosong atau spasi tanpa membuat percobaan penerbitan."""
+    issuer_id, headers = make_account()
+    response = issue(client, headers, key)
+    assert_error(response, 400, "VALIDATION_ERROR")
+    assert response.json()["error"]["details"] == [{"field": "Idempotency-Key", "issue": "string_too_short"}]
+    assert issuer_proofs(issuer_id) == []
+    assert registry.calls == []
+
+
 def test_replay_after_revocation_preserves_issuance_result(client: TestClient, registry: MockRegistryAdapter) -> None:
     """Mengembalikan receipt penerbitan semula tanpa menerbitkan ulang atau mengubah status terkini."""
     issuer_id, headers = make_account()
@@ -215,6 +226,16 @@ def test_pdf_over_file_limit_rejected(client: TestClient, registry: MockRegistry
     oversized_pdf = PDF.ljust(get_settings().max_upload_bytes + 1, b"x")
     assert_error(issue(client, headers, pdf=oversized_pdf), 413, "FILE_TOO_LARGE")
     assert issuer_proofs(issuer_id) == []
+    assert registry.calls == []
+
+
+@pytest.mark.parametrize("token", [None, "sintetis-bukan-jwt"], ids=["missing", "invalid"])
+def test_issue_rejects_missing_or_invalid_token(
+    client: TestClient, registry: MockRegistryAdapter, token: str | None
+) -> None:
+    """Memastikan API-04 menolak token hilang atau tidak valid sebelum memanggil registry."""
+    headers = {} if token is None else {"Authorization": f"Bearer {token}"}
+    assert_error(issue(client, headers), 401, "UNAUTHENTICATED")
     assert registry.calls == []
 
 
