@@ -35,7 +35,6 @@ def revoke_proof(
         )
     if re.fullmatch(PROOF_ID_PATTERN, proof_id) is None:
         raise AppError(ErrorCode.PROOF_NOT_FOUND)
-    key = uuid4().hex if idempotency_key is None else idempotency_key
     db.commit()
     with _REVOKE_LOCKS[hash(proof_id) % len(_REVOKE_LOCKS)]:
         proof = db.scalar(select(Proof).where(Proof.proof_id == proof_id, Proof.issuer_id == hr.issuer_id))
@@ -50,13 +49,13 @@ def revoke_proof(
             raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
         retry_pending = proof.revoke_idempotency_key is not None
         if retry_pending:
-            if proof.revoke_idempotency_key != key:
-                # Percobaan yang belum pasti tidak boleh ditimpa oleh kunci atau pelaku baru.
+            if idempotency_key is None or proof.revoke_idempotency_key != idempotency_key:
+                # Tanpa kunci yang cocok, tunggu konfirmasi; jangan kirim ulang atau timpa audit semula.
                 raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
             if proof.revoke_reason_code != payload.reason_code:
                 raise AppError(ErrorCode.IDEMPOTENCY_KEY_CONFLICT)
         else:
-            proof.revoke_idempotency_key = key
+            proof.revoke_idempotency_key = uuid4().hex if idempotency_key is None else idempotency_key
             proof.revoke_reason_code = payload.reason_code
             proof.revoked_by = hr.user.id
             proof.updated_at = datetime.now(UTC)
@@ -103,7 +102,7 @@ def _read_record(
     return record
 
 
-# Mengembalikan receipt pencabutan semula hanya untuk kunci dan alasan yang sama serta event terkonfirmasi.
+# Menyinkronkan mirror dari receipt sebelum memutuskan replay; receipt lengkap tidak perlu lookup event lagi.
 def _recover(
     db: Session,
     registry: registry_adapter.RegistryAdapter,
@@ -112,17 +111,27 @@ def _recover(
     payload: RevokeProofRequest,
     key: str | None,
 ) -> RevokeProofResponse:
+    if (
+        proof.status == "REVOKED"
+        and proof.revoked_at is not None
+        and proof.revoke_tx_hash is not None
+        and proof.revoke_block is not None
+        and int(proof.revoked_at.replace(tzinfo=UTC).timestamp()) == record.revoked_at
+    ):
+        response = _revoke_response(proof)
+    else:
+        try:
+            tx = registry.find_revoke_tx(proof.proof_id)
+        except registry_adapter.RegistryUnavailable:
+            raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+        if tx is None or tx.block_timestamp != record.revoked_at:
+            raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
+        response = _finalize(db, proof, tx)
     if key is None or key != proof.revoke_idempotency_key:
         raise AppError(ErrorCode.PROOF_ALREADY_REVOKED)
     if payload.reason_code != proof.revoke_reason_code:
         raise AppError(ErrorCode.IDEMPOTENCY_KEY_CONFLICT)
-    try:
-        tx = registry.find_revoke_tx(proof.proof_id)
-    except registry_adapter.RegistryUnavailable:
-        raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
-    if tx is None or tx.block_timestamp != record.revoked_at:
-        raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
-    return _finalize(db, proof, tx)
+    return response
 
 
 # Memfinalisasi mirror hanya setelah receipt sukses, dengan waktu dari registry dan audit percobaan semula.
@@ -133,11 +142,17 @@ def _finalize(db: Session, proof: Proof, tx: registry_adapter.TxResult) -> Revok
     proof.revoke_block = tx.block_number
     proof.updated_at = datetime.now(UTC)
     db.commit()
+    return _revoke_response(proof)
+
+
+# Menyusun respons dari receipt pencabutan lengkap yang telah disimpan di mirror.
+def _revoke_response(proof: Proof) -> RevokeProofResponse:
+    assert proof.revoked_at is not None and proof.revoke_tx_hash is not None and proof.revoke_block is not None
     return RevokeProofResponse(
         proof_id=proof.proof_id,
         lifecycle_status=LifecycleStatus.REVOKED,
         revoked_at=proof.revoked_at.replace(tzinfo=UTC),
-        transaction=TransactionRef(hash=tx.tx_hash, block_number=tx.block_number),
+        transaction=TransactionRef(hash=proof.revoke_tx_hash, block_number=proof.revoke_block),
     )
 
 
