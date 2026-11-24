@@ -1,0 +1,363 @@
+# Owner: Sat (PIC 6) | Status: COMPLETE | Ref: FR-04.01–FR-04.05; SA §6.6; T6-03
+"""Menguji API-06 melalui autentikasi dan SQLite nyata; mock hanya untuk tes unit."""
+
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
+from threading import Event
+
+import pytest
+from conftest import REAL_REGISTRY_ENV
+from fastapi.testclient import TestClient
+from httpx import Response
+from pydantic import SecretStr
+from test_proofs_issue import BLOCK_TIME, assert_error, issue, issuer_proofs, make_account
+
+from app.core.config import get_settings
+from app.modules.auth.schemas import AuthorizationStatus, IssuerStatus, Role
+from app.modules.registry import adapter as registry_adapter
+from app.modules.registry.mock import MockRegistryAdapter
+
+
+# Menginjeksi adapter bersama tanpa mengganti pemeriksaan otorisasi atau database.
+@pytest.fixture
+def registry(monkeypatch: pytest.MonkeyPatch) -> MockRegistryAdapter:
+    instance = MockRegistryAdapter(clock=lambda: BLOCK_TIME)
+    monkeypatch.setattr(registry_adapter, "get_registry_adapter", lambda: instance)
+    return instance
+
+
+# Membuka registry Anvil asli hanya saat marker real_registry dipilih secara eksplisit.
+@pytest.fixture
+def anvil_registry() -> registry_adapter.Web3RegistryAdapter:
+    if not REAL_REGISTRY_ENV["REGISTRY_RPC_URL"] or not REAL_REGISTRY_ENV["REGISTRY_SIGNER_PRIVATE_KEY"]:
+        pytest.fail("Tes nyata memerlukan konfigurasi registry dari container backend.")
+    return registry_adapter.Web3RegistryAdapter(
+        get_settings().model_copy(
+            update={
+                **{
+                    key.lower(): value
+                    for key, value in REAL_REGISTRY_ENV.items()
+                    if key != "REGISTRY_SIGNER_PRIVATE_KEY"
+                },
+                "registry_signer_private_key": SecretStr(REAL_REGISTRY_ENV["REGISTRY_SIGNER_PRIVATE_KEY"]),
+            }
+        )
+    )
+
+
+# Mengirim pencabutan beralasan terstruktur dengan kunci opsional.
+def revoke(
+    client: TestClient,
+    headers: dict[str, str],
+    proof_id: str,
+    key: str | None = "revoke-1",
+    reason: str = "OFFER_WITHDRAWN",
+) -> Response:
+    return client.post(
+        f"/api/v1/proofs/{proof_id}/revocations",
+        headers=headers if key is None else {**headers, "Idempotency-Key": key},
+        json={"reasonCode": reason},
+    )
+
+
+# Memastikan pencabutan dan replay mempertahankan receipt serta metadata penerbitan tanpa transaksi kedua.
+def test_revoke_and_replay(client: TestClient, registry: MockRegistryAdapter) -> None:
+    issuer_id, headers = make_account()
+    issued = issue(client, headers).json()
+    result = revoke(client, headers, issued["proofId"])
+    assert result.status_code == 201
+    body = result.json()
+    assert body["lifecycleStatus"] == "REVOKED"
+    assert body["transaction"]["blockNumber"] == 2
+    assert revoke(client, headers, issued["proofId"]).json() == body
+    (proof,) = issuer_proofs(issuer_id)
+    assert proof.status == "REVOKED"
+    assert proof.revoke_reason_code == "OFFER_WITHDRAWN"
+    assert proof.revoke_idempotency_key == "revoke-1"
+    assert proof.revoked_by == proof.issued_by
+    assert proof.issue_tx_hash == issued["transaction"]["hash"]
+    assert registry.get_proof(proof.proof_id).document_hash == issued["documentHash"]
+    assert [name for name, _ in registry.calls].count("revoke_proof") == 1
+
+
+# Menolak pencabutan ulang tanpa kunci atau dengan kunci baru setelah registry menyatakan REVOKED.
+@pytest.mark.parametrize("key", [None, "different"])
+def test_revoked_rejects_new_attempt(client: TestClient, registry: MockRegistryAdapter, key: str | None) -> None:
+    _, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    assert revoke(client, headers, proof_id).status_code == 201
+    assert_error(revoke(client, headers, proof_id, key), 409, "PROOF_ALREADY_REVOKED")
+    assert [name for name, _ in registry.calls].count("revoke_proof") == 1
+
+
+# Menolak payload lain untuk kunci pencabutan yang sudah berhasil.
+def test_replay_reason_conflict(client: TestClient, registry: MockRegistryAdapter) -> None:
+    _, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    assert revoke(client, headers, proof_id).status_code == 201
+    assert_error(revoke(client, headers, proof_id, reason="OTHER"), 409, "IDEMPOTENCY_KEY_CONFLICT")
+
+
+# Menerima seluruh alasan kontrak tanpa header opsional dan tetap menolak pencabutan kedua.
+@pytest.mark.parametrize("reason", ["OFFER_WITHDRAWN", "ISSUED_IN_ERROR", "DOCUMENT_REPLACED", "OTHER"])
+def test_revoke_without_key(client: TestClient, registry: MockRegistryAdapter, reason: str) -> None:
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    assert revoke(client, headers, proof_id, key=None, reason=reason).status_code == 201
+    assert issuer_proofs(issuer_id)[0].revoke_reason_code == reason
+    assert_error(revoke(client, headers, proof_id, key=None, reason=reason), 409, "PROOF_ALREADY_REVOKED")
+
+
+# Menolak perubahan identitas percobaan yang belum pasti tanpa menimpa audit atau mengirim transaksi.
+@pytest.mark.parametrize(
+    ("key", "reason", "code"),
+    [
+        ("different", "OTHER", "REGISTRY_TRANSACTION_FAILED"),
+        ("revoke-1", "OTHER", "IDEMPOTENCY_KEY_CONFLICT"),
+    ],
+)
+def test_pending_attempt_cannot_be_overwritten(
+    client: TestClient, registry: MockRegistryAdapter, key: str, reason: str, code: str
+) -> None:
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending())
+    assert revoke(client, headers, proof_id).status_code == 503
+    assert_error(
+        revoke(client, headers, proof_id, key=key, reason=reason),
+        409 if code == "IDEMPOTENCY_KEY_CONFLICT" else 503,
+        code,
+    )
+    (proof,) = issuer_proofs(issuer_id)
+    assert proof.revoke_idempotency_key == "revoke-1"
+    assert proof.revoke_reason_code == "OFFER_WITHDRAWN"
+    assert proof.status == "ACTIVE"
+    assert [name for name, _ in registry.calls].count("revoke_proof") == 1
+
+
+# Tidak mempercayai mirror ACTIVE ketika pembacaan registry gagal.
+def test_registry_read_outage(client: TestClient, registry: MockRegistryAdapter) -> None:
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    registry.set_unavailable(True)
+    assert_error(revoke(client, headers, proof_id), 503, "REGISTRY_UNAVAILABLE")
+    (proof,) = issuer_proofs(issuer_id)
+    assert proof.status == "ACTIVE"
+    assert proof.revoke_idempotency_key is None
+    assert not any(name == "revoke_proof" for name, _ in registry.calls)
+
+
+# Receipt yang belum ditemukan tidak boleh menghasilkan REVOKED atau metadata sukses.
+def test_missing_event_does_not_finalize(
+    client: TestClient, registry: MockRegistryAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending(), commit=True)
+    assert revoke(client, headers, proof_id).status_code == 503
+    monkeypatch.setattr(registry, "find_revoke_tx", lambda _: None)
+    assert_error(revoke(client, headers, proof_id), 503, "REGISTRY_TRANSACTION_FAILED")
+    (proof,) = issuer_proofs(issuer_id)
+    assert proof.status == "ACTIVE"
+    assert proof.revoked_at is proof.revoke_tx_hash is proof.revoke_block is None
+
+
+# Memastikan bukti asing dan identifier tidak ada tidak mengungkap detail atau memanggil RPC.
+def test_foreign_and_unknown_proof_are_404(client: TestClient, registry: MockRegistryAdapter) -> None:
+    _, headers = make_account()
+    _, other = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    before = len(registry.calls)
+    for value, caller in ((proof_id, other), ("0x" + "ff" * 32, headers), ("invalid", headers)):
+        assert_error(revoke(client, caller, value), 404, "PROOF_NOT_FOUND")
+    assert len(registry.calls) == before
+
+
+# Menolak peran dan afiliasi yang tidak memenuhi syarat pencabutan.
+@pytest.mark.parametrize(
+    ("role", "status", "authorization"),
+    [
+        (Role.ADMIN, None, AuthorizationStatus.AUTHORIZED),
+        (Role.HR, None, AuthorizationStatus.AUTHORIZED),
+        (Role.HR, IssuerStatus.PENDING, AuthorizationStatus.AUTHORIZED),
+        (Role.HR, IssuerStatus.REJECTED, AuthorizationStatus.AUTHORIZED),
+        (Role.HR, IssuerStatus.VERIFIED, AuthorizationStatus.NOT_AUTHORIZED),
+    ],
+)
+def test_revoke_requires_authorized_hr(
+    client: TestClient,
+    registry: MockRegistryAdapter,
+    role: Role,
+    status: IssuerStatus | None,
+    authorization: AuthorizationStatus,
+) -> None:
+    _, headers = make_account(role=role, status=status, authorization=authorization)
+    assert_error(revoke(client, headers, "0x" + "ff" * 32), 403, "FORBIDDEN_OPERATION")
+    assert registry.calls == []
+
+
+# Menolak token hilang atau salah sebelum pemeriksaan bukti.
+@pytest.mark.parametrize("headers", [{}, {"Authorization": "Bearer invalid"}])
+def test_revoke_requires_authentication(
+    client: TestClient, registry: MockRegistryAdapter, headers: dict[str, str]
+) -> None:
+    assert_error(revoke(client, headers, "0x" + "ff" * 32), 401, "UNAUTHENTICATED")
+    assert registry.calls == []
+
+
+# Memvalidasi alasan tertutup dan kunci kosong sebelum registry dipanggil.
+@pytest.mark.parametrize(("key", "reason"), [("", "OTHER"), ("   ", "OTHER"), ("valid", "INVALID")])
+def test_invalid_request_is_rejected(client: TestClient, registry: MockRegistryAdapter, key: str, reason: str) -> None:
+    _, headers = make_account()
+    assert_error(revoke(client, headers, "0x" + "ff" * 32, key, reason), 400, "VALIDATION_ERROR")
+    assert registry.calls == []
+
+
+# Memastikan kegagalan pasti membersihkan metadata tertunda dan memungkinkan retry yang benar.
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (registry_adapter.RegistryUnavailable, "REGISTRY_UNAVAILABLE"),
+        (registry_adapter.RegistryTransactionFailed, "REGISTRY_TRANSACTION_FAILED"),
+    ],
+)
+def test_definite_failure_clears_pending(
+    client: TestClient, registry: MockRegistryAdapter, error: type[registry_adapter.RegistryError], code: str
+) -> None:
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    registry.fail_next("revoke_proof", error())
+    assert_error(revoke(client, headers, proof_id), 503, code)
+    (proof,) = issuer_proofs(issuer_id)
+    assert proof.status == "ACTIVE"
+    assert proof.revoke_idempotency_key is proof.revoke_reason_code is proof.revoked_by is None
+    assert registry.get_proof(proof_id).status == registry_adapter.OnChainStatus.ACTIVE
+    assert revoke(client, headers, proof_id).status_code == 201
+
+
+# Memastikan timeout mempertahankan audit dan replay merekonsiliasi state chain sebelum menulis ulang.
+@pytest.mark.parametrize("mined", [False, True])
+def test_pending_confirmation_is_reconciled(client: TestClient, registry: MockRegistryAdapter, mined: bool) -> None:
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending(), commit=mined)
+    assert_error(revoke(client, headers, proof_id), 503, "REGISTRY_TRANSACTION_FAILED")
+    (proof,) = issuer_proofs(issuer_id)
+    assert proof.status == "ACTIVE"
+    assert proof.revoke_idempotency_key == "revoke-1"
+    assert proof.revoked_at is proof.revoke_tx_hash is None
+    assert revoke(client, headers, proof_id).status_code == 201
+    assert [name for name, _ in registry.calls].count("revoke_proof") == (1 if mined else 2)
+
+
+# Kegagalan pasti pada retry tidak boleh menghapus audit transaksi terdahulu yang masih belum pasti.
+@pytest.mark.parametrize("error", [registry_adapter.RegistryUnavailable, registry_adapter.RegistryTransactionFailed])
+def test_failed_retry_preserves_original_pending(
+    client: TestClient, registry: MockRegistryAdapter, error: type[registry_adapter.RegistryError]
+) -> None:
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending())
+    assert revoke(client, headers, proof_id).status_code == 503
+    registry.fail_next("revoke_proof", error())
+    assert revoke(client, headers, proof_id).status_code == 503
+    (proof,) = issuer_proofs(issuer_id)
+    assert proof.status == "ACTIVE"
+    assert proof.revoke_idempotency_key == "revoke-1"
+    assert proof.revoke_reason_code == "OFFER_WITHDRAWN"
+    assert proof.revoked_by == proof.issued_by
+    # Mensimulasikan konfirmasi transaksi terdahulu yang terlambat terlihat oleh backend.
+    registry.revoke_proof(proof_id, registry.get_proof(proof_id).issuer_ref)
+    before = len(registry.calls)
+    assert revoke(client, headers, proof_id).status_code == 201
+    assert not any(name == "revoke_proof" for name, _ in registry.calls[before:])
+
+
+# Menahan finalisasi bila lookup event gagal setelah transaksi sebenarnya terkonfirmasi.
+def test_event_outage_preserves_pending(client: TestClient, registry: MockRegistryAdapter) -> None:
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending(), commit=True)
+    assert revoke(client, headers, proof_id).status_code == 503
+    registry.fail_next("find_revoke_tx", registry_adapter.RegistryUnavailable())
+    assert_error(revoke(client, headers, proof_id), 503, "REGISTRY_UNAVAILABLE")
+    assert issuer_proofs(issuer_id)[0].status == "ACTIVE"
+    assert revoke(client, headers, proof_id).status_code == 201
+
+
+# Memulihkan receipt yang muncul di antara pembacaan status dan pengiriman ulang.
+def test_late_receipt_is_reconciled(client: TestClient, registry: MockRegistryAdapter) -> None:
+    _, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending())
+    assert revoke(client, headers, proof_id).status_code == 503
+    registry.fail_next("revoke_proof", registry_adapter.ProofNotActiveOnChain(), commit=True)
+    assert revoke(client, headers, proof_id).status_code == 201
+
+
+# Memastikan catatan chain yang tidak konsisten tidak menghasilkan pencabutan sukses.
+@pytest.mark.parametrize("field", ["issuer_ref", "document_hash"])
+def test_chain_mismatch_is_rejected(
+    client: TestClient, registry: MockRegistryAdapter, monkeypatch: pytest.MonkeyPatch, field: str
+) -> None:
+    _, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    record = registry.get_proof(proof_id)
+    monkeypatch.setattr(registry, "get_proof", lambda _: replace(record, **{field: "ff" * 32}))
+    assert_error(
+        revoke(client, headers, proof_id),
+        404 if field == "issuer_ref" else 503,
+        "PROOF_NOT_FOUND" if field == "issuer_ref" else "REGISTRY_TRANSACTION_FAILED",
+    )
+
+
+# Menjaga satu transaksi saat dua request berebut bukti dan kunci yang sama.
+def test_parallel_revoke_sends_once(
+    client: TestClient, registry: MockRegistryAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, headers = make_account()
+    proof_id = issue(client, headers).json()["proofId"]
+    entered, release = Event(), Event()
+    original = registry.revoke_proof
+
+    # Menahan receipt pertama agar permintaan kedua menunggu lock per bukti.
+    def delayed(proof_id: str, issuer_ref: str) -> registry_adapter.TxResult:
+        entered.set()
+        assert release.wait(5)
+        return original(proof_id, issuer_ref)
+
+    monkeypatch.setattr(registry, "revoke_proof", delayed)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(revoke, client, headers, proof_id)
+        try:
+            assert entered.wait(5)
+            second = pool.submit(revoke, client, headers, proof_id)
+        finally:
+            release.set()
+        a, b = first.result(timeout=5), second.result(timeout=5)
+    assert a.status_code == b.status_code == 201
+    assert a.json() == b.json()
+    assert [name for name, _ in registry.calls].count("revoke_proof") == 1
+
+
+# Memverifikasi API-04 → API-06 dan replay melalui HTTP lokal terhadap registry Anvil sungguhan.
+@pytest.mark.real_registry
+def test_real_issue_revoke_and_replay(
+    client: TestClient, anvil_registry: registry_adapter.Web3RegistryAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_registry = anvil_registry
+    monkeypatch.setattr(registry_adapter, "get_registry_adapter", lambda: real_registry)
+    issuer_id, headers = make_account()
+    issued = issue(client, headers).json()
+    proof_id = issued["proofId"]
+    result = revoke(client, headers, proof_id)
+    assert result.status_code == 201
+    assert revoke(client, headers, proof_id).json() == result.json()
+    record = real_registry.get_proof(proof_id)
+    assert record.status == registry_adapter.OnChainStatus.REVOKED
+    assert record.document_hash == issued["documentHash"]
+    tx = real_registry.find_revoke_tx(proof_id)
+    assert tx is not None
+    assert tx.tx_hash == result.json()["transaction"]["hash"]
+    assert tx.block_timestamp == record.revoked_at
+    assert issuer_proofs(issuer_id)[0].status == "REVOKED"
