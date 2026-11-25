@@ -7,7 +7,7 @@
       "PAYMENT_REQUEST"
     ],
     "text": "NORTHBRIDGE TALENT NETWORK\nEmployment Offer\n\nDear Cameron Lee,\n\nNorthbridge Talent Network is pleased to offer you the position of Remote Recruitment Assistant. The annual salary will be USD 48,000 and your start date is 5 October 2026.\n\nTo activate your employment file, transfer a refundable USD 185 administration fee to the account listed in the attached payment form by 28 September. The amount will be returned with your first salary after you begin work.\n\nPlease send the payment confirmation to onboarding@northbridgetalent.example so we can reserve your position.\n\nSincerely,\nCandidate Onboarding Team\nNorthbridge Talent Network",
-    "notes": "The candidate is asked to pay an administration fee before employment. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "PAYMENT_REQUEST: kutipan surat: 'To activate your employment file, transfer a refundable USD 185 administration fee to the account listed in the attached payment form by 28 September.' Permintaan pembayaran sebelum bekerja adalah indikator HIGH; satu indikator HIGH menghasilkan HIGH sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-high-02",
@@ -17,7 +17,7 @@
       "SENSITIVE_DATA_REQUEST"
     ],
     "text": "PINECREST PAYMENT SOLUTIONS\nOffer Confirmation\n\nDear Quinn Foster,\n\nWe are offering you the position of Payments Support Specialist at Pinecrest Payment Solutions, with an annual salary of GBP 40,500 and a planned start date of 12 October 2026.\n\nBefore the employment agreement can be released, reply with the one-time passcode sent to your phone and the PIN for your current bank card. Our verification team needs both items to confirm your identity and prepare payroll access. Do not delay, as the offer cannot be processed without them.\n\nRegards,\nVerification Desk\nPinecrest Payment Solutions",
-    "notes": "The letter requests authentication secrets that are not needed for employment onboarding. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "SENSITIVE_DATA_REQUEST: kutipan surat: 'reply with the one-time passcode sent to your phone and the PIN for your current bank card.' Permintaan OTP dan PIN adalah indikator HIGH; satu indikator HIGH menghasilkan HIGH sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-high-03",
@@ -27,7 +27,7 @@
       "PAYMENT_REQUEST"
     ],
     "text": "HARBORLIGHT CARE PARTNERS\nOffer of Employment\n\nDear Reese Martin,\n\nHarborlight Care Partners offers you the position of Care Scheduling Coordinator at our Exeter office. Your annual salary will be GBP 35,000. Your first day is scheduled for 19 October 2026.\n\nAll new coordinators must complete a pre-start certification course. Please pay the GBP 260 course fee to our training vendor before 30 September and email the receipt to recruitment. The fee is required to secure your place and will be deducted from your first month if it remains unpaid.\n\nWe look forward to your confirmation.\n\nYours sincerely,\nMolly Evans\nRecruitment Manager\nHarborlight Care Partners",
-    "notes": "The candidate must pay for a required training course before the first day. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "PAYMENT_REQUEST: kutipan surat: 'Please pay the GBP 260 course fee to our training vendor before 30 September and email the receipt to recruitment.' Biaya pelatihan wajib dibayar kandidat sebelum bekerja; satu indikator HIGH menghasilkan HIGH sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-high-04",
@@ -38,7 +38,7 @@
       "UNOFFICIAL_CONTACT"
     ],
     "text": "SUMMIT ORBIT CONSULTING\n\nDear Finley Adams,\n\nWe are pleased to offer you the role of Project Support Associate at Summit Orbit Consulting, paying USD 52,000 per year. Your planned start date is 5 October 2026.\n\nTo reserve your workspace, send a USD 300 refundable equipment deposit before 27 September. The company will return it after your first month. Send the payment screenshot and all questions directly to our recruiter on personal WhatsApp at +1 202 555 0179; our office line is not available for candidate enquiries.\n\nRegards,\nRecruitment Team\nSummit Orbit Consulting",
-    "notes": "A candidate-paid deposit is requested and the recruiter directs communication to a personal messaging account. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "PAYMENT_REQUEST: kutipan surat: 'send a USD 300 refundable equipment deposit before 27 September.'; UNOFFICIAL_CONTACT: kutipan surat: 'personal WhatsApp at +1 202 555 0179; our office line is not available for candidate enquiries.' Satu indikator HIGH menghasilkan HIGH sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-high-05",
@@ -49,7 +49,7 @@
       "URGENCY_PRESSURE"
     ],
     "text": "REDWOOD NATIONAL SERVICES\nImmediate Appointment Notice\n\nDear Skylar Bennett,\n\nRedwood National Services offers you the position of Records Assistant, with a salary of USD 46,000 per year. Your appointment is scheduled to begin on 1 October 2026.\n\nYour payroll profile must be activated within the next 90 minutes or this offer will be withdrawn permanently. Reply with your online banking username and password so the payroll department can validate your account before preparing your contract.\n\nDo not contact other departments while this time-sensitive verification is in progress.\n\nPayroll Validation Unit\nRedwood National Services",
-    "notes": "The candidate is pressured to disclose an account password and act immediately. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "SENSITIVE_DATA_REQUEST: kutipan surat: 'Reply with your online banking username and password so the payroll department can validate your account before preparing your contract.'; URGENCY_PRESSURE: kutipan surat: 'Your payroll profile must be activated within the next 90 minutes or this offer will be withdrawn permanently.' Satu indikator HIGH menghasilkan HIGH sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-high-06",
@@ -60,6 +60,6 @@
       "IDENTITY_INCONSISTENCY"
     ],
     "text": "GRANITE BAY HEALTH RESEARCH\nOffer Letter\n\nDear Drew Wallace,\n\nGranite Bay Health Research offers you the position of Clinical Data Assistant at our London office. Your annual salary will be GBP 39,600 and your anticipated start date is 12 October 2026.\n\nBefore your first day, arrange and pay for the required screening appointment at the clinic named in the attached instructions. The candidate is responsible for the GBP 145 screening charge; send proof of payment to the recruitment desk to keep this offer active.\n\nSincerely,\n\nRachel Moore\nPeople Operations Manager\nGranite Bay Financial Holdings\n81 Market Road, London",
-    "notes": "A required candidate-paid screening charge is paired with conflicting employer names in the letterhead and signature. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "PAYMENT_REQUEST: kutipan surat: 'The candidate is responsible for the GBP 145 screening charge; send proof of payment to the recruitment desk to keep this offer active.'; IDENTITY_INCONSISTENCY: kutipan penawaran: 'Granite Bay Health Research offers you the position of Clinical Data Assistant at our London office.'; kutipan tanda tangan: 'Rachel Moore\nPeople Operations Manager\nGranite Bay Financial Holdings'. Satu indikator HIGH menghasilkan HIGH sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   }
 ]

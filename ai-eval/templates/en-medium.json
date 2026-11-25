@@ -7,7 +7,7 @@
       "UNOFFICIAL_CONTACT"
     ],
     "text": "ASTER VALE LOGISTICS\nOffer of Employment\n\nDear Jordan Blake,\n\nAster Vale Logistics is pleased to offer you the position of Route Planning Assistant at our Reading office. Your annual salary will be GBP 33,500, with a proposed start date of 12 October 2026. You will report to the Transport Planning Manager.\n\nYour responsibilities include maintaining delivery schedules, updating route records, and coordinating with the warehouse team. Standard working hours are Monday to Friday.\n\nTo accept, reply by 30 September 2026. For every question about this offer, message our recruiter only on her personal WhatsApp account at +44 7700 900 214; the company office and careers inbox do not handle candidate enquiries.\n\nRegards,\nMaya Collins\nRecruitment Coordinator\nAster Vale Logistics",
-    "notes": "Recruiter directs all follow-up exclusively to a personal messaging number. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "UNOFFICIAL_CONTACT: kutipan surat: 'For every question about this offer, message our recruiter only on her personal WhatsApp account at +44 7700 900 214; the company office and careers inbox do not handle candidate enquiries.' Satu indikator MEDIUM tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-medium-02",
@@ -16,8 +16,8 @@
     "indicators": [
       "URGENCY_PRESSURE"
     ],
-    "text": "LANTERN RIDGE RETAIL GROUP\nConditional Offer\n\nDear Samira Khan,\n\nWe are pleased to offer you the position of Inventory Reporting Analyst at Lantern Ridge Retail Group. Your annual salary will be GBP 36,700. The anticipated start date is 19 October 2026, and your manager will be the Head of Supply Planning.\n\nPlease confirm your acceptance by 5:00 p.m. today, 25 September 2026. If you do not reply within the next two hours, your application will be permanently closed and the position will be reassigned without further notice.\n\nThe standard employment terms are attached. No payment is requested.\n\nSincerely,\nPeople Operations\nLantern Ridge Retail Group",
-    "notes": "The letter imposes an unusually short deadline and threatens loss of the role. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "text": "LANTERN RIDGE RETAIL GROUP\nConditional Offer\n\nDear Samira Khan,\n\nWe are pleased to offer you the position of Inventory Reporting Analyst at Lantern Ridge Retail Group. Your annual salary will be GBP 36,700. The anticipated start date is 19 October 2026, and your manager will be the Head of Supply Planning. Your responsibilities include preparing weekly stock movement summaries, reconciling inventory records, and flagging discrepancies to the Head of Supply Planning. Your regular work location will be the Lantern Ridge Retail Group Supply Planning Office in Leeds.\n\nPlease confirm your acceptance by 5:00 p.m. today, 25 September 2026. If you do not reply within the next two hours, your application will be permanently closed and the position will be reassigned without further notice.\n\nThe standard employment terms are attached. No payment is requested.\n\nSincerely,\nPeople Operations\nLantern Ridge Retail Group",
+    "notes": "URGENCY_PRESSURE: kutipan surat: 'Please confirm your acceptance by 5:00 p.m. today, 25 September 2026. If you do not reply within the next two hours, your application will be permanently closed and the position will be reassigned without further notice.' Satu indikator MEDIUM tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Tanggung jawab dan lokasi kerja dibuat eksplisit agar VAGUE_JOB_DETAILS tidak ambigu. Pengecoh biaya: 'No payment is requested.' Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan dan memperjelas tanggung jawab/lokasi pada review ini."
   },
   {
     "id": "en-medium-03",
@@ -27,7 +27,7 @@
       "IDENTITY_INCONSISTENCY"
     ],
     "text": "SILVER FERN ENERGY SERVICES\nOffer Letter\n\nDear Elliot Ward,\n\nSilver Fern Energy Services is pleased to offer you the role of Junior Project Scheduler at our York office. Your annual salary will be GBP 34,200 and your expected start date is 12 October 2026. You will support project planning and weekly status reporting.\n\nPlease return the signed acceptance by 2 October 2026. The attached schedule describes working hours, leave, and probation.\n\nYours sincerely,\n\nNora James\nPeople Operations Manager\nRedstone Marine Holdings\n44 Harbour Lane, York",
-    "notes": "The employer name in the letterhead conflicts with the employer named in the signature block. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "IDENTITY_INCONSISTENCY: kutipan penawaran: 'Silver Fern Energy Services is pleased to offer you the role of Junior Project Scheduler at our York office.'; kutipan blok tanda tangan: 'Redstone Marine Holdings' dengan alamat '44 Harbour Lane, York'. Nama pemberi kerja pada surat dan tanda tangan bertentangan. Satu indikator MEDIUM tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-medium-04",
@@ -38,7 +38,7 @@
       "URGENCY_PRESSURE"
     ],
     "text": "CROWNFIELD DIGITAL SERVICES\n\nDear Alex Rivera,\n\nWe are pleased to offer you the position of Content Operations Assistant at Crownfield Digital Services. The annual salary is GBP 30,000, and your anticipated start date is 5 October 2026. Your duties will include maintaining content records and coordinating weekly updates.\n\nAccept this offer within three hours or your place will be given to another candidate. Do not contact the company switchboard or careers inbox; send your acceptance and any questions only to our hiring manager's personal email address, crownfield.hiring@freemail.example.\n\nThe employment terms are attached for your review.\n\nSincerely,\nRecruitment Office\nCrownfield Digital Services",
-    "notes": "Exclusive personal contact is combined with pressure to accept within a few hours. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "UNOFFICIAL_CONTACT: kutipan surat: 'Do not contact the company switchboard or careers inbox', 'send your acceptance and any questions only to', dan 'crownfield.hiring@freemail.example'.; URGENCY_PRESSURE: kutipan surat: 'Accept this offer within three hours or your place will be given to another candidate.' Dua indikator MEDIUM menghasilkan MEDIUM sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-medium-05",
@@ -49,7 +49,7 @@
       "UNOFFICIAL_CONTACT"
     ],
     "text": "EASTGATE WATER ANALYTICS\nOffer of Employment\n\nDear Devon Price,\n\nEastgate Water Analytics offers you the position of Field Data Technician. The annual salary is GBP 32,800. You will collect scheduled site readings and upload records to the company's reporting system. Your planned start date is 19 October 2026.\n\nPlease sign and return this letter by 2 October 2026. For questions, contact eastgate.hr@inboxmail.example; this free email address is the only channel available to applicants.\n\nRegards,\n\nOliver Grant\nRecruitment Lead\nWestmere Water Testing Ltd.",
-    "notes": "The company name changes between the offer and signature, while follow-up is restricted to a free email account. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "IDENTITY_INCONSISTENCY: kutipan penawaran: 'Eastgate Water Analytics offers you the position of Field Data Technician.'; kutipan tanda tangan: 'Oliver Grant\nRecruitment Lead\nWestmere Water Testing Ltd.'; UNOFFICIAL_CONTACT: kutipan surat: 'this free email address is the only channel available to applicants.' Dua indikator MEDIUM menghasilkan MEDIUM sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   },
   {
     "id": "en-medium-06",
@@ -60,6 +60,6 @@
       "VAGUE_JOB_DETAILS"
     ],
     "text": "NOVA CIRCLE OPPORTUNITIES\nExecutive Offer\n\nDear Harper James,\n\nNova Circle Opportunities is delighted to offer you an entry-level remote assistant position paying USD 480,000 per year, plus a guaranteed annual bonus of USD 120,000. Your start date is 1 October 2026.\n\nYou will support business activities and complete tasks assigned by management. Further details about the department, supervisor, location, and day-to-day responsibilities will be provided after you begin. No prior experience is required.\n\nReply to confirm your acceptance by 29 September 2026.\n\nRegards,\nTalent Office\nNova Circle Opportunities",
-    "notes": "Two distinct LOW-severity indicators qualify for MEDIUM under the scoring rules: implausibly high pay and vague duties. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
+    "notes": "UNREALISTIC_COMPENSATION: kutipan surat: 'entry-level remote assistant position paying USD 480,000 per year, plus a guaranteed annual bonus of USD 120,000.'; VAGUE_JOB_DETAILS: kutipan surat: 'You will support business activities and complete tasks assigned by management. Further details about the department, supervisor, location, and day-to-day responsibilities will be provided after you begin.' Dua indikator LOW berbeda tanpa HIGH menghasilkan MEDIUM sesuai BR-04.06. Penulis: Pash. Peninjau: Van; approval masih menunggu. Bantuan model: OpenAI GPT-6 (Codex), menambahkan anotasi kutipan pada review ini; teks surat tidak diubah."
   }
 ]
