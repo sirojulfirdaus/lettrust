@@ -187,7 +187,7 @@ Status: COMPLETE = berfungsi sekarang; STUB = signature/docstring dengan kegagal
 | 6 | `dev.py down` lalu `dev.py up` | PASS: alamat contract sama, deployment dilewati, kode contract ada. |
 | 6 | Scan nilai `JWT_SECRET`, `INTERNAL_API_TOKEN`, `PARTNER_TOKEN` di 306 berkas repo (kecuali `.git`, `node_modules`, `.next`); `git status` | PASS: 0 match di luar `.env`; `.env` tidak terdaftar oleh git. |
 | TOI-02 (Apple Silicon) | — | Tidak diuji. Image yang dipakai hanya diverifikasi untuk amd64. |
-| TOI-03 (body 5 MB Route Handler) | — | Tidak dapat diuji sampai BFF diimplementasikan. |
+| TOI-03 (body 5 MB Route Handler) | `curl -F` ke `http://127.0.0.1:3001/api/verify` dengan PDF sintetis 5.242.880 byte dan 5.242.881 byte | PASS batas unggahan: berkas tepat 5 MiB diteruskan ke API-07 dan menerima respons upstream 501 `NOT_IMPLEMENTED` (backend masih stub); berkas 1 byte di atas batas ditolak BFF dengan 413 `FILE_TOO_LARGE`. |
 | TOI-10 (bind mount Windows `--dev`) | — | Tidak diuji. |
 
 SCN-21 dapat dieksekusi pada mesin Windows dan Linux (tim memiliki keduanya); TOI-02 (Apple Silicon) tetap tidak diuji.
