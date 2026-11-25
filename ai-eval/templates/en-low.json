@@ -1,44 +1,50 @@
 [
   {
-    "language": "en",
-    "category": "LOW",
-    "referenceIndicators": [],
-    "notes": "Ordinary offer; the employer pays approved travel and medical assessment costs, a benign lookalike for payment requests.",
-    "text": "NORTHSTAR FIELD SYSTEMS LTD.\n18 September 2026\n\nDear Morgan Ellis,\n\nWe are pleased to offer you the position of Junior Operations Analyst at Northstar Field Systems Ltd. Your annual gross salary will be USD 54,000, paid monthly, and your anticipated start date is 12 October 2026. You will report to the Operations Manager at our Cambridge office.\n\nYour first three months will be a probationary period. The company will provide the equipment required for your role. Approved travel for the pre-employment medical assessment and the assessment fee will be paid directly by Northstar; no payment is requested from you.\n\nPlease review the attached employee handbook and return the signed acceptance form to hr@northstar-field.example by 25 September 2026. Your employment terms are subject to the standard reference check described in the handbook.\n\nSincerely,\nHelen Carter\nPeople Operations Manager\nNorthstar Field Systems Ltd."
+    "id": "en-low-01",
+    "lang": "en",
+    "label": "LOW",
+    "indicators": [],
+    "text": "NORTHSTAR FIELD SYSTEMS LTD.\n18 September 2026\n\nDear Morgan Ellis,\n\nWe are pleased to offer you the position of Junior Operations Analyst at Northstar Field Systems Ltd. Your annual gross salary will be USD 54,000, paid monthly, and your anticipated start date is 12 October 2026. You will report to the Operations Manager at our Cambridge office.\n\nYour first three months will be a probationary period. The company will provide the equipment required for your role. Approved travel for the pre-employment medical assessment and the assessment fee will be paid directly by Northstar; no payment is requested from you.\n\nPlease review the attached employee handbook and return the signed acceptance form to hr@northstar-field.example by 25 September 2026. Your employment terms are subject to the standard reference check described in the handbook.\n\nSincerely,\nHelen Carter\nPeople Operations Manager\nNorthstar Field Systems Ltd.",
+    "notes": "Ordinary offer; the employer pays approved travel and medical assessment costs, a benign lookalike for payment requests. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
   },
   {
-    "language": "en",
-    "category": "LOW",
-    "referenceIndicators": [],
-    "notes": "Conventional software engineering offer with specific duties, salary, and company contact channels.",
-    "text": "CEDARLINE SOFTWARE COMPANY\nOffer of Employment\n\nDear Avery Brooks,\n\nCedarline Software Company is pleased to offer you full-time employment as a Software Test Engineer, based in Bristol. Your annual salary will be GBP 42,500, paid monthly through the company payroll. Your proposed start date is 5 October 2026.\n\nYou will design and run automated tests, document defects, and work with the product engineering team during normal business hours. You will report to Daniel Reed, Test Engineering Lead. The company provides a laptop and the software access needed for your duties.\n\nPlease sign and return this letter by 24 September 2026. Questions about this offer may be sent to people@cedarline.example or raised through the careers portal where you submitted your application.\n\nThis offer is conditional on verification of your employment references. The detailed leave and benefits terms are in the enclosed policy.\n\nRegards,\nPriya Shah\nDirector of People\nCedarline Software Company"
+    "id": "en-low-02",
+    "lang": "en",
+    "label": "LOW",
+    "indicators": [],
+    "text": "CEDARLINE SOFTWARE COMPANY\nOffer of Employment\n\nDear Avery Brooks,\n\nCedarline Software Company is pleased to offer you full-time employment as a Software Test Engineer, based in Bristol. Your annual salary will be GBP 42,500, paid monthly through the company payroll. Your proposed start date is 5 October 2026.\n\nYou will design and run automated tests, document defects, and work with the product engineering team during normal business hours. You will report to Daniel Reed, Test Engineering Lead. The company provides a laptop and the software access needed for your duties.\n\nPlease sign and return this letter by 24 September 2026. Questions about this offer may be sent to people@cedarline.example or raised through the careers portal where you submitted your application.\n\nThis offer is conditional on verification of your employment references. The detailed leave and benefits terms are in the enclosed policy.\n\nRegards,\nPriya Shah\nDirector of People\nCedarline Software Company",
+    "notes": "Conventional software engineering offer with specific duties, salary, and company contact channels. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
   },
   {
-    "language": "en",
-    "category": "LOW",
-    "referenceIndicators": [],
-    "notes": "Normal graduate design offer with a standard response period and no unusual requests.",
-    "text": "BRIGHT HARBOR DESIGN STUDIO\n22 September 2026\n\nDear Jamie Patel,\n\nWe are happy to offer you the role of Graduate Service Designer at Bright Harbor Design Studio in Leeds. The position is full time with an annual salary of GBP 31,800. You will join the Customer Experience group and report to Senior Designer Rowan Miller.\n\nYour expected start date is 19 October 2026. During the first six months, you will take part in our regular design review sessions and receive mentoring from the team. Standard working hours are Monday to Friday, 9:00 a.m. to 5:00 p.m.\n\nPlease return the signed acceptance form to careers@brightharbor.example by 2 October 2026. You may contact our People team using the address shown in the application portal if you would like to discuss the position or benefits.\n\nWe look forward to welcoming you.\n\nYours sincerely,\nLeah Thompson\nPeople Partner\nBright Harbor Design Studio"
+    "id": "en-low-03",
+    "lang": "en",
+    "label": "LOW",
+    "indicators": [],
+    "text": "BRIGHT HARBOR DESIGN STUDIO\n22 September 2026\n\nDear Jamie Patel,\n\nWe are happy to offer you the role of Graduate Service Designer at Bright Harbor Design Studio in Leeds. The position is full time with an annual salary of GBP 31,800. You will join the Customer Experience group and report to Senior Designer Rowan Miller.\n\nYour expected start date is 19 October 2026. During the first six months, you will take part in our regular design review sessions and receive mentoring from the team. Standard working hours are Monday to Friday, 9:00 a.m. to 5:00 p.m.\n\nPlease return the signed acceptance form to careers@brightharbor.example by 2 October 2026. You may contact our People team using the address shown in the application portal if you would like to discuss the position or benefits.\n\nWe look forward to welcoming you.\n\nYours sincerely,\nLeah Thompson\nPeople Partner\nBright Harbor Design Studio",
+    "notes": "Normal graduate design offer with a standard response period and no unusual requests. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
   },
   {
-    "language": "en",
-    "category": "LOW",
-    "referenceIndicators": [],
-    "notes": "Benign relocation support is paid by the company and is not a candidate payment request.",
-    "text": "MERIDIAN BIOANALYTICS PLC\nEmployment Offer\n\nDear Taylor Nguyen,\n\nMeridian BioAnalytics PLC offers you the position of Laboratory Data Coordinator at our Oxford facility. Your annual salary will be GBP 38,200, with benefits described in the attached schedule. The planned start date is 12 October 2026, subject to your acceptance and routine reference checks.\n\nThe role includes maintaining sample records, preparing weekly data summaries, and coordinating with laboratory staff. You will report to Dr. Nia Foster, Laboratory Operations Manager.\n\nFor employees relocating to Oxford, Meridian can arrange temporary accommodation and reimburse approved rail travel under its standard relocation policy. These costs are paid by the company after receipts are submitted through the employee portal; no advance payment is requested from the candidate.\n\nPlease return the signed letter to people@meridianbio.example by 30 September 2026.\n\nKind regards,\nDr. Nia Foster\nLaboratory Operations Manager\nMeridian BioAnalytics PLC"
+    "id": "en-low-04",
+    "lang": "en",
+    "label": "LOW",
+    "indicators": [],
+    "text": "MERIDIAN BIOANALYTICS PLC\nEmployment Offer\n\nDear Taylor Nguyen,\n\nMeridian BioAnalytics PLC offers you the position of Laboratory Data Coordinator at our Oxford facility. Your annual salary will be GBP 38,200, with benefits described in the attached schedule. The planned start date is 12 October 2026, subject to your acceptance and routine reference checks.\n\nThe role includes maintaining sample records, preparing weekly data summaries, and coordinating with laboratory staff. You will report to Dr. Nia Foster, Laboratory Operations Manager.\n\nFor employees relocating to Oxford, Meridian can arrange temporary accommodation and reimburse approved rail travel under its standard relocation policy. These costs are paid by the company after receipts are submitted through the employee portal; no advance payment is requested from the candidate.\n\nPlease return the signed letter to people@meridianbio.example by 30 September 2026.\n\nKind regards,\nDr. Nia Foster\nLaboratory Operations Manager\nMeridian BioAnalytics PLC",
+    "notes": "Benign relocation support is paid by the company and is not a candidate payment request. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
   },
   {
-    "language": "en",
-    "category": "LOW",
-    "referenceIndicators": [],
-    "notes": "Standard finance assistant offer; payroll details are collected through the employer's authenticated onboarding portal after acceptance.",
-    "text": "WILLOW & FINCH ACCOUNTING\n24 September 2026\n\nDear Casey Morgan,\n\nWe are pleased to offer you the position of Accounts Assistant at Willow & Finch Accounting, Manchester. Your salary will be GBP 29,400 per year, paid monthly. You will work with the client accounts team and report to Finance Manager Ellis Grant.\n\nYour duties include reconciling invoices, maintaining ledgers, and supporting month-end reporting. Your normal hours will be 37.5 per week. Your proposed start date is 19 October 2026.\n\nAfter you accept, our People team will provide access to the authenticated employee portal for routine payroll and tax onboarding. Please do not email financial documents or account credentials. No fee is charged to candidates at any stage of recruitment.\n\nPlease sign and return the attached letter to recruitment@willowfinch.example by 1 October 2026.\n\nSincerely,\nEllis Grant\nFinance Manager\nWillow & Finch Accounting"
+    "id": "en-low-05",
+    "lang": "en",
+    "label": "LOW",
+    "indicators": [],
+    "text": "WILLOW & FINCH ACCOUNTING\n24 September 2026\n\nDear Casey Morgan,\n\nWe are pleased to offer you the position of Accounts Assistant at Willow & Finch Accounting, Manchester. Your salary will be GBP 29,400 per year, paid monthly. You will work with the client accounts team and report to Finance Manager Ellis Grant.\n\nYour duties include reconciling invoices, maintaining ledgers, and supporting month-end reporting. Your normal hours will be 37.5 per week. Your proposed start date is 19 October 2026.\n\nAfter you accept, our People team will provide access to the authenticated employee portal for routine payroll and tax onboarding. Please do not email financial documents or account credentials. No fee is charged to candidates at any stage of recruitment.\n\nPlease sign and return the attached letter to recruitment@willowfinch.example by 1 October 2026.\n\nSincerely,\nEllis Grant\nFinance Manager\nWillow & Finch Accounting",
+    "notes": "Standard finance assistant offer; payroll details are collected through the employer's authenticated onboarding portal after acceptance. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
   },
   {
-    "language": "en",
-    "category": "LOW",
-    "referenceIndicators": [],
-    "notes": "Ordinary customer support offer with modest, clearly described compensation and no suspicious request.",
-    "text": "BLUEPEAK COMMUNITY SERVICES\nOffer Letter\n\nDear Riley Chen,\n\nBluePeak Community Services is pleased to offer you the role of Client Support Associate at our Cardiff office. The annual salary is GBP 27,600, paid monthly, with 25 days of annual leave. Your start date is expected to be 26 October 2026.\n\nYou will respond to service enquiries, record cases in our support system, and refer complex matters to the relevant specialist team. You will report to Support Supervisor Amira Lewis. Training and work equipment will be provided during your first week.\n\nPlease review the attached employment terms and return your signed acceptance to jobs@bluepeak.example by 5 October 2026. The People team can answer questions through that company email address or through your candidate portal account.\n\nThis offer is subject to completion of standard right-to-work and reference checks.\n\nBest regards,\nAmira Lewis\nSupport Supervisor\nBluePeak Community Services"
+    "id": "en-low-06",
+    "lang": "en",
+    "label": "LOW",
+    "indicators": [],
+    "text": "BLUEPEAK COMMUNITY SERVICES\nOffer Letter\n\nDear Riley Chen,\n\nBluePeak Community Services is pleased to offer you the role of Client Support Associate at our Cardiff office. The annual salary is GBP 27,600, paid monthly, with 25 days of annual leave. Your start date is expected to be 26 October 2026.\n\nYou will respond to service enquiries, record cases in our support system, and refer complex matters to the relevant specialist team. You will report to Support Supervisor Amira Lewis. Training and work equipment will be provided during your first week.\n\nPlease review the attached employment terms and return your signed acceptance to jobs@bluepeak.example by 5 October 2026. The People team can answer questions through that company email address or through your candidate portal account.\n\nThis offer is subject to completion of standard right-to-work and reference checks.\n\nBest regards,\nAmira Lewis\nSupport Supervisor\nBluePeak Community Services",
+    "notes": "Ordinary customer support offer with modest, clearly described compensation and no suspicious request. Penulis: Pash. Peninjau: Van; status tinjauan: menunggu tinjauan Van. Model bantu: OpenAI GPT-6 (Codex), digunakan hanya untuk koreksi format dan metadata pada review ini; isi surat tidak diubah."
   }
 ]
