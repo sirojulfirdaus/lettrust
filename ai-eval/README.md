@@ -12,7 +12,8 @@ Tooling dataset dan evaluasi pipeline AI. Protokol: [`docs/evaluation/protocol.m
 | `scripts/generate_pdfs.py`, `scripts/make_scans.py` | COMPLETE: generator PDF teks/scan deterministik; mode parsial memakai `--languages id` |
 | `scripts/generate_fixtures.py` | COMPLETE: entry point T5-06 yang memanggil `../fixtures/fixture_builder.py` dengan renderer T5-05; mendukung `--check` dan `--test` |
 | `scripts/baseline.py`, `scripts/_eval_schema.py` | COMPLETE: baseline regex ID/EN dan kontrak hasil evaluasi v1; CLI pengembangan hanya memproses dev |
-| `scripts/freeze_testset.py`, `run_eval.py`, `metrics.py` | STUB: tooling evaluasi lanjutan, belum boleh dipakai untuk menyatakan hasil test set |
+| `scripts/run_eval.py`, `scripts/_eval_records.py` | COMPLETE: pemilihan model T5-07 hanya pada dev; format terdahulu belum mengikuti kontrak bersama §6 |
+| `scripts/freeze_testset.py`, `scripts/metrics.py` | STUB: tooling evaluasi lanjutan, belum boleh dipakai untuk menyatakan hasil test set |
 | `results/<timestamp>/` | `raw.jsonl`, `metrics.json`, `confusion.csv`, `run_config.json` |
 
 Menjalankan tooling yang tersedia dari root repository (di image `ai-service`, `ai-eval/` dan `fixtures/` ter-mount):
@@ -30,9 +31,9 @@ python scripts/dev.py eval baseline --split dev
 
 Cara memakai fixture, checksum, test validator backend, dan hasil skenario yang diharapkan dijelaskan di [fixtures/README.md](../fixtures/README.md). FX-01–FX-10 dibuat mandiri dan bukan tambahan dev/test set.
 
-**T5-05 masih parsial:** tersedia 36 PDF Indonesia (18 teks/18 scan; 12 dev/24 test) dari target 72. Dataset belum final: menunggu tinjauan manusia per surat oleh Pash, identitas model bantu yang dapat diverifikasi, dan bagian Inggris T4-03. Nama “Gemini Neon” yang dicatat saat ini belum merupakan ID model yang dapat diperiksa.
+**T5-05 masih parsial:** tersedia 36 PDF Indonesia (18 teks/18 scan; 12 dev/24 test) dari target 72. Identitas model bantu Indonesia sudah dicatat dari metadata Van di [protocol.md §2](../docs/evaluation/protocol.md#2-label-dan-pembuatan-data). Dataset belum final: tinjauan manusia per surat oleh Pash serta data Inggris dan provenance model bantunya masih menunggu.
 
-Sebelum ketiga prasyarat tersebut selesai, jangan menjalankan `freeze_testset`, menyatakan T5-05 selesai, atau menggunakan hasil test split sebagai metrik laporan. Jika tinjauan manusia mengubah sumber surat, tinjau dan regenerasi pasangan PDF serta baris manifest yang terdampak sebelum freeze. Penambahan fixture T5-06 tidak menutup prasyarat tersebut.
+Sebelum seluruh prasyarat tersebut selesai, jangan menjalankan `freeze_testset`, menyatakan T5-05 selesai, atau menggunakan hasil test split sebagai metrik laporan. Jika tinjauan manusia mengubah sumber surat, tinjau dan regenerasi pasangan PDF serta baris manifest yang terdampak sebelum freeze. Penambahan fixture T5-06 tidak menutup prasyarat tersebut.
 
 Aturan evaluasi berikut berlaku setelah prasyarat dipenuhi: penyesuaian prompt/ambang hanya pada dev set; test set dibekukan (checksum) sebelum penyesuaian final dan tidak dipakai untuk tuning; catat model ID, versi prompt, dan output mentah; laporkan hasil aktual termasuk kegagalan. Baseline aturan hanya untuk evaluasi, bukan fallback runtime. Seluruh data sintetis. `run` merupakan alias `run_eval.py` pada launcher, bukan implementasi evaluasi terpisah.
 
@@ -42,7 +43,7 @@ Baseline mendeteksi tujuh indikator melalui pola ID/EN dengan pengecualian per k
 
 `--check` menjalankan ekstraksi/OCR asli pada PDF dev dan memvalidasi checksum, tanpa menulis hasil. Tanpa flag itu, `--output <direktori-baru>` memilih lokasi run; default `results/<UTC>-baseline/`. Hasilnya `raw.jsonl` dan `run_config.json`, bukan metrik. Direktori lama dan output di dalam dataset ditolak. Kegagalan dokumen tetap dicatat sebagai UNAVAILABLE dengan result null dan exit code 1. PDF test tidak dibuka; CLI menolak `--split test` selama pengembangan.
 
-Kontrak yang harus dipakai **B (T5-07/T5-08), Pash (T4-07), dan Sat (T6-05)** ada di [protocol.md §6](../docs/evaluation/protocol.md#6-kontrak-output-evaluasi-v1), dengan model bersama `scripts/_eval_schema.py`. Format ini kini ditetapkan; `run_eval.py` dan `metrics.py` tetap harus diimplementasikan oleh owner masing-masing. Dokumen protokol lainnya masih STUB. Belum ada hasil evaluasi final atau klaim kinerja test set.
+Kontrak yang harus dipakai **B (T5-07/T5-08), Pash (T4-07), dan Sat (T6-05)** ada di [protocol.md §6](../docs/evaluation/protocol.md#6-kontrak-output-evaluasi-v1), dengan model bersama `scripts/_eval_schema.py`. Baseline sudah memakai kontrak tersebut. Runner T5-07 sudah diimplementasikan, tetapi formatnya masih berbeda dan harus diselaraskan B sebelum evaluasi gabungan; `metrics.py` masih menunggu Pash. Protokol berstatus DRAF, dengan hasil dev dan keputusan sementara di [§7](../docs/evaluation/protocol.md#7-hasil-aktual-dan-keputusan). Bukti T5-07 dipertahankan dalam format asal. Belum ada hasil evaluasi final atau klaim kinerja test set.
 
 Jika user non-root di image tidak dapat menulis bind mount Linux, jalankan container dengan UID/GID pemilik workspace, tanpa mengubah launcher/file bersama atau permission seluruh repository:
 
