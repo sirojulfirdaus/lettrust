@@ -50,7 +50,7 @@ lettrust/
 ├── blockchain/                Dockerfile, foundry.toml, src/OfferProofRegistry.sol, test/OfferProofRegistry.t.sol,
 │                              script/Deploy.s.sol, scripts/deploy-if-needed.sh, lib/forge-std/
 ├── ai-eval/                   README.md, templates/README.md, dataset/manifest.csv, scripts/*.py, results/.gitkeep
-├── fixtures/README.md
+├── fixtures/                   README.md, FX-01–FX-10.pdf, fixture_builder.py, test_*.py
 ├── contracts/                 README.md, openapi.json, examples/*.json (8 berkas)
 ├── scripts/                   dev.py, export_abi.py, scn/README.md
 └── docs/                      prd/, SYSTEM_ARCHITECTURE.md, SCAFFOLD_REPORT.md, testing/{README.md,test-cases.md,evidence/.gitkeep},
@@ -59,7 +59,7 @@ lettrust/
 
 ## 4. Tabel File
 
-Status: COMPLETE = berfungsi sekarang; STUB = signature/docstring dengan kegagalan eksplisit; GEN = hasil generator (tanpa header kepemilikan).
+Status: COMPLETE = berfungsi sekarang; STUB = signature/docstring dengan kegagalan eksplisit; GEN = hasil generator (tanpa header kepemilikan); PARSIAL = artefak tersedia tetapi cakupan atau prasyarat finalisasi belum lengkap.
 
 ### Root, launcher, kontrak, dokumentasi
 
@@ -79,9 +79,12 @@ Status: COMPLETE = berfungsi sekarang; STUB = signature/docstring dengan kegagal
 | `contracts/README.md` | Dws | COMPLETE | SA §20.2 | Konvensi prefiks contoh |
 | `docs/testing/README.md`, `test-cases.md`, `evidence/.gitkeep` | Pash | STUB | PRD §12.4–§12.5 | Seksi SCN-01…SCN-22 (+07a/07b), tanpa baris TC |
 | `docs/evaluation/protocol.md` | B (PIC 5) | STUB | PRD §10.4 | Heading saja |
-| `fixtures/README.md` | B | STUB | PRD §12.4.1 | Tabel FX-01…FX-10 |
-| `ai-eval/README.md`, `templates/README.md`, `dataset/manifest.csv`, `results/.gitkeep` | B | STUB | SA §7.9 | manifest hanya header |
-| `ai-eval/scripts/{generate_pdfs,make_scans,freeze_testset,baseline,run_eval,metrics}.py` | B | STUB | SA §7.9 | Docstring + `NotImplementedError` |
+| `fixtures/README.md`, `FX-01.pdf`…`FX-10.pdf`, `fixture_builder.py`, `test_*.py` | B | COMPLETE | PRD §12.4.1; PLAN T5-06 | Sumber sintetis mandiri, renderer T5-05, checksum, test ekstraksi/OCR dan validasi unggahan; kategori LLM tetap target skenario, bukan hasil terukur |
+| `ai-eval/README.md`, `templates/README.md` | B | COMPLETE | SA §7.9 | Dokumentasi format templat dan perintah tooling; status data/evaluasi tetap terpisah |
+| `ai-eval/dataset/manifest.csv`, `ai-eval/dataset/pdf/`, `ai-eval/results/.gitkeep` | B | PARSIAL | PRD §10.4; PLAN T5-05 | 36 PDF Indonesia draf; EN, tinjauan manusia dan ID model bantu terverifikasi belum lengkap; jangan freeze atau memakai metrik test split sebagai hasil laporan |
+| `ai-eval/scripts/{generate_pdfs,make_scans}.py` | B | COMPLETE | SA §7.9; PLAN T5-05 | Generator deterministik; penyelesaian tooling tidak berarti T5-05 selesai penuh |
+| `ai-eval/scripts/generate_fixtures.py` | B | COMPLETE | SA §7.9; PLAN T5-06 | Entry point `dev.py eval` ke `fixtures/fixture_builder.py`; disetujui pengguna, tanpa perubahan launcher atau kontrak |
+| `ai-eval/scripts/{freeze_testset,baseline,run_eval,metrics}.py` | B | STUB | SA §7.9 | Tugas evaluasi lanjutan; belum dijalankan pada test split |
 
 ### Blockchain
 
@@ -200,6 +203,7 @@ Semua pemeriksaan dijalankan terhadap stack nyata (Anvil nyata); tidak ada mock 
 | D-03 | Service `chain` berjalan sebagai `user: "0:0"` dan `stop_signal: SIGINT`. | Image Foundry berjalan sebagai uid 1000, sedangkan volume `/data` dibuat root-owned; SIGINT memastikan anvil menyimpan state saat berhenti (TOI-01). |
 | D-04 | Kode error tambahan `NOT_FOUND` (404) dan `METHOD_NOT_ALLOWED` (405) untuk route tidak dikenal, serta `NOT_IMPLEMENTED` (501) sementara. | SA §10.3 tidak punya kode untuk kasus routing; envelope SA §10.2 tetap dipakai. `NOT_IMPLEMENTED` harus dihapus setelah seluruh stub terisi. |
 | D-05 | Respons 422 bawaan FastAPI dihapus dari OpenAPI. | Validasi dipetakan ke 400 `VALIDATION_ERROR` (SA §10.1); 422 di kontrak menyesatkan frontend. |
+| D-05a | Perubahan atas D-05: yang dihapus hanya 422 validasi bawaan FastAPI (`Validation Error`/`HTTPValidationError`); 422 bisnis dari `error_responses` (API-03 `HR_NOT_AFFILIATED`, SA §10.3) tetap di OpenAPI. | Filter D-05 sebelumnya ikut menghapus 422 bisnis sehingga kontrak dan tipe frontend kehilangan `HR_NOT_AFFILIATED`. |
 | D-06 | Domain email `.test` diizinkan dengan menghapus `test` dari `email_validator.SPECIAL_USE_DOMAIN_NAMES`. | email-validator 2.4 menolak `.test`, padahal seed SA §9.5 memakai `@lettrust.test`. Berlaku untuk seluruh input email backend. **Disetujui Dws (21/11).** |
 | D-07 | Password dipotong ke 72 byte sebelum bcrypt. | bcrypt 5.0 menolak input >72 byte, sedangkan SA mengizinkan password hingga 128 karakter. Pemotongan sama dengan perilaku bcrypt klasik. **Disetujui Dws (21/11).** |
 | D-08 | `app/core/schemas.py` (backend) dan `app/schemas.py` (ai-service) ditambahkan. | Basis `ApiModel`/envelope bersama; SA §13.1 tidak merinci file ini. |
@@ -214,6 +218,8 @@ Semua pemeriksaan dijalankan terhadap stack nyata (Anvil nyata); tidak ada mock 
 | D-17 | `contracts/examples/index.json` menggantikan pemetaan prefiks di test backend sebagai satu-satunya pemetaan contoh → skema; contoh internal di `contracts/examples/internal/`. | Satu sumber untuk test backend, test ai-service, dan generator fixture. |
 | D-18 | `pyproject.toml` backend men-deselect marker `real_registry` secara default; `tests/conftest.py` menyimpan env registry asli (`REAL_REGISTRY_ENV`) sebelum ditimpa. | Suite conformance web3 hanya jalan eksplisit terhadap Anvil nyata; `pytest` dan `dev.py test` tetap hijau. |
 | D-19 | `dev.py test ai-service` juga me-mount `contracts/` (`CONTRACTS_DIR`). | Test contoh internal ai-service membaca `contracts/examples`. |
+| D-20 | Request API-08 mendapat field opsional `extractionMethod` (`TEXT_LAYER`/`OCR`/`MIXED`, default `TEXT_LAYER`); backend meneruskan `method` dari I-01 dan tidak mengirim field bila `null`. Fuzzy matching kutipan hanya untuk `OCR`/`MIXED`. Request D2 tanpa field tetap valid. | SA §10.8 hanya memuat `documentContent`, padahal SA §7.5 mensyaratkan fuzzy hanya untuk OCR/MIXED; default `TEXT_LAYER` konservatif (tanpa fuzzy). **Disetujui Dws (24/11).** |
+| D-21 | `explanation` API-08 memakai templat (bukan teks model) juga bila ada indikator dibuang (`droppedIndicators > 0`), lebih dari tiga kalimat, atau memuat kata vonis (`asli`, `palsu`, `aman`, `penipuan`, `authentic`, `fake`, `safe`, `scam`, `fraud`). | SA §7.7 hanya mensyaratkan tidak kosong dan ≤ 600 karakter; aturan tambahan menjaga SA §7.4.2 (hanya indikator yang ditemukan) dan larangan vonis. Explanation sah yang menyebut kata tersebut ikut diganti templat. |
 
 ## 7. Known Issues dan Keputusan untuk Manusia
 

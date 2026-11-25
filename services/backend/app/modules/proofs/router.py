@@ -1,16 +1,18 @@
-# Owner: Zan (PIC 3) | Status: STUB | Ref: PRD FR-03.01–FR-03.09, FR-04.01–FR-04.07; SA §10.4, §10.6, §8.3
-# TODO: Ganti `raise not_implemented()` dengan proofs.service; berkas dibaca sekali ke memori (maks MAX_UPLOAD_BYTES+1).
+# Owner: Zan (PIC 3) | Status: COMPLETE | Ref: PRD FR-03.01–FR-03.09, FR-04.01–FR-04.07; SA §10.4, §10.6, §8.3
 """Router SVC-02: API-04, S-06, API-05, API-06."""
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Header, Path, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Header, Path, Query, Request, UploadFile, status
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.core.db import get_db
-from app.core.errors import error_responses, not_implemented
+from app.core.errors import AppError, error_responses
+from app.core.files import read_uploaded_pdf
 from app.core.schemas import ErrorCode
 from app.modules.issuers.dependencies import AuthorizedHrContext, authorized_hr
+from app.modules.proofs import service
 from app.modules.proofs.schemas import (
     IssueProofResponse,
     LifecycleStatus,
@@ -45,13 +47,20 @@ IdempotencyKeyHeader = Annotated[str | None, Header(alias="Idempotency-Key", max
     ),
 )
 async def issue_proof(
+    request: Request,
     hr: Annotated[AuthorizedHrContext, Depends(authorized_hr)],
     db: Annotated[Session, Depends(get_db)],
     file: Annotated[UploadFile, File(description="Satu berkas PDF final, maks MAX_UPLOAD_BYTES.")],
     issuer_id: Annotated[str | None, Form(alias="issuerId")] = None,
     idempotency_key: IdempotencyKeyHeader = None,
 ) -> IssueProofResponse:
-    raise not_implemented()
+    if issuer_id is not None and issuer_id != hr.issuer_id:
+        raise AppError(ErrorCode.FORBIDDEN_OPERATION)
+
+    validated = await read_uploaded_pdf(request)
+    if validated is None:
+        raise AppError(ErrorCode.EMPTY_FILE)
+    return await run_in_threadpool(service.issue_proof, db, hr, validated.sha256, idempotency_key)
 
 
 # S-06: daftar bukti milik penerbit HR.
@@ -68,7 +77,7 @@ async def list_proofs(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ProofListResponse:
-    raise not_implemented()
+    return await run_in_threadpool(service.list_proofs, db, hr, status_filter, limit, offset)
 
 
 # API-05 getProofStatus: status bukti dibaca dari registry.
@@ -88,7 +97,7 @@ async def get_proof_status(
     hr: Annotated[AuthorizedHrContext, Depends(authorized_hr)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ProofStatusResponse:
-    raise not_implemented()
+    return await run_in_threadpool(service.get_proof_status, db, hr, proof_id)
 
 
 # API-06 revokeProof: pencabutan bukti ACTIVE milik penerbit HR.
@@ -114,4 +123,7 @@ async def revoke_proof(
     db: Annotated[Session, Depends(get_db)],
     idempotency_key: IdempotencyKeyHeader = None,
 ) -> RevokeProofResponse:
-    raise not_implemented()
+    # Menjalankan pencabutan idempoten di threadpool agar RPC dan lock tidak menahan event loop.
+    from app.modules.proofs import revocation
+
+    return await run_in_threadpool(revocation.revoke_proof, db, hr, proof_id, payload, idempotency_key)
