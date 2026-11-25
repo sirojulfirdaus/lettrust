@@ -1,6 +1,6 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD §9.6, FR-02.09, FR-06.07
 import { describe, expect, it } from "vitest";
-import { api07AiNotPerformed, api07NotFoundCodeOnly, api07ReferenceMatchAi, api07RegistryUnavailable, api07RevokedMismatch } from "@/fixtures/api";
+import { api07AiNotPerformed, api07AiOnly, api07NotFoundCodeOnly, api07ReferenceMatchAi, api07RegistryUnavailable, api07RevokedMismatch } from "@/fixtures/api";
 import { indicatorLabel, integrityCheckLabel, proofCheckLabel, riskAnalysisLabel } from "./labels";
 
 describe("verification labels", () => {
@@ -40,7 +40,7 @@ describe("verification labels", () => {
   // Memastikan penjelasan risiko tetap memakai teks yang ditentukan PRD.
   it("menggunakan redaksi label sesuai PRD", () => {
     expect(proofCheckLabel(api07NotFoundCodeOnly.proofCheck).explanation).toContain("Ini tidak berarti surat palsu:");
-    expect(riskAnalysisLabel(api07ReferenceMatchAi.riskAnalysis).explanation).toContain("pola yang sering muncul pada penipuan rekrutmen");
+    expect(riskAnalysisLabel(api07AiOnly.riskAnalysis).explanation).toContain("pola yang sering muncul pada penipuan rekrutmen");
     expect(riskAnalysisLabel(api07ReferenceMatchAi.riskAnalysis).explanation).toContain("Risiko rendah tidak menjamin surat aman.");
   });
 
