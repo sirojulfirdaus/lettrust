@@ -39,10 +39,17 @@ os.environ.update(
     }
 )
 
-from fastapi.testclient import TestClient  # noqa: E402
+from datetime import UTC, datetime  # noqa: E402
 
-from app.core.db import init_db  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import select  # noqa: E402
+
+from app.core.config import get_settings  # noqa: E402
+from app.core.db import get_session_factory, init_db  # noqa: E402
+from app.core.ids import new_partner_id  # noqa: E402
+from app.core.security import hash_token  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.modules.partners.models import Partner  # noqa: E402
 
 
 # Klien HTTP untuk aplikasi dengan tabel yang sudah dibuat.
@@ -51,3 +58,21 @@ def client() -> Iterator[TestClient]:
     init_db()
     with TestClient(create_app()) as test_client:
         yield test_client
+
+
+# Header Authorization partner valid: memastikan partner ber-token PARTNER_TOKEN ada di DB uji (seperti seed).
+@pytest.fixture(scope="session")
+def partner_headers(client) -> dict[str, str]:
+    token = get_settings().partner_token.get_secret_value()
+    with get_session_factory().begin() as db:
+        if db.scalar(select(Partner.id).where(Partner.token_hash == hash_token(token))) is None:
+            db.add(
+                Partner(
+                    id=new_partner_id(),
+                    name="Partner Uji",
+                    token_hash=hash_token(token),
+                    active=True,
+                    created_at=datetime.now(UTC),
+                )
+            )
+    return {"Authorization": f"Bearer {token}"}

@@ -1,5 +1,4 @@
-# Owner: Zan (PIC 3) | Status: STUB | Ref: PRD FR-01.03–FR-01.06; SA §10.4, §10.5, §8.3
-# TODO: Ganti `raise not_implemented()` dengan pemanggilan issuers.service.
+# Owner: Zan (PIC 3) | Status: COMPLETE | Ref: PRD FR-01.03–FR-01.06; SA §10.4, §10.5, §8.3
 """Router SVC-01: API-01, S-04, S-05, API-02, API-03."""
 
 from typing import Annotated
@@ -8,11 +7,12 @@ from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.errors import error_responses, not_implemented
+from app.core.errors import error_responses
 from app.core.schemas import ErrorCode
 from app.modules.auth.dependencies import current_user, require_admin
 from app.modules.auth.models import User
 from app.modules.auth.schemas import IssuerStatus
+from app.modules.issuers import service
 from app.modules.issuers.dependencies import require_unaffiliated_hr
 from app.modules.issuers.schemas import (
     AuthorizeHrRequest,
@@ -42,12 +42,12 @@ IssuerIdPath = Annotated[str, Path(alias="issuerId")]
         ErrorCode.REGISTRATION_NUMBER_ALREADY_EXISTS,
     ),
 )
-async def register_issuer(
+def register_issuer(
     payload: RegisterIssuerRequest,
     user: Annotated[User, Depends(require_unaffiliated_hr)],
     db: Annotated[Session, Depends(get_db)],
 ) -> RegisterIssuerResponse:
-    raise not_implemented()
+    return service.register_issuer(db, user, payload)
 
 
 # S-04: daftar penerbit untuk Administrator.
@@ -57,14 +57,14 @@ async def register_issuer(
     operation_id="listIssuers",
     responses=error_responses(ErrorCode.UNAUTHENTICATED, ErrorCode.FORBIDDEN_OPERATION),
 )
-async def list_issuers(
+def list_issuers(
     admin: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
     status_filter: Annotated[IssuerStatus | None, Query(alias="status")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> IssuerListResponse:
-    raise not_implemented()
+    return service.list_issuers(db, status_filter, limit, offset)
 
 
 # S-05: detail penerbit untuk Administrator atau anggota penerbit.
@@ -74,12 +74,12 @@ async def list_issuers(
     operation_id="getIssuer",
     responses=error_responses(ErrorCode.UNAUTHENTICATED, ErrorCode.ISSUER_NOT_FOUND),
 )
-async def get_issuer(
+def get_issuer(
     issuer_id: IssuerIdPath,
     user: Annotated[User, Depends(current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> IssuerDetailResponse:
-    raise not_implemented()
+    return service.get_issuer_detail(db, user, issuer_id)
 
 
 # API-02 verifyIssuer: keputusan verifikasi oleh Administrator.
@@ -94,13 +94,13 @@ async def get_issuer(
         ErrorCode.ISSUER_DECISION_ALREADY_MADE,
     ),
 )
-async def verify_issuer(
+def verify_issuer(
     issuer_id: IssuerIdPath,
     payload: VerifyIssuerRequest,
     admin: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
 ) -> VerifyIssuerResponse:
-    raise not_implemented()
+    return service.verify_issuer(db, admin, issuer_id, payload)
 
 
 # API-03 authorizeHR: otorisasi HR terafiliasi oleh Administrator.
@@ -118,10 +118,10 @@ async def verify_issuer(
         ErrorCode.HR_ALREADY_AUTHORIZED,
     ),
 )
-async def authorize_hr(
+def authorize_hr(
     issuer_id: IssuerIdPath,
     payload: AuthorizeHrRequest,
     admin: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AuthorizeHrResponse:
-    raise not_implemented()
+    return service.authorize_hr(db, admin, issuer_id, payload)

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "method": "llm",
+  "split": "dev",
+  "purpose": "provisional-model-selection",
+  "datasetStatus": "draft-not-frozen",
+  "startedAt": "2026-11-25T07:34:59.866311+00:00",
+  "state": "finished",
+  "settings": {
+    "provider": "openai_compatible",
+    "baseUrl": "https://api.groq.com/openai/v1",
+    "model": "openai/gpt-oss-120b",
+    "promptVersion": "v1",
+    "temperature": 0,
+    "responseFormat": {
+      "type": "json_object"
+    },
+    "maxOutputTokens": 900,
+    "reasoningEffort": null,
+    "requestTimeoutSeconds": 40.0,
+    "outputInvalidRetries": 1,
+    "providerRetries": 0,
+    "maxUploadBytes": 5242880,
+    "aiMaxPages": 5,
+    "aiMaxChars": 12000,
+    "ocrMinCharsPerPage": 25,
+    "ocrDpi": 300,
+    "ocrPageTimeoutSeconds": 20.0,
+    "evidenceFuzzyThreshold": 90
+  },
+  "manifestSha256": "17556b3c43ec905a23ccf01f53350b14d3a6c8b77e7b6d71cb59d46f475bed93",
+  "documents": [
+    {
+      "id": "id-high-03-scan",
+      "sha256": "3dcccd7ac4d3ba9639a243fe92779f47e7aedddbb8bbc0acf7ec780a4441f153"
+    }
+  ],
+  "sourceSha256": {
+    "runner": "0e1292d3797d4685e10c4ec7110ce175de1278c2d25146467298d08330c7cf23",
+    "records": "bc9739910075a3a1074c2ca7e0a1565d2588f806a2a23460d785b104eb0690c9",
+    "provider": "b31d3d59ea9eebcb91f6f8d704694736daf089618ec01180986293e32200ba7c",
+    "prompt": "c694012c8995e64222149f89643eee11b5a8027a185de44bfc5a2bea8ef7140b",
+    "analysis": "a60f2915b041fec7cc2e02c6d1fd58cdaa142de169211b8f574772373fd7b925",
+    "extraction": "ce4b7ecbb85cd5fec455e5158f91b59217b3893814738ac1d08f2023d226d915"
+  },
+  "intervalSeconds": 0.0,
+  "latencyDefinition": "extraction+analysis+runtime-output-retry; excludes inter-document delay",
+  "finishedAt": "2026-11-25T07:35:04.685640+00:00",
+  "statusCounts": {
+    "COMPLETED": 1
+  },
+  "stopReason": null,
+  "lengthEvents": 0
+}
