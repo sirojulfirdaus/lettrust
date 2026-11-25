@@ -19,13 +19,15 @@ type ApiErrorEnvelope = { error?: { code?: string; message?: string } };
 
 // Memilih pesan perbaikan statis agar detail internal layanan tidak tampil kepada pemohon.
 export function verificationErrorMessage(status: number, code?: string): string {
-  if (status === 400 || code === "VALIDATION_ERROR" || code === "INVALID_REFERENCE_CODE_FORMAT" || code === "INVALID_INPUT_COMBINATION" || code === "AI_ONLY_REQUIRES_INCLUDE_RISK") {
-    return "Periksa kembali kode referensi, pilihan mode, dan berkas yang Anda masukkan.";
-  }
-  if (status === 413 || code === "FILE_TOO_LARGE") return "Ukuran PDF melebihi batas 5 MB. Pilih berkas yang lebih kecil.";
-  if (status === 415 || code === "UNSUPPORTED_MEDIA_TYPE") return "Format berkas tidak didukung. Pilih dokumen PDF.";
-  if (code === "EMPTY_FILE") return "Berkas kosong. Pilih PDF lain yang berisi surat.";
+  if (code === "INVALID_REFERENCE_CODE_FORMAT") return "Format kode referensi tidak valid. Periksa kembali kode pada surat Anda.";
+  if (code === "INVALID_INPUT_COMBINATION") return "Masukkan kode referensi atau unggah berkas PDF untuk dianalisis.";
+  if (code === "AI_ONLY_REQUIRES_INCLUDE_RISK") return "Tanpa kode referensi, pemeriksaan hanya dapat dilakukan dengan analisis AI. Setujui pemrosesan AI untuk melanjutkan.";
+  if (code === "FILE_TOO_LARGE" || status === 413) return "Ukuran berkas melebihi batas yang diizinkan.";
+  if (code === "UNSUPPORTED_MEDIA_TYPE" || status === 415) return "Berkas harus berformat PDF.";
+  if (code === "EMPTY_FILE") return "Berkas kosong tidak dapat diproses.";
   if (code === "MULTIPLE_FILES") return "Pilih satu berkas PDF untuk diperiksa.";
+  if (code === "RATE_LIMITED" || status === 429) return "Terlalu banyak permintaan. Coba lagi beberapa saat lagi.";
+  if (status === 400 || code === "VALIDATION_ERROR") return "Periksa kembali kode referensi, pilihan mode, dan berkas yang Anda masukkan.";
   return "Layanan pemeriksaan sedang tidak tersedia. Coba lagi beberapa saat lagi.";
 }
 
@@ -49,18 +51,19 @@ export function VerifyForm() {
     event.currentTarget.value = "";
     setFileError(null);
     setFile(null);
+    setIncludeRisk(false);
     setConsent(false);
     if (!selected) return;
     if (!selected.name.toLowerCase().endsWith(".pdf") || (selected.type && selected.type !== PDF_MIME)) {
-      setFileError("Pilih berkas dengan format PDF.");
+      setFileError("Berkas harus berformat PDF.");
       return;
     }
     if (selected.size === 0) {
-      setFileError("Berkas kosong. Pilih PDF lain yang berisi surat.");
+      setFileError("Berkas kosong tidak dapat diproses.");
       return;
     }
     if (selected.size > MAX_FILE_BYTES) {
-      setFileError("Ukuran PDF melebihi batas 5 MB.");
+      setFileError("Ukuran berkas melebihi batas yang diizinkan.");
       return;
     }
     setFile(selected);
@@ -83,7 +86,7 @@ export function VerifyForm() {
     event.preventDefault();
     setError(null);
     if (mode === "REFERENCE_CHECK" && (!normalizedCode || !isValidReferenceCode(normalizedCode))) {
-      setError("Masukkan kode referensi dengan format yang benar, misalnya LTR-7K3M-9QX2-H4TD.");
+      setError("Format kode referensi tidak valid. Periksa kembali kode pada surat Anda.");
       return;
     }
     if ((mode === "AI_ONLY" || shouldIncludeRisk) && !file) {
@@ -150,7 +153,7 @@ export function VerifyForm() {
           <Input id="offer-letter" type="file" accept="application/pdf,.pdf" onChange={acceptFile} disabled={isProcessing} aria-describedby="file-help" aria-invalid={Boolean(fileError)} />
           <p id="file-help" className="text-sm text-muted-foreground">Berkas dipakai untuk pemeriksaan ini saja.</p>
           {fileError && <p role="alert" className="text-sm text-destructive">{fileError}</p>}
-          {file && <div className="flex flex-wrap items-center gap-3 text-sm"><span>{file.name} · {(file.size / (1024 * 1024)).toFixed(2)} MB</span><Button type="button" variant="outline" size="sm" disabled={isProcessing} onClick={() => { setFile(null); setConsent(false); }}>Hapus berkas</Button></div>}
+          {file && <div className="flex flex-wrap items-center gap-3 text-sm"><span>{file.name} · {(file.size / (1024 * 1024)).toFixed(2)} MB</span><Button type="button" variant="outline" size="sm" disabled={isProcessing} onClick={() => { setFile(null); setIncludeRisk(false); setConsent(false); }}>Hapus berkas</Button></div>}
         </div>
         {mode === "REFERENCE_CHECK" && (
           <label className="flex items-start gap-3 rounded-lg border p-3">
@@ -158,7 +161,7 @@ export function VerifyForm() {
             <span><span className="block font-medium">Analisis indikasi risiko dengan AI</span><span className="text-sm text-muted-foreground">Unggah PDF untuk mengaktifkan pilihan ini.</span></span>
           </label>
         )}
-        {mode === "AI_ONLY" && <p className="rounded-lg bg-muted p-3 text-sm">Bukti penerbitan dan keutuhan berkas tidak diperiksa tanpa kode referensi.</p>}
+        {mode === "AI_ONLY" && <div className="space-y-2 rounded-lg bg-muted p-3 text-sm"><p>Bukti penerbitan dan keutuhan berkas tidak diperiksa tanpa kode referensi.</p><p>Apabila perusahaan menyatakan menggunakan Lettrust, mintalah kode referensi kepada perusahaan.</p></div>}
         {shouldIncludeRisk && <ConsentCheckbox checked={consent} disabled={isProcessing} onCheckedChange={setConsent} />}
         {error && <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>}
         {isProcessing && <ProcessingStatus includeRisk={shouldIncludeRisk} />}

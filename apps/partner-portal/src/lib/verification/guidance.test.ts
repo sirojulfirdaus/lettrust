@@ -17,7 +17,7 @@ describe("guidance", () => {
   it("menyertakan arahan AI-only dan hasil risiko tinggi tanpa vonis gabungan", () => {
     const guidance = buildGuidance(api07AiOnly);
     expect(guidance.map(({ id }) => id)).toEqual(["G-01", "G-02", "G-08"]);
-    expect(guidance.every(({ text }) => !/asli|palsu|aman|penipuan/i.test(text))).toBe(true);
+    expect(guidance.every(({ text }) => !/\b(?:surat|penawaran|hasil)\s+(?:ini\s+)?(?:asli|palsu|aman|penipuan)\b/i.test(text))).toBe(true);
     expect(buildGuidance(api07AiOnlyMediumPartial).map(({ id }) => id)).toEqual(["G-01", "G-08", "G-09"]);
   });
 

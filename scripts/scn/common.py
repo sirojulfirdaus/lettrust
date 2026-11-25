@@ -10,7 +10,6 @@ import secrets
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,8 +19,13 @@ ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE_ROOT = ROOT / "docs" / "testing" / "evidence"
 SERVICES = {"chain", "backend", "ai-service", "issuer-console", "partner-portal"}
 REDACTED_KEYS = {
-    "accessToken", "authorization", "evidence", "indicators", "indicatorDetails",
-    "password", "partnerToken", "referenceCode", "token",
+    "accessToken",
+    "authorization",
+    "evidence",
+    "password",
+    "partnerToken",
+    "referenceCode",
+    "token",
 }
 
 
