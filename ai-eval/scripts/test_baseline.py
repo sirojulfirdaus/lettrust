@@ -65,6 +65,61 @@ def test_exceptions_do_not_raise_indicators(text: str) -> None:
     assert result.category.value == "LOW"
 
 
+# Larangan berbagi kredensial tetap LOW untuk bentuk verba ID/EN yang dikenali detektor positif.
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Jangan kirimkan OTP kepada siapa pun.",
+        "Dilarang kirimkan PIN kepada pihak lain.",
+        "Jangan serahkan PIN kepada siapa pun.",
+        "Dilarang serahkan kata sandi kepada pihak lain.",
+        "Jangan beri password kepada siapa pun.",
+        "Jangan berikan OTP kepada siapa pun.",
+        "Do not submit your password to anyone.",
+        "Don't submit your OTP to anyone.",
+        "Never submit your PIN to anyone.",
+        "You must not submit your password to anyone.",
+    ],
+)
+def test_sensitive_data_warnings_do_not_raise_indicators(text: str) -> None:
+    result = baseline.analyze_text(text)
+    assert result.indicator_details == []
+    assert result.category.value == "LOW"
+
+
+# Pengecualian baru tidak boleh menutupi permintaan kredensial afirmatif dengan verba yang sama.
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Serahkan PIN Anda kepada petugas rekrutmen.",
+        "Beri kata sandi Anda kepada petugas rekrutmen.",
+        "Submit your password to the recruitment contact.",
+    ],
+)
+def test_sensitive_data_requests_remain_high(text: str) -> None:
+    result = baseline.analyze_text(text)
+    assert {detail.code for detail in result.indicator_details} == {"SENSITIVE_DATA_REQUEST"}
+    assert result.category.value == "HIGH"
+    assert result.indicator_details[0].evidence == [text]
+
+
+# Peringatan kredensial pada klausa lain tidak boleh membatalkan permintaan yang benar-benar terdeteksi.
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Jangan kirimkan OTP kepada orang lain, tetapi serahkan PIN kepada petugas rekrutmen.",
+        "Serahkan PIN kepada petugas rekrutmen, tetapi jangan kirimkan OTP kepada orang lain.",
+        "Do not submit your password to strangers, but submit your PIN to the recruitment contact.",
+        "Submit your PIN to the recruitment contact, but do not submit your password to strangers.",
+    ],
+)
+def test_sensitive_data_warning_exception_is_local(text: str) -> None:
+    result = baseline.analyze_text(text)
+    assert {detail.code for detail in result.indicator_details} == {"SENSITIVE_DATA_REQUEST"}
+    assert result.category.value == "HIGH"
+    assert result.indicator_details[0].evidence == [text]
+
+
 # Pengecualian dalam satu klausa tidak boleh menutupi permintaan pembayaran pada klausa lain.
 @pytest.mark.parametrize(
     "text",

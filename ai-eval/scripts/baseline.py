@@ -98,8 +98,9 @@ EXCLUSIONS = {
         r"\bno\s+(?:administration|administrative|training|processing|recruitment)\s+fees?\b",
     ),
     "SENSITIVE_DATA_REQUEST": _rules(
-        r"\b(?:jangan|dilarang|tidak\s+pernah)\b.{0,40}\b(?:kirim|bagikan|berikan|meminta|membagikan)\b",
-        r"\b(?:do\s+not|don['’]t|never|must\s+not)\s+(?:share|send|provide|request|ask)\b",
+        r"\b(?:jangan|dilarang|tidak\s+pernah)\b.{0,40}"
+        r"\b(?:kirim(?:kan)?|beri(?:kan)?|bagikan|serahkan|meminta|membagikan)\b",
+        r"\b(?:do\s+not|don['’]t|never|must\s+not)\s+(?:share|send|provide|submit|request|ask)\b",
     ),
     "UNOFFICIAL_CONTACT": _rules(r"\b(?:jangan|tidak|do\s+not|never)\b.{0,40}\b(?:hubungi|contact|gunakan|use)\b"),
     "URGENCY_PRESSURE": _rules(r"\b(?:tidak\s+perlu\s+(?:segera|terburu)|no\s+urgency|not\s+urgent)\b"),
