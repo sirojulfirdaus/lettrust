@@ -73,6 +73,22 @@ describe("POST /api/verify", () => {
     }
   });
 
+  // Menyamarkan konfigurasi server yang tidak lengkap sebagai gangguan layanan.
+  it("mengembalikan envelope 503 saat konfigurasi server hilang", async () => {
+    vi.stubEnv("LETTRUST_API_BASE_URL", "");
+    vi.stubEnv("LETTRUST_PARTNER_TOKEN", "");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(makeRequest([["referenceCode", "LTR-7K3M-9QX2-H4TD"]]));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("X-Request-ID")).toMatch(/^req_[A-F0-9]{16}$/);
+    expect(body.error.code).toBe("SERVICE_UNAVAILABLE");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("menerima berkas 5 MiB dan menolak berkas yang melebihi batas", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
