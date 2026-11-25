@@ -1,35 +1,85 @@
-// Owner: Pash (PIC 4) | Status: STUB | Ref: PRD FR-02.07, FR-02.11; SA §11.3.2, §10.2, TOI-03
-// TODO: Teruskan multipart ke API-07 dengan token partner dari getServerConfig(); timeout/jaringan/401 upstream -> 503 SERVICE_UNAVAILABLE.
-// Import efek samping memastikan rantai modul server-only ikut dibundel; token belum dibaca pada stub ini.
-import "@/lib/server/config";
+// Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD FR-02.07, FR-02.11; SA §11.3.2, §10.2, TOI-03
+import { getServerConfig } from "@/lib/server/config";
 
 export const runtime = "nodejs";
 
-// Membuat requestId berformat SA §6.3 (req_ + 16 karakter).
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+// Membuat requestId lokal untuk panggilan upstream dan respons gangguan sebelum backend menjawab.
 function newRequestId(): string {
   return `req_${crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase()}`;
 }
 
-// Meneruskan permintaan pemeriksaan pelamar ke API-07 menggunakan token partner di sisi server.
-export async function POST(_req: Request): Promise<Response> {
-  // 1. Pastikan multipart; ambil hanya field referenceCode, file, includeRisk.
-  // 2. Susun FormData baru (field lain dibuang).
-  // 3. fetch(`${apiBaseUrl}/api/v1/verifications`, {
-  //      method: "POST", body, headers: { Authorization: `Bearer ${partnerToken}`, "X-Request-ID": id },
-  //      signal: AbortSignal.timeout(upstreamTimeoutMs) })
-  // 4. Teruskan status dan body JSON apa adanya.
-  // 5. Error jaringan/timeout/401 dari upstream -> 503 { error: { code: "SERVICE_UNAVAILABLE" } }.
-  // BFF tidak menyimpan berkas dan tidak mencatat isi permintaan.
-  const requestId = newRequestId();
+// Membentuk error envelope portal tanpa menyertakan detail internal atau isi berkas.
+function errorResponse(requestId: string, status: number, code: string, message: string): Response {
   return Response.json(
-    {
-      requestId,
-      error: {
-        code: "NOT_IMPLEMENTED",
-        message: "Fitur pemeriksaan belum diimplementasikan.",
-        details: [],
-      },
-    },
-    { status: 501, headers: { "X-Request-ID": requestId } },
+    { requestId, error: { code, message, details: [] } },
+    { status, headers: { "X-Request-ID": requestId } },
   );
+}
+
+// Memvalidasi multipart, membatasi ukuran berkas, dan meneruskan API-07 dari server portal.
+export async function POST(req: Request): Promise<Response> {
+  const requestId = newRequestId();
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().startsWith("multipart/form-data;")) {
+    return errorResponse(requestId, 400, "VALIDATION_ERROR", "Permintaan harus menggunakan multipart/form-data.");
+  }
+
+  let incoming: FormData;
+  try {
+    incoming = await req.formData();
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return errorResponse(requestId, 400, "VALIDATION_ERROR", "Format berkas yang dikirim tidak valid.");
+    }
+    throw error;
+  }
+
+  const outgoing = new FormData();
+  for (const [name, value] of incoming.entries()) {
+    if (name === "referenceCode" || name === "includeRisk") {
+      if (typeof value === "string") outgoing.append(name, value);
+    } else if (name === "file" && value instanceof File) {
+      if (value.size > MAX_UPLOAD_BYTES) {
+        return errorResponse(requestId, 413, "FILE_TOO_LARGE", "Ukuran berkas melebihi batas yang diizinkan.");
+      }
+      outgoing.append("file", value, value.name);
+    }
+  }
+
+  const config = getServerConfig();
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${config.apiBaseUrl}/api/v1/verifications`, {
+      method: "POST",
+      body: outgoing,
+      headers: {
+        Authorization: `Bearer ${config.partnerToken}`,
+        "X-Request-ID": requestId,
+      },
+      signal: AbortSignal.timeout(config.upstreamTimeoutMs),
+    });
+  } catch (error) {
+    if (error instanceof TypeError || (error instanceof DOMException && error.name === "TimeoutError")) {
+      return errorResponse(requestId, 503, "SERVICE_UNAVAILABLE", "Layanan pemeriksaan sedang tidak tersedia. Coba lagi beberapa saat lagi.");
+    }
+    throw error;
+  }
+
+  const upstreamRequestId = upstream.headers.get("X-Request-ID");
+  if (upstream.status === 401) {
+    return errorResponse(
+      upstreamRequestId ?? requestId,
+      503,
+      "SERVICE_UNAVAILABLE",
+      "Layanan pemeriksaan sedang tidak tersedia. Coba lagi beberapa saat lagi.",
+    );
+  }
+
+  const headers = new Headers();
+  const upstreamContentType = upstream.headers.get("Content-Type");
+  if (upstreamContentType) headers.set("Content-Type", upstreamContentType);
+  if (upstreamRequestId) headers.set("X-Request-ID", upstreamRequestId);
+  return new Response(upstream.body, { status: upstream.status, headers });
 }
