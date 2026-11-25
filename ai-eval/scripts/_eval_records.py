@@ -1,8 +1,9 @@
-# Owner: B (PIC 5) | Status: COMPLETE | Ref: PLAN T5-07; PRD §10.4.3; SA §7.9
-"""Membaca hanya berkas dev dan menyimpan record evaluasi tanpa secret atau akses PDF test."""
+# Owner: B (PIC 5) | Status: COMPLETE | Ref: PLAN T5-07/T5-08; PRD §10.4.3; SA §7.9
+"""Memvalidasi metadata bersama tooling freeze; pembacaan PDF di helper ini tetap hanya dev, tanpa secret."""
 
 import csv
 import json
+from io import StringIO
 from pathlib import Path
 from typing import Any, TextIO
 from urllib.parse import urlsplit
@@ -12,17 +13,14 @@ from _dataset import FIELDS, SOURCE_ID, Entry, pdf_path, sha256, validate_labels
 from app.core.config import Settings
 
 
-# Memeriksa split seluruh metadata sebelum mengakses PDF; checksum dan isi berkas hanya dibaca untuk dev.
-def load_dev_entries(directory: Path, limit: int | None = None) -> list[Entry]:
-    if limit is not None and limit < 1:
-        raise ValueError("Limit harus positif.")
-    with (directory / "manifest.csv").open(encoding="utf-8", newline="") as stream:
+# Memvalidasi identitas dan split dari satu snapshot metadata; fungsi ini tidak mengakses PDF atau mem-parse label test.
+def parse_manifest_metadata(content: bytes) -> list[Entry]:
+    with StringIO(content.decode("utf-8"), newline="") as stream:
         reader = csv.DictReader(stream)
         if reader.fieldnames != list(FIELDS):
             raise ValueError("Header manifest tidak sesuai SA §7.9.")
         entries = []
         identifiers = set()
-        pairs = {}
         source_splits = {}
         for row in reader:
             if set(row) != set(FIELDS) or any(not isinstance(value, str) for value in row.values()):
@@ -41,16 +39,27 @@ def load_dev_entries(directory: Path, limit: int | None = None) -> list[Entry]:
                 raise ValueError("Pasangan surat berada pada split berbeda.")
             source_splits[source_id] = entry.split
             identifiers.add(entry.id)
-            if entry.split != "dev":
-                continue
-            validate_labels(json.loads(entry.indicators), entry.label)
-            metadata = (entry.lang, entry.label, entry.indicators)
-            if source_id in pairs and pairs[source_id] != metadata:
-                raise ValueError("Anotasi pasangan dev tidak konsisten.")
-            pairs[source_id] = metadata
             entries.append(entry)
+    return entries
+
+
+# Memeriksa seluruh split sebelum mengakses PDF; anotasi, checksum, dan isi berkas hanya dibaca untuk dev.
+def load_dev_entries(directory: Path, limit: int | None = None) -> list[Entry]:
+    if limit is not None and limit < 1:
+        raise ValueError("Limit harus positif.")
+    entries = [
+        entry for entry in parse_manifest_metadata((directory / "manifest.csv").read_bytes()) if entry.split == "dev"
+    ]
     if not entries:
         raise ValueError("Manifest tidak mempunyai dokumen dev.")
+    pairs = {}
+    for entry in entries:
+        validate_labels(json.loads(entry.indicators), entry.label)
+        source_id = entry.id.rsplit("-", 1)[0]
+        metadata = (entry.lang, entry.label, entry.indicators)
+        if source_id in pairs and pairs[source_id] != metadata:
+            raise ValueError("Anotasi pasangan dev tidak konsisten.")
+        pairs[source_id] = metadata
     for entry in entries:
         path = pdf_path(directory, entry)
         if not path.is_file() or sha256(path.read_bytes()) != entry.sha256:
