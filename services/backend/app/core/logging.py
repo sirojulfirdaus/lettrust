@@ -24,6 +24,9 @@ ALLOWED_FIELDS = (
     "riskState",
     "model",
     "component",
+    # Diagnosis pelanggaran skema ai-service: penanda dan lokasi field saja, tanpa nilai.
+    "reason",
+    "fields",
 )
 _LEVEL_NAMES = {"WARNING": "WARN", "CRITICAL": "ERROR"}
 

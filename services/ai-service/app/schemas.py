@@ -4,7 +4,7 @@
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
 from pydantic.alias_generators import to_camel
 
 
@@ -50,9 +50,19 @@ class ExtractionResponse(ApiModel):
 
 
 class RiskAnalysisRequest(ApiModel):
-    """API-08 (sesuai D2): teks dokumen 1–AI_MAX_CHARS karakter; batas atas diperiksa handler dari konfigurasi."""
+    """API-08: teks 1–AI_MAX_CHARS; metode opsional default TEXT_LAYER sesuai keputusan Dws untuk T5-04."""
 
     document_content: str = Field(min_length=1)
+    extraction_method: ExtractionMethod = ExtractionMethod.TEXT_LAYER
+
+    # Mempertahankan round-trip request D2 tanpa menambahkan metode yang tidak dikirim pemanggil.
+    @model_serializer(mode="wrap")
+    def _serialize_optional_method(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        data = handler(self)
+        if "extraction_method" not in self.model_fields_set:
+            data.pop("extractionMethod", None)
+            data.pop("extraction_method", None)
+        return data
 
 
 class Severity(StrEnum):

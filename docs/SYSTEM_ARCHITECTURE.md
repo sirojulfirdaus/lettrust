@@ -827,6 +827,7 @@ ai-eval/
 ├── scripts/
 │   ├── generate_pdfs.py  # templat → PDF teks (reportlab)
 │   ├── make_scans.py     # PDF teks → gambar ber-derau → PDF tanpa teks
+│   ├── generate_fixtures.py # entry point FX-01–FX-10 → fixtures/fixture_builder.py
 │   ├── freeze_testset.py # mencatat checksum test set
 │   ├── baseline.py
 │   ├── run_eval.py       # menjalankan pipeline nyata dan baseline pada split
@@ -836,7 +837,7 @@ ai-eval/
 
 * Skrip dijalankan di dalam image `ai-service` melalui `python scripts/dev.py eval …` sehingga OCR dan dependency identik.
 * `run_eval.py` memanggil pipeline yang sama dengan runtime (ekstraksi + analisis), bukan salinan logika.
-* Fixture demo (`fixtures/FX-01`–`FX-10`) dihasilkan dari tooling yang sama.
+* Fixture demo (`fixtures/FX-01`–`FX-10`) dihasilkan dari renderer yang sama melalui `python scripts/dev.py eval generate_fixtures`. Entry point memanggil `fixtures/fixture_builder.py`; `--check` memeriksa byte/checksum README, sedangkan `--test` menjalankan test artefak dan ekstraksi. Fixture skenario terpisah dari dataset evaluasi dan tidak membekukan test set.
 * Protokol dan laporan akhir disimpan di `docs/evaluation/`.
 
 # 8. Identity, Authentication & Authorization

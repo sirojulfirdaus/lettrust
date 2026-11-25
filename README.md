@@ -66,6 +66,7 @@ Backend mengisi data seed sintetis saat startup jika basis data kosong. Saat bac
 | `python scripts/dev.py openapi` | Ekspor `contracts/openapi.json` + regenerasi `schema.d.ts` kedua app |
 | `python scripts/dev.py test [SVC]` | Unit test di container (`blockchain`, `backend`, `ai-service`, `issuer-console`, `partner-portal`) |
 | `python scripts/dev.py eval <script> ...` | Jalankan `ai-eval/scripts/<script>.py` di image ai-service |
+| `python scripts/dev.py eval generate_fixtures [--check\|--test]` | Buat/periksa FX-01–FX-10 dengan tooling T5-05; lihat [fixtures/README.md](fixtures/README.md) |
 | `python scripts/dev.py lock [backend\|ai-service]` | Kunci dependency Python termasuk transitif (`pip freeze`) ke `services/<svc>/constraints.txt`; tanpa argumen = keduanya |
 | `python scripts/export_abi.py` | Ekspor ABI contract ke modul registry backend |
 
