@@ -100,6 +100,22 @@ def test_body_validation():
     assert call(fake, "POST", ANALYSIS_PATH, json={"documentContent": ""}, headers=HEADERS).status_code == 400
 
 
+# D-20: extractionMethod API-08 opsional; hanya TEXT_LAYER/OCR/MIXED diterima, null atau field asing → 400.
+@pytest.mark.parametrize(
+    ("extra", "status"),
+    [
+        ({}, 200),
+        ({"extractionMethod": "OCR"}, 200),
+        ({"extractionMethod": None}, 400),
+        ({"extractionMethod": "PHOTO"}, 400),
+        ({"category": "LOW"}, 400),
+    ],
+)
+def test_analysis_extraction_method(extra, status):
+    body = {"documentContent": "teks", **extra}
+    assert call(FakeAiService(), "POST", ANALYSIS_PATH, json=body, headers=HEADERS).status_code == status
+
+
 # Mode error AI dipetakan ke status dan kode SA §10.3.
 @pytest.mark.parametrize(
     ("mode", "status", "code"),
