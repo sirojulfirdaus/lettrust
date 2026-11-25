@@ -1,6 +1,6 @@
 # Dokumentasi Pengujian
 
-Owner: Pash (PIC 4, koordinasi) · Ref: PRD §12.4–§12.6; SA §18
+Owner: Pash (PIC 4, koordinasi) · Status: COMPLETE · Ref: PRD §12.4–§12.6; SA §18
 
 | Berkas | Isi |
 | ----- | ----- |
@@ -9,10 +9,10 @@ Owner: Pash (PIC 4, koordinasi) · Ref: PRD §12.4–§12.6; SA §18
 
 Aturan:
 
-1. `Actual result` dan `Status` diisi hanya setelah pengujian benar-benar dijalankan. Jangan pre-fill PASS.
+1. Definisi kasus boleh ditulis sebelum pengujian; `Actual result` dan `Status` diisi setelah eksekusi nyata. Jangan pre-fill PASS.
 2. Bukti skenario dan evaluasi berasal dari stack nyata (Anvil + LLM nyata). Hasil mock bukan bukti.
 3. Bukti tidak memuat secret, token, atau kunci (`.env`, token partner/internal, JWT, kunci signer, API key LLM).
 4. Bukti integrasi mencantumkan referensi transaksi registry; bukti AI mencantumkan model ID.
 5. Test case yang gagal tetap dilaporkan beserta analisis dan tindak lanjut.
 
-Skrip skenario API berada di [`scripts/scn/`](../../scripts/scn/README.md); skenario antarmuka (SCN-01, 03, 06, 08, 09, 13, 19) dieksekusi manual.
+Skrip skenario API berada di [`scripts/scn/`](../../scripts/scn/README.md); skenario antarmuka (SCN-01, 03, 06, 08, 09, 13, 19) dieksekusi manual. Bagian per skenario mengikuti pembagian pelaksana di PLAN.md §7.1.
