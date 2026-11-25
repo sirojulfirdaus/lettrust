@@ -1,6 +1,6 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD §9.6, FR-02.09, FR-06.07
 import { describe, expect, it } from "vitest";
-import { api07AiOnly, api07AiNotPerformed, api07NotFoundCodeOnly, api07ReferenceMatchAi, api07RegistryUnavailable, api07RevokedMismatch } from "@/fixtures/api";
+import { api07AiNotPerformed, api07NotFoundCodeOnly, api07ReferenceMatchAi, api07RegistryUnavailable, api07RevokedMismatch } from "@/fixtures/api";
 import { indicatorLabel, integrityCheckLabel, proofCheckLabel, riskAnalysisLabel } from "./labels";
 
 describe("verification labels", () => {
@@ -21,6 +21,30 @@ describe("verification labels", () => {
     expect(riskAnalysisLabel(api07AiNotPerformed.riskAnalysis).title).toBe("Tidak dapat dianalisis");
     expect(integrityCheckLabel(api07RevokedMismatch.integrityCheck).title).toBe("Berkas berbeda dari yang dicatat");
     expect(proofCheckLabel(api07RevokedMismatch.proofCheck).title).toBe("Tercatat, tetapi telah dicabut");
+  });
+
+  // Menampilkan redaksi PRD, nama perusahaan biasa, dan waktu yang mudah dibaca.
+  it("memformat keterangan penerbit dan tanggal tanpa markup literal", () => {
+    const revoked = proofCheckLabel(api07RevokedMismatch.proofCheck);
+    expect(revoked.explanation).toContain(api07RevokedMismatch.proofCheck.issuer?.companyName);
+    expect(revoked.explanation).not.toContain("**");
+    if (api07RevokedMismatch.proofCheck.revokedAt) {
+      expect(revoked.explanation).not.toContain(api07RevokedMismatch.proofCheck.revokedAt);
+    }
+
+    const unverified = proofCheckLabel({
+      ...api07ReferenceMatchAi.proofCheck,
+      issuerVerified: false,
+    });
+    expect(unverified.explanation).toContain("(penerbit belum/tidak berstatus terverifikasi)");
+    expect(unverified.explanation).not.toContain("terverifikasi.)");
+  });
+
+  // Mempertahankan disclaimer dan penjelasan hasil sesuai teks PRD.
+  it("menggunakan redaksi label sesuai PRD", () => {
+    expect(proofCheckLabel(api07NotFoundCodeOnly.proofCheck).explanation).toContain("Ini tidak berarti surat palsu:");
+    expect(riskAnalysisLabel(api07ReferenceMatchAi.riskAnalysis).explanation).toContain("pola yang sering muncul pada penipuan rekrutmen");
+    expect(riskAnalysisLabel(api07ReferenceMatchAi.riskAnalysis).explanation).toContain("Risiko rendah tidak menjamin surat aman.");
   });
 
   // Memastikan enum baru ditangani netral dan taksonomi indikator diterjemahkan.

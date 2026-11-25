@@ -5,7 +5,7 @@ import { isValidReferenceCode, normalizeReferenceCode } from "./reference-code";
 describe("reference code", () => {
   // Memastikan input yang dapat diperbaiki dinormalisasi ke format konsisten.
   it("menormalisasi variasi spasi, tanda hubung, prefiks, dan alfabet Crockford", () => {
-    expect(normalizeReferenceCode(" ltr o7k3 m-9qx2 h4td ")).toBe("LTR-07K3-M9QX-2H4TD");
+    expect(normalizeReferenceCode(" ltr o7k3 m-9qx2 h4t ")).toBe("LTR-07K3-M9QX-2H4T");
     expect(normalizeReferenceCode("7K3M9QX2H4TD")).toBe("LTR-7K3M-9QX2-H4TD");
   });
 

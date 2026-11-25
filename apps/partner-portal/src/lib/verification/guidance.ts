@@ -30,7 +30,7 @@ export function buildGuidance(result: VerificationResponse): GuidanceItem[] {
     guidance.push({ id: "G-05", text: "Unggah berkas PDF surat Anda untuk memastikan berkas sama dengan yang dicatat, dan pastikan nama penerbit sama dengan nama perusahaan pada surat." });
   }
   if (proofCheck.lookup === "NOT_FOUND") {
-    guidance.push({ id: "G-06", text: "Periksa kembali penulisan kode. Apabila kode sudah benar, konfirmasikan penawaran melalui kanal resmi perusahaan." });
+    guidance.push({ id: "G-06", text: "Periksa kembali penulisan kode. Apabila kode sudah benar, konfirmasikan keaslian surat melalui kanal resmi perusahaan." });
   }
   if (proofCheck.lookup === "UNAVAILABLE" || riskAnalysis.state === "UNAVAILABLE") {
     guidance.push({ id: "G-07", text: "Sebagian pemeriksaan gagal karena gangguan. Coba lagi beberapa saat lagi." });
