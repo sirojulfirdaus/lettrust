@@ -8,6 +8,7 @@ from collections.abc import Iterator
 from dataclasses import asdict, replace
 from pathlib import Path
 
+import _eval_records
 import pytest
 import run_eval
 from _dataset import FIELDS, Entry, sha256
@@ -73,6 +74,41 @@ def test_only_dev_files_are_read(dataset: Path) -> None:
     assert all(entry.split == "dev" for entry in entries)
     assert not (dataset / "pdf/id-low-02-text.pdf").exists()
     assert before == (dataset / "manifest.csv").read_bytes()
+
+
+# Seluruh split pasangan diperiksa sebelum akses PDF, termasuk saat smoke test memakai limit.
+@pytest.mark.parametrize("dev_format", ["text", "scan"])
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("limit", [None, 1])
+def test_cross_split_pair_is_rejected_before_pdf_access(
+    dataset: Path, monkeypatch: pytest.MonkeyPatch, dev_format: str, reverse: bool, limit: int | None
+) -> None:
+    with (dataset / "manifest.csv").open(encoding="utf-8", newline="") as stream:
+        original = Entry(**next(csv.DictReader(stream)))
+    entries = [
+        replace(
+            original,
+            id=f"id-high-01-{file_format}",
+            format=file_format,
+            file=f"pdf/id-high-01-{file_format}.pdf",
+            split="dev" if file_format == dev_format else "test",
+        )
+        for file_format in ("text", "scan")
+    ]
+    if reverse:
+        entries.reverse()
+    with (dataset / "manifest.csv").open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=FIELDS)
+        writer.writeheader()
+        writer.writerows(asdict(entry) for entry in entries)
+
+    def forbidden_pdf_path(*args: object) -> Path:
+        """Menggagalkan test bila runner mencoba mengakses PDF sebelum split seluruh manifest sah."""
+        raise AssertionError("PDF tidak boleh diakses sebelum validasi split selesai")
+
+    monkeypatch.setattr(_eval_records, "pdf_path", forbidden_pdf_path)
+    with pytest.raises(ValueError, match="split"):
+        load_dev_entries(dataset, limit)
 
 
 # Checksum dev harus lolos sebelum satu pun provider dibuat atau dipanggil.
@@ -163,6 +199,33 @@ def test_public_config_has_no_secrets(settings: Settings) -> None:
     serialized = json.dumps(public_settings(settings))
     for forbidden in ("unit-secret-not-real", "unit-token-not-real", "llm_api_key", "internal_api_token"):
         assert forbidden not in serialized
+
+
+# Artefak hanya menyimpan origin; path berkredensial tidak bocor dan URL runtime tidak berubah.
+@pytest.mark.parametrize(
+    ("url", "origin"),
+    [
+        ("https://example.test/private/unit-path-secret-not-real/v1", "https://example.test"),
+        ("https://example.test/private/unit%2Dpath%2Dsecret%2Dnot%2Dreal/v1", "https://example.test"),
+        ("https://example.test:8443/v1", "https://example.test:8443"),
+        ("http://[::1]:8080/v1", "http://[::1]:8080"),
+    ],
+)
+def test_provider_path_is_not_written_to_artifacts(
+    dataset: Path, settings: Settings, tmp_path: Path, url: str, origin: str
+) -> None:
+    configured = settings.model_copy(update={"llm_base_url": url})
+    output = tmp_path / "origin-only"
+    run_eval.execute_run(
+        dataset, output, load_dev_entries(dataset, 1), configured, provider=MockLLMProvider(HIGH_OUTPUT)
+    )
+    config = json.loads((output / "run_config.json").read_text(encoding="utf-8"))
+    assert config["settings"]["baseUrl"] == origin
+    assert configured.llm_base_url == url
+    for artifact in output.iterdir():
+        content = artifact.read_text(encoding="utf-8")
+        assert "unit-path-secret-not-real" not in content
+        assert "unit%2Dpath%2Dsecret%2Dnot%2Dreal" not in content
 
 
 # URL berkredensial/query ditolak sebelum menjadi konfigurasi atau bukti run.

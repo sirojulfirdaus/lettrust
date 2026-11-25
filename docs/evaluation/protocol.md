@@ -8,7 +8,7 @@ Dokumen ini menetapkan prosedur uji dev T5-07 dan format artefak bersama B, Sat 
 
 Saat penyusunan T5-07 tersedia 18 surat Indonesia dalam 36 PDF: 18 teks dan 18 scan. Manifest memuat delapan kolom SA §7.9. Pembagian sementara 12 dev dan 24 test; pasangan teks/scan dari surat yang sama selalu satu split. Target lengkap tetap 72 PDF (ID/EN × LOW/MEDIUM/HIGH × teks/scan × enam), sekitar 24 dev/48 test. Bagian Inggris menunggu T4-03; komposisi final OI-02 belum ditetapkan.
 
-Runner T5-07 hanya menerima `--split dev`. Ia membaca metadata manifest untuk memilih dev, kemudian memeriksa path dan SHA-256 PDF dev saja. PDF test tidak dibuka, dikirim ke LLM, atau dipakai untuk tuning. `--limit` hanya untuk smoke test dan selalu dicatat melalui daftar dokumen pada `run_config.json`.
+Runner T5-07 hanya menerima `--split dev`. Ia memvalidasi ID dan split seluruh metadata manifest terlebih dahulu; pasangan teks/scan dari satu ID surat dengan split berbeda ditolak sebelum PDF apa pun diakses, termasuk saat memakai `--limit`. Setelah metadata lolos, ia memeriksa path dan SHA-256 PDF dev saja. PDF test tidak dibuka, dikirim ke LLM, atau dipakai untuk tuning. `--limit` hanya untuk smoke test dan selalu dicatat melalui daftar dokumen pada `run_config.json`.
 
 Semua run pada tahap ini berstatus `draft-not-frozen` dan pemilihan model bersifat sementara. Dokumen test tidak boleh dipakai sebagai metrik laporan. Jangan menjalankan `freeze_testset` atau menyatakan T5-05 selesai sampai tinjauan manusia Pash, identitas model bantu, serta data Inggris lengkap. Identitas model ID kini telah dikonfirmasi melalui cuplikan metadata Van di bawah; tinjauan Pash dan EN masih menunggu.
 
@@ -69,7 +69,7 @@ NO_CONTENT menjadi NOT_PERFORMED dengan kode alasan ekstraksi. Error model menja
 
 `model_outputs.jsonl` menyimpan `{id, attempts}` dengan konten mentah model sintetis, nomor attempt, durasi provider, kode error, dan jumlah event length per attempt. Ini artefak evaluasi, bukan log aplikasi. Input dokumen mentah tidak dicetak atau disalin ke log. Tidak ada key, token, password, atau seluruh Settings pada artefak.
 
-`run_config.json` mencatat timestamp UTC, status run, model/provider/base URL tanpa kredensial, prompt version, parameter, ambang, daftar ID/SHA-256 dev, checksum manifest, fingerprint kode runtime/runner, jumlah status, alasan penghentian, dan event length. Tidak ada nilai API key/internal token. `state=interrupted` berarti bukti belum lengkap dan tidak boleh dinyatakan run penuh.
+`run_config.json` mencatat timestamp UTC, status run, model/provider, prompt version, parameter, ambang, daftar ID/SHA-256 dev, checksum manifest, fingerprint kode runtime/runner, jumlah status, alasan penghentian, dan event length. Field `settings.baseUrl` pada runner setelah perbaikan review hanya menyimpan origin (`scheme://host[:port]`); seluruh path dihilangkan karena dapat memuat kredensial. URL dengan userinfo, query, atau fragment ditolak. URL lengkap dalam Settings runtime tidak diubah. Tidak ada nilai API key/internal token. `state=interrupted` berarti bukti belum lengkap dan tidak boleh dinyatakan run penuh.
 
 ### 3.4 Perintah dan penggantian model
 
@@ -101,7 +101,7 @@ Dataset dev saat ini hanya Indonesia, berukuran kecil dan mempunyai pasangan tek
 
 ## 6. Hasil Aktual dan Keputusan
 
-Unit test runner: 19 passed; suite ai-service: 254 passed. Dry run memvalidasi 12 dokumen dev tanpa panggilan LLM. Endpoint daftar model mengonfirmasi kedua kandidat tersedia.
+Saat run pemilihan model awal: unit test runner 19 passed; suite ai-service 254 passed. Dry run memvalidasi 12 dokumen dev tanpa panggilan LLM. Endpoint daftar model mengonfirmasi kedua kandidat tersedia.
 
 Smoke test satu dokumen yang sama (`id-high-03-scan`) berhasil pada kedua kandidat dengan 900 token dan reasoning default. Keduanya menghasilkan kategori HIGH serta PAYMENT_REQUEST, UNOFFICIAL_CONTACT, dan URGENCY_PRESSURE sesuai label dev. Tidak ada event length atau retry output pada kedua smoke test. Latensi total terukur: GPT-OSS 120B 4804 ms, Qwen 3.8 27B 3194 ms. Ini hanya pemeriksaan teknis awal satu dokumen, bukan dasar tunggal pemilihan model.
 
@@ -149,3 +149,7 @@ OCR minimum 25 karakter/halaman, 300 DPI, timeout 20 detik, dan fuzzy 90 diperta
 Model bantu ID yang dicatat di §2 berbeda dari model terpilih. Keputusan akhir OI-01/OI-02 dan evaluasi final tetap menunggu dataset ID/EN lengkap serta tinjauan Pash. T5-05 belum dinyatakan selesai dan T5-08 tidak dijalankan. Format artefak versi 1 siap diserahkan kepada Sat/Pash; integrasi baseline dan metrics masih pekerjaan pemilik masing-masing.
 
 Audit 12 berkas artefak dari dua smoke test dan dua run dev lengkap tidak menemukan nilai API key atau internal token yang dikonfigurasi. Pemeriksaan memakai environment container dan hanya mencetak jumlah temuan, tanpa membuka `.env` atau menampilkan secret.
+
+Perbaikan review PR #49 memperketat validasi metadata split dan penyimpanan origin provider. Keempat artefak run di atas tetap merupakan bukti eksekusi sebelum perbaikan, dengan `baseUrl` lama yang mencakup path `/openai/v1` dan fingerprint kode saat itu. Artefak tersebut tidak ditulis ulang; seluruh ID yang dijalankan sudah dikonfirmasi berada di dev tanpa pasangan lintas split. Perbaikan ini diverifikasi dengan test sintetis dan dry run, tanpa mengulang evaluasi LLM.
+
+Verifikasi setelah perbaikan review (container Python 3.12): `python scripts/dev.py eval run_eval --test` 31 passed (19 test sebelumnya dan 12 kasus regresi); `python scripts/dev.py eval test_dataset` 18 passed; `python scripts/dev.py test ai-service` 254 passed. Dry run tetap memilih 12 PDF dev dengan nol panggilan LLM. Ruff check dan format check dengan konfigurasi proyek lulus. Dua belas kasus regresi gagal sebelum perbaikan; kasus split mencakup kedua arah pasangan, urutan baris, dan penggunaan limit, sedangkan kasus URL memeriksa artefak yang ditulis dengan path sintetis, path terenkode, port, dan IPv6. Warning pytest tentang rewrite modul anyio yang sudah diimpor tetap muncul pada test runner.
