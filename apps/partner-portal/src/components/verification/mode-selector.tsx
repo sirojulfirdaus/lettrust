@@ -20,7 +20,7 @@ export function ModeSelector({ mode, disabled, onChange }: ModeSelectorProps) {
       </label>
       <label className="flex cursor-pointer gap-3 rounded-lg border p-3">
         <input type="radio" name="verification-mode" value="AI_ONLY" checked={mode === "AI_ONLY"} onChange={() => onChange("AI_ONLY")} />
-        <span><span className="block font-medium">Saya tidak punya kode referensi</span><span className="text-sm text-muted-foreground">Analisis indikasi risiko dari isi PDF dengan AI.</span></span>
+        <span><span className="block font-medium">Saya tidak punya kode — analisis isi surat dengan AI</span><span className="text-sm text-muted-foreground">Bukti penerbitan dan keutuhan berkas tidak diperiksa.</span></span>
       </label>
     </fieldset>
   );

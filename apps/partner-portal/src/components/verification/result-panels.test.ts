@@ -28,4 +28,12 @@ describe("portal verification fixtures", () => {
       expect(verificationErrorMessage(0, envelope.error.code).length).toBeGreaterThan(0);
     }
   });
+  // Memastikan kode kesalahan khusus dipetakan sebelum status HTTP umum.
+  it("memakai pesan PRD untuk validasi dan pembatasan permintaan", () => {
+    expect(verificationErrorMessage(400, "INVALID_REFERENCE_CODE_FORMAT")).toBe("Format kode referensi tidak valid. Periksa kembali kode pada surat Anda.");
+    expect(verificationErrorMessage(400, "INVALID_INPUT_COMBINATION")).toBe("Masukkan kode referensi atau unggah berkas PDF untuk dianalisis.");
+    expect(verificationErrorMessage(400, "AI_ONLY_REQUIRES_INCLUDE_RISK")).toBe("Tanpa kode referensi, pemeriksaan hanya dapat dilakukan dengan analisis AI. Setujui pemrosesan AI untuk melanjutkan.");
+    expect(verificationErrorMessage(400, "EMPTY_FILE")).toBe("Berkas kosong tidak dapat diproses.");
+    expect(verificationErrorMessage(429, "RATE_LIMITED")).toBe("Terlalu banyak permintaan. Coba lagi beberapa saat lagi.");
+  });
 });

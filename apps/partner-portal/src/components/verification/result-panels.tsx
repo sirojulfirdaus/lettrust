@@ -39,6 +39,12 @@ export function ResultPanels({ result }: ResultPanelsProps) {
             {id === "proof" && result.proofCheck.issuer?.companyName && (
               <p className="mt-3 text-sm">Penerbit: <span className="font-medium">{result.proofCheck.issuer.companyName}</span></p>
             )}
+            {id === "proof" && result.proofCheck.lookup !== "NOT_REQUESTED" && (
+              <p className="mt-3 text-xs text-muted-foreground">Sumber status bukti: registry.</p>
+            )}
+            {id === "integrity" && result.integrityCheck.result !== "NOT_CHECKED" && (
+              <p className="mt-3 text-xs text-muted-foreground">Hasil perbandingan hash: {result.integrityCheck.result === "MATCH" ? "cocok" : "berbeda"} ({result.integrityCheck.hashAlgorithm}).</p>
+            )}
             {id === "risk" && result.riskAnalysis.state === "COMPLETED" && (
               <div className="mt-4 space-y-3">
                 {result.riskAnalysis.indicatorDetails.map((indicator, index) => (
@@ -49,6 +55,7 @@ export function ResultPanels({ result }: ResultPanelsProps) {
                 ))}
                 {result.riskAnalysis.explanation && <p className="text-sm">{result.riskAnalysis.explanation}</p>}
                 {result.riskAnalysis.recommendation && <p className="text-sm font-medium">{result.riskAnalysis.recommendation}</p>}
+                <p className="text-xs text-muted-foreground">Hasil analisis AI bersifat indikatif dan bukan penentu keaslian surat atau putusan hukum.</p>
                 {result.riskAnalysis.extractionMethod && <p className="text-xs text-muted-foreground">Metode pembacaan: {result.riskAnalysis.extractionMethod === "OCR" ? "OCR" : "teks PDF"}. Halaman dianalisis: {result.riskAnalysis.pagesAnalyzed ?? "—"}{result.riskAnalysis.pagesTotal ? ` dari ${result.riskAnalysis.pagesTotal}` : ""}{result.riskAnalysis.contentTruncated ? "; isi yang dianalisis dibatasi" : ""}.</p>}
               </div>
             )}

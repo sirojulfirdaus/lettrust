@@ -19,35 +19,46 @@ const UNKNOWN_LABEL: StatusLabel = {
   tone: "neutral",
 };
 
+// Memformat waktu API agar mudah dibaca tanpa mengubah zona waktu sumber.
+function formatTimestamp(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "long",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(date);
+}
+
 // Label panel Bukti Penerbitan & Status (PRD §9.6.1).
 export function proofCheckLabel(proofCheck: ProofCheck): StatusLabel {
   const lookup = proofCheck.lookup as string;
   if (lookup === "FOUND" && proofCheck.lifecycleStatus === "ACTIVE") {
     const company = proofCheck.issuer?.companyName;
     const issuerStatus = proofCheck.issuerVerified === false
-      ? "Penerbit belum/tidak berstatus terverifikasi."
+      ? "penerbit belum/tidak berstatus terverifikasi"
       : "penerbit terverifikasi";
-    const issuedAt = proofCheck.issuedAt ? ` pada ${proofCheck.issuedAt}` : "";
+    const issuedAt = proofCheck.issuedAt ? ` pada ${formatTimestamp(proofCheck.issuedAt)}` : "";
     return {
       title: "Tercatat dan aktif",
-      explanation: `Surat dengan kode ini dicatat oleh ${company ? `${company} (${issuerStatus})` : issuerStatus}${issuedAt}, dan statusnya masih aktif. Pastikan nama perusahaan sesuai dengan surat Anda. Status ini tidak menilai risiko isi surat.`,
+      explanation: `Surat dengan kode ini dicatat oleh ${company ? `${company} (${issuerStatus})` : issuerStatus}${issuedAt}, dan statusnya masih aktif. Pastikan nama perusahaan sesuai dengan surat Anda. Status ini tidak menjamin isi surat aman.`,
       icon: "✓",
       tone: "positive",
     };
   }
   if (lookup === "FOUND" && proofCheck.lifecycleStatus === "REVOKED") {
     const company = proofCheck.issuer?.companyName;
-    const revokedAt = proofCheck.revokedAt ? ` pada ${proofCheck.revokedAt}` : "";
+    const revokedAt = proofCheck.revokedAt ? ` pada ${formatTimestamp(proofCheck.revokedAt)}` : "";
     return {
       title: "Tercatat, tetapi telah dicabut",
-      explanation: `Surat dengan kode ini pernah dicatat oleh ${company ? `**${company}**` : "penerbit"}, tetapi telah dicabut oleh penerbit${revokedAt}. Konfirmasikan status penawaran kepada perusahaan melalui kanal resminya.`,
+      explanation: `Surat dengan kode ini pernah dicatat oleh ${company ?? "penerbit"}, tetapi telah dicabut oleh penerbit${revokedAt}. Konfirmasikan status penawaran kepada perusahaan melalui kanal resminya.`,
       icon: "⊘",
       tone: "warning",
     };
   }
   switch (lookup) {
     case "NOT_FOUND":
-      return { title: "Tidak ditemukan di Lettrust", explanation: "Kode ini tidak tercatat dalam registry Lettrust. Perusahaan mungkin tidak menggunakan Lettrust atau kode salah ketik. Periksa kembali kode dan konfirmasikan penawaran melalui kanal resmi perusahaan.", icon: "?", tone: "neutral" };
+      return { title: "Tidak ditemukan di Lettrust", explanation: "Kode ini tidak tercatat dalam registry Lettrust. Ini tidak berarti surat palsu: perusahaan mungkin tidak menggunakan Lettrust atau kode salah ketik. Periksa kembali kode dan konfirmasikan melalui kanal resmi perusahaan.", icon: "?", tone: "neutral" };
     case "UNAVAILABLE":
       return { title: "Pemeriksaan bukti sedang tidak dapat dilakukan", explanation: "Terjadi gangguan saat memeriksa registry. Ini bukan berarti kode tidak terdaftar. Coba lagi beberapa saat lagi.", icon: "⚠", tone: "disruption" };
     case "NOT_REQUESTED":
@@ -77,9 +88,9 @@ export function riskAnalysisLabel(riskAnalysis: RiskAnalysis): StatusLabel {
   const state = riskAnalysis.state as string;
   if (state === "COMPLETED") {
     switch (riskAnalysis.category as string | null) {
-      case "HIGH": return { title: "Indikasi risiko tinggi", explanation: "Ditemukan pola yang perlu mendapat perhatian dalam proses rekrutmen. Lihat indikator dan kutipan di bawah.", icon: "▲", tone: "danger" };
+      case "HIGH": return { title: "Indikasi risiko tinggi", explanation: "Ditemukan pola yang sering muncul pada penipuan rekrutmen. Lihat indikator dan kutipan di bawah.", icon: "▲", tone: "danger" };
       case "MEDIUM": return { title: "Indikasi risiko sedang", explanation: "Ditemukan hal yang perlu diperiksa lebih lanjut.", icon: "◆", tone: "warning" };
-      case "LOW": return { title: "Indikasi risiko rendah", explanation: "Tidak ditemukan pola yang termasuk dalam daftar indikator. Kategori risiko rendah tidak memastikan seluruh aspek surat bebas dari risiko.", icon: "●", tone: "neutral" };
+      case "LOW": return { title: "Indikasi risiko rendah", explanation: "Tidak ditemukan pola yang termasuk dalam daftar indikator. Risiko rendah tidak menjamin surat aman.", icon: "●", tone: "neutral" };
       default: return UNKNOWN_LABEL;
     }
   }
