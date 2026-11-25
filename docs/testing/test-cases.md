@@ -1,8 +1,10 @@
 # Test Cases Lettrust D3
 
-Owner: Pash (PIC 4, koordinasi) · Ref: PRD §12.4, §12.5; SA §18
+Owner: Pash (PIC 4, koordinasi) · Status: COMPLETE · Ref: PRD §12.4, §12.5; SA §18
 
-Kolom mengikuti PRD §12.5. `Actual result` dan `Status` (Pass, Fail, Blocked, Not Run) hanya diisi setelah eksekusi nyata dengan bukti di `docs/testing/evidence/<TC-ID>/`. Mock tidak boleh menjadi bukti. Belum ada test case yang ditulis.
+Kolom mengikuti PRD §12.5. Definisi kasus dapat ditulis sebelum pengujian; `Actual result` dan `Status` (Pass, Fail, Blocked, Not Run) diisi hanya setelah eksekusi nyata dengan bukti di `docs/testing/evidence/<TC-ID>/`. Mock tidak boleh menjadi bukti.
+
+Pembagian pelaksana per SCN mengikuti PLAN.md §7.1. Masing-masing PIC mengisi bagian skenario yang ditugaskan kepadanya.
 
 ## SCN-01 — Verifikasi surat sah dan utuh
 
@@ -17,6 +19,7 @@ Expected output dan langkah acuan: PRD §12.4 (SCN-02). FR: FR-03.11.
 
 | Test case ID | Referensi (SCN, FR/AC, MVP) | Tujuan | Prasyarat | Data uji | Langkah / input | Expected result | Actual result | Status | Bukti | Penguji dan waktu | Catatan defect |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
+| TC-002 | SCN-02; FR-03.11; MVP-02, MVP-03 | Memastikan perubahan byte pada surat terdeteksi terhadap bukti yang telah diterbitkan. | Stack nyata sehat; FX-01 telah diterbitkan dan ACTIVE; API-04/API-07 tersedia; partner token aktif. | Kode referensi dari FX-01; FX-02. | Jalankan `python scripts/scn/scn02_mismatch.py --fx02 fixtures/FX-02.pdf`, masukkan kode saat diminta, lalu periksa tampilan portal untuk panduan G-04. | HTTP 200; `proofCheck.lookup=FOUND`; `proofCheck.lifecycleStatus=ACTIVE`; `integrityCheck.result=MISMATCH`; portal menampilkan panduan G-04. |  |  | `docs/testing/evidence/TC-002/` |  |  |
 
 ## SCN-03 — Pemeriksaan surat yang dicabut
 
