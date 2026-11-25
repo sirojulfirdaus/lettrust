@@ -1,5 +1,5 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD FR-02.07, FR-02.11; SA §11.3.2, §10.2, TOI-03
-import { getServerConfig } from "@/lib/server/config";
+import { getServerConfig, PortalConfigurationError } from "@/lib/server/config";
 
 export const runtime = "nodejs";
 
@@ -48,7 +48,13 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
 
-  const config = getServerConfig();
+  let config: ReturnType<typeof getServerConfig>;
+  try {
+    config = getServerConfig();
+  } catch (error) {
+    if (!(error instanceof PortalConfigurationError)) throw error;
+    return errorResponse(requestId, 503, "SERVICE_UNAVAILABLE", "Layanan pemeriksaan sedang tidak tersedia. Coba lagi beberapa saat lagi.");
+  }
   let upstream: Response;
   try {
     upstream = await fetch(`${config.apiBaseUrl}/api/v1/verifications`, {
