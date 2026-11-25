@@ -137,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
                 "dev": sum(entry.split == "dev" for entry in entries),
                 "test": sum(entry.split == "test" for entry in entries),
                 "seed": args.seed,
-                "review": "Status tinjauan manusia mengikuti notes templat; generator tidak mengesahkannya.",
+                "review": "Konfirmasi review manusia dicatat di protokol evaluasi, bukan disahkan generator.",
             }
         )
     )
