@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import getpass
 import hashlib
-import json
 import re
 import sys
 from datetime import UTC, datetime
@@ -14,7 +13,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
 from common import (
     ROOT,
     ScenarioError,
@@ -29,10 +27,20 @@ REFERENCE_CODE_PATTERN = re.compile(r"^LTR-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
+# Membuat nama evidence berhuruf kecil yang lolos validasi common.save_evidence.
+def evidence_filename() -> str:
+    return f"scn02-mismatch-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S%f')}.json"
+
+
 def parse_args() -> argparse.Namespace:
     """Membaca lokasi FX-02 tanpa menerima credential atau kode pada argumen."""
     parser = argparse.ArgumentParser(description="Jalankan SCN-02 pada API-07 stack nyata.")
-    parser.add_argument("--fx02", type=Path, default=ROOT / "fixtures" / "FX-02.pdf", help="Path fixture sintetis FX-02.")
+    parser.add_argument(
+        "--fx02",
+        type=Path,
+        default=ROOT / "fixtures" / "FX-02.pdf",
+        help="Path fixture sintetis FX-02.",
+    )
     return parser.parse_args()
 
 
@@ -121,7 +129,7 @@ def main() -> int:
             "actual": actual,
             "response": response_body,
         }
-        filename = f"scn02-mismatch-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.json"
+        filename = evidence_filename()
         evidence_path = save_evidence(
             "TC-002",
             filename,
