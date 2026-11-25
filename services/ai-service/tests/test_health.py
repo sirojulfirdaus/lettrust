@@ -2,6 +2,7 @@
 """Test health ai-service dan penegakan X-Internal-Token."""
 
 from conftest import INTERNAL_TOKEN
+from fastapi.testclient import TestClient
 
 PDF = ("offer.pdf", b"%PDF-1.4\n%synthetic\n", "application/pdf")
 
@@ -30,12 +31,14 @@ def test_internal_endpoints_require_token(client):
             assert response.json()["requestId"].startswith("req_")
 
 
-# Dengan token valid, endpoint stub mengembalikan 501 NOT_IMPLEMENTED.
-def test_stub_endpoints_return_501(client):
+# Token valid mempertahankan request ID: API-08 tanpa key ditolak, I-01 memetakan PDF rusak.
+def test_internal_endpoints_preserve_request_id(client: TestClient) -> None:
     headers = {"X-Internal-Token": INTERNAL_TOKEN, "X-Request-ID": "req_FROMBACKEND00001"}
     risk = client.post("/internal/v1/risk-analyses", json={"documentContent": "teks"}, headers=headers)
     extraction = client.post("/internal/v1/document-extractions", files={"file": PDF}, headers=headers)
-    for response in (risk, extraction):
-        assert response.status_code == 501
-        assert response.json()["error"]["code"] == "NOT_IMPLEMENTED"
-        assert response.json()["requestId"] == "req_FROMBACKEND00001"
+    assert risk.status_code == 503
+    assert risk.json()["error"]["code"] == "AI_PROVIDER_UNCONFIGURED"
+    assert risk.json()["requestId"] == "req_FROMBACKEND00001"
+    assert extraction.status_code == 200
+    assert extraction.json()["reasonDetail"] == "PDF_UNREADABLE"
+    assert extraction.headers["X-Request-ID"] == "req_FROMBACKEND00001"

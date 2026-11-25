@@ -1397,6 +1397,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
+            /** @description Kode error: HR_NOT_AFFILIATED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Kode error: INTERNAL_ERROR */
             500: {
                 headers: {

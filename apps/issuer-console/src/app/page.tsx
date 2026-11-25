@@ -1,21 +1,89 @@
-// Owner: Van (PIC 2) | Status: STUB | Ref: PRD FR-01.02/AC-07; SA §11.2.1, §11.2.2
-// TODO: Redirect berdasarkan sesi dan role dari S-03: tanpa sesi -> /login; ADMIN -> /admin/issuers; HR tanpa membership -> /onboarding/company; HR -> /hr.
-import { PlaceholderPage } from "@/components/placeholder-page";
+// Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.02/AC-07; SA §11.2.1, §11.2.2
+"use client";
 
-// Halaman akar Console: placeholder logika redirect sesuai sesi.
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { ApiError, fetchSessionProfile } from "@/lib/api/client";
+import { resolveLandingRoute } from "@/lib/routes";
+import { readSession } from "@/lib/session";
+
+// Halaman akar Console: mengarahkan pengguna ke area yang sesuai berdasarkan sesi dan profil S-03.
 export default function HomePage() {
+  const router = useRouter();
+  const [attempt, setAttempt] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const session = readSession();
+    if (!session) {
+      router.replace("/login");
+      return;
+    }
+
+    const controller = new AbortController();
+    fetchSessionProfile({
+      signal: controller.signal,
+      onUnauthorized: () => router.replace("/login?reason=session_expired"),
+    })
+      .then((profile) => {
+        if (!controller.signal.aborted) {
+          router.replace(resolveLandingRoute(profile));
+        }
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        if (error instanceof ApiError && error.status === 401) {
+          return;
+        }
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : "Tidak dapat menghubungi layanan backend. Pastikan layanan aktif lalu coba lagi.";
+        setErrorMessage(message);
+      });
+
+    return () => controller.abort();
+  }, [attempt, router]);
+
+  const handleRetry = () => {
+    setErrorMessage(null);
+    setAttempt((n) => n + 1);
+  };
+
+  if (!errorMessage) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="mx-auto flex max-w-md flex-col items-center justify-center gap-3 py-16 text-center"
+      >
+        <Loader2 className="size-6 animate-spin text-primary" aria-hidden="true" />
+        <p className="text-sm text-muted-foreground">Memeriksa sesi Anda...</p>
+      </div>
+    );
+  }
+
   return (
-    <PlaceholderPage
-      title="Redirect sesuai sesi"
-      owner="Van (PIC 2)"
-      refs={["PRD FR-01.02/AC-07", "SA §11.2.1", "SA §11.2.2"]}
-      checklist={[
-        "Baca sesi dari sessionStorage (lettrust.session); tanpa sesi atau kedaluwarsa -> /login.",
-        "Panggil S-03 GET /api/v1/auth/me untuk role dan membership.",
-        "ADMIN -> /admin/issuers; HR tanpa membership -> /onboarding/company; HR terafiliasi -> /hr.",
-        "Respons 401 -> hapus sesi -> /login dengan pesan sesi berakhir.",
-        "State Loading selama menentukan tujuan.",
-      ]}
-    />
+    <div className="mx-auto max-w-lg space-y-4 py-8">
+      <Alert variant="destructive">
+        <AlertCircle className="size-4" aria-hidden="true" />
+        <AlertTitle>Gagal memuat sesi</AlertTitle>
+        <AlertDescription>{errorMessage}</AlertDescription>
+      </Alert>
+      <div className="flex flex-wrap gap-3">
+        <Button type="button" onClick={handleRetry} className="cursor-pointer">
+          Coba lagi
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/login">Ke halaman Masuk</Link>
+        </Button>
+      </div>
+    </div>
   );
 }
