@@ -32,12 +32,15 @@ describe("verification labels", () => {
       expect(revoked.explanation).not.toContain(api07RevokedMismatch.proofCheck.revokedAt);
     }
 
-    const unverified = proofCheckLabel({ ...api07ReferenceMatchAi.proofCheck, issuerVerified: false });
+    const unverified = proofCheckLabel({
+      ...api07ReferenceMatchAi.proofCheck,
+      issuerVerified: false,
+    });
     expect(unverified.explanation).toContain("(penerbit belum/tidak berstatus terverifikasi)");
     expect(unverified.explanation).not.toContain("terverifikasi.)");
   });
 
-  // Memastikan penjelasan risiko tetap memakai teks yang ditentukan PRD.
+  // Mempertahankan disclaimer dan penjelasan hasil sesuai teks PRD.
   it("menggunakan redaksi label sesuai PRD", () => {
     expect(proofCheckLabel(api07NotFoundCodeOnly.proofCheck).explanation).toContain("Ini tidak berarti surat palsu:");
     expect(riskAnalysisLabel(api07AiOnly.riskAnalysis).explanation).toContain("pola yang sering muncul pada penipuan rekrutmen");

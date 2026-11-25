@@ -55,15 +55,15 @@ export function VerifyForm() {
     setConsent(false);
     if (!selected) return;
     if (!selected.name.toLowerCase().endsWith(".pdf") || (selected.type && selected.type !== PDF_MIME)) {
-      setFileError("Pilih berkas dengan format PDF.");
+      setFileError("Berkas harus berformat PDF.");
       return;
     }
     if (selected.size === 0) {
-      setFileError("Berkas kosong. Pilih PDF lain yang berisi surat.");
+      setFileError("Berkas kosong tidak dapat diproses.");
       return;
     }
     if (selected.size > MAX_FILE_BYTES) {
-      setFileError("Ukuran PDF melebihi batas 5 MB.");
+      setFileError("Ukuran berkas melebihi batas yang diizinkan.");
       return;
     }
     setFile(selected);
@@ -86,7 +86,7 @@ export function VerifyForm() {
     event.preventDefault();
     setError(null);
     if (mode === "REFERENCE_CHECK" && (!normalizedCode || !isValidReferenceCode(normalizedCode))) {
-      setError("Masukkan kode referensi dengan format yang benar, misalnya LTR-7K3M-9QX2-H4TD.");
+      setError("Format kode referensi tidak valid. Periksa kembali kode pada surat Anda.");
       return;
     }
     if ((mode === "AI_ONLY" || shouldIncludeRisk) && !file) {
