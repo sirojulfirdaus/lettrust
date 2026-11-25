@@ -1,5 +1,4 @@
-// Owner: Pash (PIC 4) | Status: STUB | Ref: SA §6.3.1; PRD FR-02.03/AC-02, AC-03
-// TODO: Normalisasi (trim, kapital, hapus spasi/tanda hubung, pisah prefiks LTR, O->0, I/L->1, susun LTR-XXXX-XXXX-XXXX) dan validasi regex untuk umpan balik cepat; backend tetap memvalidasi.
+// Owner: Pash (PIC 4) | Status: COMPLETE | Ref: SA §6.3.1; PRD FR-02.03/AC-02, AC-03
 
 // Contoh format kode yang ditampilkan di form (SA §10.6).
 export const REFERENCE_CODE_EXAMPLE = "LTR-7K3M-9QX2-H4TD";
@@ -8,11 +7,16 @@ export const REFERENCE_CODE_EXAMPLE = "LTR-7K3M-9QX2-H4TD";
 export const REFERENCE_CODE_PATTERN = /^LTR-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
 
 // Menormalisasi input kode; mengembalikan null bila input kosong atau hanya spasi.
-export function normalizeReferenceCode(_input: string): string | null {
-  throw new Error("NOT_IMPLEMENTED");
+export function normalizeReferenceCode(input: string): string | null {
+  const trimmed = input.trim().toUpperCase();
+  if (!trimmed) return null;
+  let body = trimmed.replace(/[\s-]/g, "");
+  if (body.startsWith("LTR")) body = body.slice(3);
+  body = body.replace(/O/g, "0").replace(/[IL]/g, "1");
+  return `LTR-${body.slice(0, 4)}-${body.slice(4, 8)}-${body.slice(8)}`;
 }
 
 // Memeriksa apakah kode hasil normalisasi sesuai format.
-export function isValidReferenceCode(_code: string): boolean {
-  throw new Error("NOT_IMPLEMENTED");
+export function isValidReferenceCode(code: string): boolean {
+  return REFERENCE_CODE_PATTERN.test(code);
 }
