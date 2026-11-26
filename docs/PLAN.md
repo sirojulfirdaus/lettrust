@@ -837,10 +837,11 @@ Halaman dibangun dari fixture kontrak (`apps/issuer-console/src/fixtures/api/`),
 | PIC · Reviewer | B · Pash |
 | Branch | `feat/fixtures` |
 | Tenggat | Sen 23/11 15.00 · M3 |
-| File | `fixtures/` → `README.md`, `FX-01.pdf` … `FX-10.pdf` (baru) |
+| File | `fixtures/` → `README.md`, `FX-01.pdf` … `FX-10.pdf`, `fixture_builder.py`, `test_fixtures.py`, `test_upload_validation.py`<br>`ai-eval/scripts/generate_fixtures.py` → entry point launcher `eval` (penambahan disetujui untuk T5-06) |
 | Ref | PRD §12.4.1; SA §7.9 |
 | Tergantung | T5-05 (tooling) |
 | Selesai bila | Kesepuluh fixture sesuai PRD §12.4.1 (FX-02 = FX-01 dengan isi diubah, FX-08 bukan PDF berekstensi `.pdf`, FX-09 melebihi batas, FX-10 header PDF tetapi rusak), dihasilkan dari tooling yang sama, dan README memuat tujuan serta checksum setiap fixture. |
+| Verifikasi | `python scripts/dev.py eval generate_fixtures`; `python scripts/dev.py eval generate_fixtures --check`; `python scripts/dev.py eval generate_fixtures --test`; `python scripts/dev.py test ai-service`. Test validator backend dan prasyarat image dijelaskan di `fixtures/README.md`. |
 | Serah terima | Semua anggota (TB-02, TB-04) |
 
 ### T5-07 — Pemilihan model (OI-01)
