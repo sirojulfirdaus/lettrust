@@ -1,18 +1,31 @@
 # Protokol Evaluasi AI Lettrust
 
-Owner: B (PIC 5) · Status: DRAF T5-07 (run dev selesai; keputusan sementara) · Reviewer: Dws · Ref: PRD §10.4, FR-05.12, BR-04.13, BR-04.14; SA §7.4.1, §7.9
+Owner: B (PIC 5) · Status: T5-05/T5-07 lengkap; final T5-08 menunggu T4-07 · Reviewer: Dws · Ref: PRD §10.4, FR-05.12, BR-04.13, BR-04.14; SA §7.4.1, §7.9
 
 Dokumen ini menetapkan prosedur uji dev T5-07 dan format artefak bersama B, Sat (baseline T6-05), dan Pash (metrics T4-07). Hasil awal bukan metrik test set atau penutupan OI-01/OI-02. Freeze dan evaluasi final T5-08 belum diizinkan.
 
-Bagian 6 menetapkan kontrak output bersama v1 dari T6-05; bagian 7 mempertahankan hasil nyata T5-07. Artefak dan runner T5-07 masih memakai format terdahulu di §3.3, sehingga integrasi dengan kontrak §6 belum selesai. Tidak ada angka hasil yang boleh ditulis tanpa pengukuran nyata.
+Bagian 6 menetapkan kontrak output bersama v1 dari T6-05; bagian 7 mempertahankan hasil nyata T5-07. Artefak run awal tetap memakai format historis §3.3. Runner baru mengikuti §6, sedangkan integrasi metrics masih menunggu T4-07. Tidak ada angka hasil yang boleh ditulis tanpa pengukuran nyata.
 
 ## 1. Dataset
 
-Saat penyusunan T5-07 tersedia 18 surat Indonesia dalam 36 PDF: 18 teks dan 18 scan. Manifest memuat delapan kolom SA §7.9. Pembagian sementara 12 dev dan 24 test; pasangan teks/scan dari surat yang sama selalu satu split. Target lengkap tetap 72 PDF (ID/EN × LOW/MEDIUM/HIGH × teks/scan × enam), sekitar 24 dev/48 test. Bagian Inggris menunggu T4-03; komposisi final OI-02 belum ditetapkan.
+Pada run awal T5-07 tersedia 18 surat Indonesia dalam 36 PDF (12 dev/24 test). Setelah T4-03 merge, pelengkapan T5-05 tanggal 26 November 2026 menghasilkan 72 PDF dari 36 surat ID/EN: 36 teks dan 36 scan, terbagi 24 dev/48 test secara seimbang per bahasa, kategori, dan format. Manifest memuat delapan kolom SA §7.9; pasangan teks/scan dari surat yang sama selalu satu split. Jumlah ini sesuai target awal PRD §10.4.1 dan PLAN; OI-02 tidak ditutup sepihak oleh agent.
 
-Runner T5-07 hanya menerima `--split dev`. Ia memvalidasi ID dan split seluruh metadata manifest terlebih dahulu; pasangan teks/scan dari satu ID surat dengan split berbeda ditolak sebelum PDF apa pun diakses, termasuk saat memakai `--limit`. Setelah metadata lolos, ia memeriksa path dan SHA-256 PDF dev saja. PDF test tidak dibuka, dikirim ke LLM, atau dipakai untuk tuning. `--limit` hanya untuk smoke test dan selalu dicatat melalui daftar dokumen pada `run_config.json`.
+Runner T5-07 hanya menerima `--split dev`. Ia memvalidasi ID dan split seluruh metadata manifest terlebih dahulu; pasangan teks/scan dari satu ID surat dengan split berbeda ditolak sebelum PDF apa pun diakses, termasuk saat memakai `--limit`. Setelah metadata lolos, ia memeriksa path dan SHA-256 PDF dev saja. Runner tidak membuka PDF test atau mengirimkannya ke LLM. QA generator seluruh PDF dijelaskan terpisah di §7.3 dan tidak dipakai untuk tuning. `--limit` hanya untuk smoke test dan selalu dicatat melalui daftar dokumen pada `run_config.json`.
 
-Semua run pada tahap ini berstatus `draft-not-frozen` dan pemilihan model bersifat sementara. Dokumen test tidak boleh dipakai sebagai metrik laporan. Jangan menjalankan `freeze_testset` atau menyatakan T5-05 selesai sampai tinjauan manusia Pash, identitas model bantu, serta data Inggris lengkap. Identitas model ID kini telah dikonfirmasi melalui cuplikan metadata Van di bawah; tinjauan Pash dan EN masih menunggu.
+Dataset belum dibekukan dan hasil dev tidak menjadi metrik test set laporan. Pengguna mengonfirmasi pada 26 November 2026 bahwa review manusia seluruh 18 surat ID oleh Pash dan 18 surat EN oleh Van sudah selesai. Data EN dan provenance yang dilaporkan penulis kini tersedia. Catatan lama “belum dikonfirmasi/menunggu tinjauan” masih ada pada berkas templat milik Van/Pash; konfirmasi pengguna ini dicatat terpisah, tanpa mengubah berkas mereka atau mengklaim agent melakukan review manusia. Freeze dan evaluasi final tetap menunggu metrics T4-07 serta verifikasi integrasi T5-08.
+
+Konfirmasi tersebut berlaku untuk snapshot sumber berikut; perubahan teks/anotasi sesudahnya memerlukan review dan regenerasi pasangan terkait:
+
+| Templat | SHA-256 berkas |
+| --- | --- |
+| `en-high.json` | `d79db73cc3d5688f3e4c4ff43b13d4876a773a8a27fe764c456711e174dd8492` |
+| `en-low.json` | `1ec8a6974eae7bddae49c78806574822a07d0fdce9267605275ccc2c1482242b` |
+| `en-medium.json` | `cac9a55ffa7f8c1e6f4f1cd5a6ee05387050fd237b0478edba52792ade451649` |
+| `id-high.json` | `a81c6d00aa850b95c0fe13ae1d6610911415c971e2787e0bc6d9985aa07bc87a` |
+| `id-low.json` | `1446be55bbd0b65983b6e7e8f61f55c358633dd4067417374ba7636bbf662c65` |
+| `id-medium.json` | `bc2cf570820671e5a53d17df0b1ad12f30bf444f8b68c860385f85af82cf0a97` |
+
+Checksum manifest 72 PDF: `e7cb70b0e2a0e99a06be30c064903c2eff5baf79f3c8741357423c8edb7f86fb`. Pencatatan ini merupakan identitas data T5-05, bukan snapshot freeze T5-08.
 
 ## 2. Label dan Pembuatan Data
 
@@ -26,7 +39,7 @@ Provenance model bantu berdasarkan cuplikan metadata tersanitasi yang disampaika
 - Metadata penulisan tiga berkas: `write_file`, step 6, `2026-11-22T15:12:22Z`; `models_used` executor hanya `gemini-4-neon-medium`.
 - Sumber: cuplikan `transcript.jsonl`, field `model` dan ringkasan executor. Log lokal penuh tidak tersedia di repository dan tidak diklaim telah diperiksa langsung oleh B.
 
-Tiga surat ID (MEDIUM-03, MEDIUM-06, HIGH-05) kemudian diperjelas dengan bantuan Codex (keluarga GPT-6) setelah koordinasi Van. Revisi tersebut ikut memerlukan tinjauan Pash. Kandidat T5-07 di bawah berbeda dari keluarga/model bantu yang dilaporkan; pemeriksaan ini diulang bila kandidat berubah. Provenance model EN harus dilengkapi saat T4-03 tersedia.
+Tiga surat ID (MEDIUM-03, MEDIUM-06, HIGH-05) kemudian diperjelas dengan bantuan Codex (keluarga GPT-6) setelah koordinasi Van. Konfirmasi review Pash pada §1 mencakup versi ini. Untuk EN, notes T4-03 mencatat penulis Pash, peninjau Van, dan bantuan OpenAI GPT-6 (Codex) untuk koreksi format/metadata LOW serta anotasi kutipan MEDIUM/HIGH. Identitas itu dicatat sesuai laporan penulis, tanpa mengarang ID varian tambahan. Model bantu yang dilaporkan berbeda dari kedua kandidat evaluasi (`openai/gpt-oss-120b`, `qwen/qwen3.8-27b`); pemeriksaan ini diulang bila kandidat berubah.
 
 PDF teks memakai ReportLab dengan font Unicode bawaan; scan memakai PDFium dan Pillow, seed 20261121, render 200 DPI, rotasi kecil dan derau ringan, tanpa text layer. Generator tidak menyisipkan label/notes dalam PDF. SHA-256 dihitung dari byte PDF asli. Fixture FX-01–FX-10 terpisah dari dataset ini dan tidak dipakai untuk memilih model.
 
@@ -47,7 +60,7 @@ Ambang awal runtime dipertahankan sebelum ada bukti dev: OCR minimum 25 karakter
 3. Bandingkan kedua kandidat pada daftar PDF dev, urutan, prompt, ambang OCR/fuzzy, dan parameter yang sama. Jangan memilih dokumen berdasarkan hasil kandidat.
 4. Prioritaskan kelengkapan run/JSON valid, ketepatan kategori dan indikator dev, lalu latensi serta ketersediaan provider. Jangan menyembunyikan kegagalan atau menghitung model gagal sebagai LOW. Keputusan tetap sementara selama dataset belum lengkap/ditinjau.
 5. SDK tidak me-retry provider; pipeline runtime mengulang hanya output tidak valid sekali. Pada kuota, timeout, unconfigured, atau provider error, runner menghentikan panggilan berikutnya dan mencatat sisa dokumen NOT_PERFORMED. Tidak ada loop pada kuota atau fallback ke baseline/mock.
-6. T6-05 menyediakan baseline; T4-07 menyediakan metrics. Keduanya masih STUB pada awal T5-07. Baseline kini COMPLETE beserta kontrak §6, sedangkan metrics masih STUB; runner T5-07 belum menjalankan baseline atau mengklaim keluaran metrics final.
+6. T6-05 menyediakan baseline; T4-07 menyediakan metrics. Keduanya masih STUB pada awal T5-07. Baseline kini COMPLETE beserta kontrak §6. Runner baru mendukung varian pipeline/baseline pada dev; metrics masih STUB, sehingga integrasi pembaca metrik dan hasil final belum diklaim.
 7. Setelah seluruh prasyarat selesai, T5-08 menambahkan verifikasi freeze dan eksekusi sekali untuk pipeline serta baseline pada test set yang sama. Runner T5-07 saat ini sengaja menolak `--split test` sebelum membaca PDF atau konfigurasi.
 
 ### 3.3 Format terdahulu artefak T5-07
@@ -73,7 +86,7 @@ NO_CONTENT menjadi NOT_PERFORMED dengan kode alasan ekstraksi. Error model menja
 
 `model_outputs.jsonl` menyimpan `{id, attempts}` dengan konten mentah model sintetis, nomor attempt, durasi provider, kode error, dan jumlah event length per attempt. Ini artefak evaluasi, bukan log aplikasi. Input dokumen mentah tidak dicetak atau disalin ke log. Tidak ada key, token, password, atau seluruh Settings pada artefak.
 
-`run_config.json` mencatat timestamp UTC, status run, model/provider, prompt version, parameter, ambang, daftar ID/SHA-256 dev, checksum manifest, fingerprint kode runtime/runner, jumlah status, alasan penghentian, dan event length. Field `settings.baseUrl` pada runner setelah perbaikan review hanya menyimpan origin (`scheme://host[:port]`); seluruh path dihilangkan karena dapat memuat kredensial. URL dengan userinfo, query, atau fragment ditolak. URL lengkap dalam Settings runtime tidak diubah. Tidak ada nilai API key/internal token. `state=interrupted` berarti bukti belum lengkap dan tidak boleh dinyatakan run penuh.
+`run_config.json` mencatat timestamp UTC, status run, model/provider, prompt version, parameter, ambang, daftar ID/SHA-256 dev, checksum manifest, fingerprint kode runtime/runner, jumlah status, alasan penghentian, dan event length. Field `settings.baseUrl` pada runner setelah perbaikan review hanya menyimpan origin (`scheme://host[:port]`); seluruh path dihilangkan karena dapat memuat kredensial. URL dengan userinfo, query, atau fragment ditolak. URL lengkap dalam Settings runtime tidak diubah. Tidak ada nilai API key/internal token. Lifecycle `state` pada artefak historis tidak berlaku pada kontrak baru: §6 memakai `status`, `stopReason`, dan `stoppedAt`; pembaca hanya menerima run berstatus COMPLETE.
 
 ### 3.4 Perintah dan penggantian model
 
@@ -94,7 +107,7 @@ Untuk pergantian model layanan setelah keputusan disetujui: human mengatur envir
 
 Kategori diturunkan dari indikator tervalidasi dengan skoring deterministik, bukan label kategori keluaran langsung model. Karena itu, klasifikasi mengukur kemampuan menemukan indikator dan mempertahankan kutipan bukti. Catat indikator yang dibuang, kegagalan parsing, pemotongan, serta salah positif/negatif secara terpisah.
 
-Dataset dev saat ini hanya Indonesia, berukuran kecil dan mempunyai pasangan teks/scan yang berkorelasi. Hasil tidak membuktikan kemampuan bahasa Inggris atau generalisasi ke surat nyata. Tinjauan coding agent tidak menggantikan tinjauan manusia Pash. Angka dev hanya untuk keputusan eksperimen, bukan MET-09–MET-15 test set final.
+Dataset dev lengkap mencakup ID/EN, tetapi tetap kecil dan mempunyai pasangan teks/scan yang berkorelasi. Run awal pada §7 hanya mencakup Indonesia; hasil awal tersebut tidak membuktikan kemampuan bahasa Inggris atau generalisasi ke surat nyata. Tinjauan coding agent tidak menggantikan review manusia yang dikonfirmasi pada §1. Angka dev hanya untuk keputusan eksperimen, bukan MET-09–MET-15 test set final.
 
 ## 5. Log Perubahan Ambang dan Prompt
 
@@ -105,7 +118,7 @@ Dataset dev saat ini hanya Indonesia, berukuran kecil dan mempunyai pasangan tek
 
 ## 6. Kontrak output evaluasi v1
 
-Kontrak ini berlaku bagi `baseline.py` (Sat, T6-05), `run_eval.py` (B, T5-07/T5-08), dan `metrics.py` (Pash, T4-07). Format bersama ditetapkan di T6-05 dan sudah dipakai baseline. Runner T5-07 kini COMPLETE untuk pemilihan model dev, tetapi masih memakai format terdahulu §3.3; pembaca metrik masih STUB. B harus menyesuaikan runner dan pengujiannya, sementara Pash mengimplementasikan pembaca sesuai kontrak ini. Kontrak ini bukan perubahan API publik dan tidak menyelesaikan keputusan dataset, pemilihan model final, freeze, atau metrik yang masih terbuka di bagian 1–5.
+Kontrak ini berlaku bagi `baseline.py` (Sat, T6-05), `run_eval.py` (B, T5-07/T5-08), dan `metrics.py` (Pash, T4-07). Format bersama ditetapkan di T6-05. Runner B kini memakai `EvaluationRecord` yang sama dengan baseline, termasuk varian, status, dan lifecycle konfigurasi; bukti run awal tetap memakai format historis §3.3. Pembaca metrik masih STUB dan integrasi dengannya belum teruji. Kontrak ini tidak mengubah API publik atau menyelesaikan freeze/evaluasi final.
 
 Sumber skema yang dapat dieksekusi: `ai-eval/scripts/_eval_schema.py`, kelas `EvaluationRecord`. Serialisasi memakai `model_dump_json(by_alias=True)`; pembaca memakai `EvaluationRecord.model_validate_json(line)`. Kunci JSON memakai camelCase. Satu baris UTF-8 dalam `raw.jsonl` adalah satu objek lengkap, tanpa baris kosong. Pasangan `(variant, id)` harus unik dalam satu run. Kandidat model pipeline yang berbeda disimpan pada direktori run yang berbeda.
 
@@ -140,7 +153,9 @@ Evidence sintetis boleh disimpan dalam artefak hasil evaluasi; teks dokumen leng
 
 CLI baseline hanya menerima dev selama pengembangan. Untuk run final T5-08 setelah freeze, B dapat memanggil `baseline.analyze_text(extracted.text)` dan membungkus responsnya dengan `EvaluationRecord(variant="baseline", ...)`. Jangan mengaktifkan baseline sebagai fallback runtime. Perubahan kontrak harus memperbarui skema, contoh/tes sintetis, dan dokumentasi ini serta dikoordinasikan ke ketiga owner.
 
-Sebelum evaluasi gabungan atau final, B/Pash harus memverifikasi keluaran runner nyata melalui `EvaluationRecord` dan pembaca metrik yang sama dengan baseline. Perbedaan saat ini mencakup status sukses `COMPLETED` versus `OK`, field `schemaVersion`/`variant` per record, stage error huruf kecil versus huruf besar, `NOT_PERFORMED`/`RUN_ABORTED` dengan latensi null, serta lifecycle konfigurasi `state` versus `status`. Penanganan dokumen yang belum dijalankan harus diselaraskan secara eksplisit tanpa mengarang kategori atau latensi. Keempat direktori bukti T5-07 pada §7 tetap utuh dalam format asal; penyelesaian konflik dokumen ini tidak memigrasikan runner atau artefak tersebut.
+Penyelarasan runner tanggal 26 November mengganti `COMPLETED` menjadi `OK`, menambahkan `schemaVersion`/`variant`, memakai stage error huruf besar, serta mengganti lifecycle `state` dengan `status`. NO_CONTENT tercatat UNAVAILABLE dengan `EXTRACTION_NO_CONTENT` dan `reasonDetail` asli, tanpa kategori. Bila quota/timeout/provider error menghentikan pemrosesan, hanya dokumen yang benar-benar dicoba disimpan di `tmp/raw.jsonl`; konfigurasi tetap RUNNING dengan `stopReason`, `stoppedAt`, jumlah aktual dan `plannedRecords`. Dokumen yang belum dicoba tidak mendapat kategori, status prediksi, atau latensi fiktif. `raw.jsonl` diterbitkan atomik dan status menjadi COMPLETE hanya setelah seluruh dokumen/varian dicoba dan checksum manifest masih sesuai.
+
+`--variants pipeline baseline` menjalankan kedua detector secara eksplisit pada PDF dev yang sama, masing-masing melalui ekstraksi runtime dengan pengaturan identik. Baseline tidak membuat provider atau memerlukan key; `--variants baseline` hanya merekam parameter ekstraksi. Setiap record divalidasi melalui skema bersama sebelum ditulis. Sebelum final, B/Pash tetap harus memverifikasi pembacaan hasil oleh metrics. Keempat direktori bukti T5-07 awal pada §7 dipertahankan utuh dan tidak dimigrasikan.
 
 ## 7. Hasil Aktual dan Keputusan
 
@@ -153,7 +168,7 @@ Artefak smoke test:
 - `ai-eval/results/t5-07-20261125-gptoss120b-smoke-900/`
 - `ai-eval/results/t5-07-20261125-qwen38-smoke-900/`
 
-### 7.1 Perbandingan seluruh dev
+### 7.1 Perbandingan dev ID awal (25 November)
 
 Run nyata tanggal 25 November 2026 memakai 12 PDF dev yang sama dalam urutan yang sama (enam surat, masing-masing teks dan scan). Baseline repository saat eksekusi adalah commit `b646387`; runner/helper T5-07 masih berupa perubahan working tree, dengan fingerprint tersimpan pada artefak. Kedua `run_config.json` cocok dalam daftar ID/SHA-256, checksum manifest, fingerprint kode, dan seluruh parameter selain model. Prompt v1, 900 token, reasoning default provider, serta jeda antardokumen 25 detik. Tidak ada error kuota, timeout, atau penghentian run.
 
@@ -181,7 +196,7 @@ Artefak run lengkap (masing-masing berisi `raw.jsonl`, `model_outputs.jsonl`, `r
 - `ai-eval/results/t5-07-20261125-gptoss120b-dev-900/`
 - `ai-eval/results/t5-07-20261125-qwen38-dev-900/`
 
-### 7.2 Keputusan dan ambang sementara
+### 7.2 Keputusan awal dan ambang sementara (25 November)
 
 Pilihan sementara B: **Groq / `openai/gpt-oss-120b`**, prompt v1 dan parameter awal. Prioritas kualitas indikator pada prosedur §3.2 menjadi pembeda: GPT-OSS sesuai anotasi pada seluruh 12 PDF. Qwen memiliki latensi lebih rendah dan tidak memerlukan retry pada run ini; status preview dan ketersediaannya tetap perlu dipantau bila dipertimbangkan lagi. Tidak ada fallback otomatis antar kandidat.
 
@@ -189,10 +204,105 @@ Base URL dan model terpilih sama dengan default repository, sehingga `.env.examp
 
 OCR minimum 25 karakter/halaman, 300 DPI, timeout 20 detik, dan fuzzy 90 dipertahankan. Pada kedua run, enam scan berhasil memakai OCR dan enam PDF teks memakai TEXT_LAYER, tanpa pemotongan ekstraksi. Pemeriksaan ulang terhadap ekstraksi dev menemukan 25/25 kutipan GPT-OSS dan 42/42 kutipan Qwen cocok substring ternormalisasi; tidak ada yang hanya lolos karena fuzzy. Ini mendukung mempertahankan konfigurasi awal untuk data ini, tetapi belum membuktikan ambang fuzzy optimal atau ketahanan terhadap scan buruk. TOI-06/TOI-07 tetap memiliki batas bukti tersebut; OI/TOI tidak ditutup sepihak.
 
-Model bantu ID yang dicatat di §2 berbeda dari model terpilih. Keputusan akhir OI-01/OI-02 dan evaluasi final tetap menunggu dataset ID/EN lengkap serta tinjauan Pash. T5-05 belum dinyatakan selesai dan T5-08 tidak dijalankan. Bukti T5-07 tersedia untuk Sat/Pash dalam format terdahulu §3.3; penyesuaian runner ke §6 dan integrasi baseline/metrics masih pekerjaan pemilik masing-masing.
+Model bantu yang dicatat di §2 berbeda dari model terpilih. Saat run ID awal, dataset EN dan review manusia belum lengkap. Kondisi tersebut diperbarui pada §1 dan §7.3 tanggal 26 November; keputusan di bagian ini tetap merupakan keputusan dari run ID awal. Bukti lama tersedia untuk Sat/Pash dalam format historis §3.3. Runner baru sudah diselaraskan ke §6, sedangkan metrics dan evaluasi final masih menunggu T4-07.
 
 Audit 12 berkas artefak dari dua smoke test dan dua run dev lengkap tidak menemukan nilai API key atau internal token yang dikonfigurasi. Pemeriksaan memakai environment container dan hanya mencetak jumlah temuan, tanpa membuka `.env` atau menampilkan secret.
 
 Perbaikan review PR #49 memperketat validasi metadata split dan penyimpanan origin provider. Keempat artefak run di atas tetap merupakan bukti eksekusi sebelum perbaikan, dengan `baseUrl` lama yang mencakup path `/openai/v1` dan fingerprint kode saat itu. Artefak tersebut tidak ditulis ulang; seluruh ID yang dijalankan sudah dikonfirmasi berada di dev tanpa pasangan lintas split. Perbaikan ini diverifikasi dengan test sintetis dan dry run, tanpa mengulang evaluasi LLM.
 
 Verifikasi setelah perbaikan review (container Python 3.12): `python scripts/dev.py eval run_eval --test` 31 passed (19 test sebelumnya dan 12 kasus regresi); `python scripts/dev.py eval test_dataset` 18 passed; `python scripts/dev.py test ai-service` 254 passed. Dry run tetap memilih 12 PDF dev dengan nol panggilan LLM. Ruff check dan format check dengan konfigurasi proyek lulus. Dua belas kasus regresi gagal sebelum perbaikan; kasus split mencakup kedua arah pasangan, urutan baris, dan penggunaan limit, sedangkan kasus URL memeriksa artefak yang ditulis dengan path sintetis, path terenkode, port, dan IPv6. Warning pytest tentang rewrite modul anyio yang sudah diimpor tetap muncul pada test runner.
+
+### 7.3 Pelengkapan T5-05 dan integrasi runner (26 November)
+
+Perintah aktual `python scripts/dev.py eval generate_pdfs` menghasilkan 36 PDF teks ID/EN; `python scripts/dev.py eval make_scans` menghasilkan 36 scan. Manifest lengkap berisi 72 baris, 24 dev/48 test, dan setiap bahasa/format memiliki 18 PDF. Diff manifest menambah 36 baris EN tanpa mengubah baris ID; PDF ID lama tidak berubah. Tidak ada perubahan teks/anotasi templat milik Van/Pash. Review manusia telah dikonfirmasi pengguna sebagaimana §1.
+
+QA generator memakai ekstraksi runtime nyata pada seluruh PDF, tanpa panggilan LLM atau perhitungan metrik prediksi test set:
+
+| Kelompok | Berhasil / jumlah | Metode | Kemiripan minimum ke teks sumber |
+| --- | --- | --- | --- |
+| EN teks | 18/18 | TEXT_LAYER | 1,000000 |
+| EN scan | 18/18 | OCR | 0,994746 |
+| ID teks | 18/18 | TEXT_LAYER | 1,000000 |
+| ID scan | 18/18 | OCR | 0,997739 |
+
+Kemiripan dihitung dengan `rapidfuzz.fuzz.ratio` atas normalisasi runtime, hanya untuk QA isi hasil generator. Tidak ada ekstraksi gagal/terpotong atau pasangan lintas split. Hasil QA ini tidak digunakan untuk menyesuaikan prompt/ambang dari test set; seluruh parameter runtime tetap sebagaimana run awal. Ketiga kriteria implementasi T5-05 terpenuhi: 72 PDF, manifest/split seimbang, dan eksekusi melalui launcher.
+
+Migrasi runner lulus `python scripts/dev.py eval run_eval --test` (36 passed) dan suite generator `python scripts/dev.py eval test_dataset` (18 passed). Test runner menggunakan MockLLMProvider bersama dan baseline asli pada PDF unit sintetis, memvalidasi format melalui `EvaluationRecord`, hasil gagal tetap tercatat, penghentian kuota tidak membuat latensi fiktif, dan perubahan manifest mencegah penerbitan raw. Hasil test ini bukan bukti evaluasi model nyata atau hasil final.
+
+Perintah pengembangan baru:
+
+```sh
+python scripts/dev.py eval run_eval --split dev --variants pipeline baseline --dry-run
+python scripts/dev.py eval run_eval --split dev --variants baseline
+python scripts/dev.py eval run_eval --split dev --variants pipeline baseline --interval-seconds 25
+```
+
+T5-08 belum selesai: runner tetap menolak test split, metrics masih STUB, dan belum ada freeze/run test set aktual. T5-09 tidak dapat menyatakan metrik final sebelum dependensi itu selesai.
+
+Pemeriksaan metadata `freeze_testset --check` dengan konfirmasi review pengguna dan checksum manifest §1 menyisakan satu prasyarat eksternal: `T4_07_NOT_AVAILABLE`. Perintah keluar 1 dengan `ready=false`, `pdfsOpened=0`; tidak ada snapshot freeze yang dibuat. Integrasi dan run test final tetap belum dijalankan.
+
+Verifikasi tambahan T5-06 tanggal 26 November: `generate_fixtures --check` mengonfirmasi byte/checksum kesepuluh fixture tetap sesuai README; test manual `fixtures/test_upload_validation.py` melalui image backend lulus 11 test. FX-09 berukuran 5.244.158 byte, masih melampaui konfigurasi backend aktual `MAX_UPLOAD_BYTES=5.242.880`. Fixture tidak diubah. Kategori fixture tetap target skenario sampai TB-04 dengan LLM/Anvil nyata; test validator ini tidak menjadi bukti skenario tersebut. Suite `python scripts/dev.py test ai-service` lulus 254 test.
+
+### 7.4 Dev ID/EN lengkap dan usulan pilihan model (26 November)
+
+Ketiga run berikut memakai manifest §1, daftar 24 PDF dev beserta SHA-256 yang identik, dan fingerprint sumber yang sama. Run pipeline menggunakan pengaturan yang sama selain model: prompt v1, 900 token, reasoning default, temperature 0, timeout 40 detik, dan jeda 25 detik antardokumen. OCR/fuzzy tetap sebagaimana §3.1. Baseline tidak memanggil LLM dan memakai parameter ekstraksi yang sama. Seluruh angka di bagian ini diagnostik dev, bukan MET-09–MET-15 test set.
+
+| Ukuran dev | GPT-OSS 120B | Qwen 3.8 27B | Baseline rules-v1 |
+| --- | --- | --- | --- |
+| Dokumen pipeline/baseline dicoba | 4/24 | 24/24 | 24/24 |
+| Status OK | 3/4 | 24/24 | 24/24 |
+| Lifecycle run | RUNNING, dihentikan | COMPLETE | COMPLETE |
+| Kategori sesuai anotasi | Tidak dibandingkan sebagai run lengkap | 24/24 | 12/24 |
+| Himpunan kode indikator persis sesuai anotasi | Tidak dibandingkan sebagai run lengkap | 20/24 | 6/24 |
+| Event length | 0 | 0 | Tidak berlaku |
+| Median latensi ekstraksi + analisis | Tidak dibandingkan sebagai run lengkap | 1429,5 ms | 607,5 ms |
+| P95 latensi ekstraksi + analisis | Tidak dibandingkan sebagai run lengkap | 2538 ms | 1800 ms |
+
+P95 memakai nearest rank `ceil(0,95 × 24)`, yaitu nilai ke-23 setelah diurutkan. Jeda antardokumen tidak masuk latensi. Baseline dan pipeline masing-masing menjalankan ekstraksi sehingga latensi mencerminkan alur lengkap tiap varian, bukan waktu detektor saja.
+
+GPT-OSS semula dijalankan bersama baseline, dengan target 48 record. Sesudah tiga pasangan varian berhasil, pipeline pada `en-high-05-text` menghasilkan `AI_PROVIDER_ERROR`; run langsung berhenti. Bukti parsial berisi tujuh record aktual (tiga pipeline OK, tiga baseline OK, satu pipeline UNAVAILABLE), dengan `finishedAt=null`, `stopReason=AI_PROVIDER_ERROR`, dan raw asli di `tmp/`. Karena folder `tmp/` diabaikan Git, salinan identik byte tersedia di direktori run sebagai `partial_raw.jsonl` dan `partial_model_outputs.jsonl` (§7.5). Tidak ada retry provider, perpindahan model otomatis, atau record untuk dokumen yang belum dicoba. Penyebab HTTP lebih rinci tidak diketahui; tidak ada event length pada run ini sehingga kegagalan tidak diklaim akibat pemotongan output. Bukti ini tidak boleh dibaca metrics sebagai run lengkap.
+
+Qwen menyelesaikan seluruh 24 PDF tanpa UNAVAILABLE; kategori sesuai 24/24 dan tidak ada indikator yang dibuang validator. Empat ketidaksesuaian himpunan indikator berupa tambahan: `URGENCY_PRESSURE` pada pasangan `en-high-01`, serta `UNOFFICIAL_CONTACT` pada pasangan `id-medium-03`. Tidak ada kode referensi yang hilang pada run ini. Empat PDF tersebut hanya dua surat sumber; jangan menghitungnya sebagai empat kasus independen atau mengubah anotasi berdasarkan prediksi.
+
+Baseline menyelesaikan 24/24 tetapi cocok kategori pada 12/24 dan himpunan indikator pada 6/24. Contoh keterbatasan dev: pasangan `id-low-02` dan `id-low-03` mendapat `PAYMENT_REQUEST` meskipun anotasi LOW; pola biaya/negasi perlu ditinjau Sat. Pasangan `en-high-05`, `en-medium-02`, `id-medium-03`, dan `id-medium-04` menjadi LOW karena indikator referensi tidak terdeteksi. Ini temuan untuk owner baseline, bukan perubahan aturan oleh B. Tidak ada baseline yang dipakai sebagai fallback runtime.
+
+Pilihan terbaru B, disetujui Dws melalui konfirmasi pengguna pada 26 November 2026: **Groq / `qwen/qwen3.8-27b`**, dengan prompt/OCR/fuzzy dan budget tetap. Pilihan ini memprioritaskan run lengkap yang tersedia, bukan klaim bahwa Qwen lebih akurat secara umum: GPT-OSS belum menyelesaikan pembandingan ID/EN yang berpasangan dan hasil awal ID-nya tetap tercatat di §7.1. Qwen masih memiliki tambahan indikator pada dua surat sumber dan berstatus preview menurut dokumentasi provider di §3.1. Satu run ini tidak membuktikan kestabilan jangka panjang.
+
+Sesuai persetujuan tersebut, default `LLM_MODEL` pada `.env.example`, `app/core/config.py`, dan fallback `compose.yaml` diperbarui menjadi `qwen/qwen3.8-27b`; `.env` tidak dibaca atau diubah. Provider/base URL dan parameter lain tetap. Nilai environment yang ditetapkan operator mengalahkan default, sehingga perubahan repository tidak membuktikan container yang sudah ada memakai model baru. Operator memperbarui `LLM_MODEL` sendiri bila perlu lalu membuat ulang container ai-service dengan `docker compose up -d --build --no-deps ai-service`. Override `--model` hanya berlaku pada proses eksperimen. Tidak ada fallback otomatis. Bukti run lama tetap utuh dengan konfigurasi/fingerprint saat eksekusi. T5-08 tetap menunggu metrics T4-07 serta verifikasi integrasinya sebelum freeze/run final; T5-09 masih draf.
+
+Pengguna mengonfirmasi pada 26 November 2026 bahwa pilihan terbaru Groq / Qwen sudah diumumkan B ke tim setelah persetujuan Dws. Konfirmasi ini menutup langkah pengumuman pada kriteria keempat T5-07; agent tidak mengirim pesan eksternal atau mengklaim memeriksa percakapan tim secara langsung. Ringkasan keputusan: “T5-07: Dws menyetujui Groq / qwen/qwen3.8-27b sebagai model terpilih. Default repository telah diselaraskan; operator perbarui LLM_MODEL sendiri lalu buat ulang ai-service bila masih memakai nilai lama. Prompt v1, budget 900 token, OCR 25 karakter/halaman pada 300 DPI, dan fuzzy 90 khusus OCR/MIXED tetap. Hasil dev dan keterbatasan ada di docs/evaluation/protocol.md §7.4. Test set belum dievaluasi atau dibekukan.”
+
+Verifikasi setelah penyelarasan default: `docker compose build ai-service` berhasil, lalu `python scripts/dev.py test ai-service` lulus 254 test. Pemeriksaan Settings pada image baru tanpa override `LLM_MODEL` menghasilkan default Qwen; override eksplisit tetap diprioritaskan. Ketiga nilai default repository cocok, Ruff check/format konfigurasi lulus, dan `git diff --check` bersih. Pemeriksaan ini tidak memanggil LLM dan tidak membuktikan container layanan yang sudah ada memakai model baru.
+
+Perintah nyata dan lokasi artefak:
+
+```sh
+python scripts/dev.py eval run_eval --split dev --model openai/gpt-oss-120b --variants pipeline baseline --interval-seconds 25 --output-dir /ai-eval/results/t5-07-20261126-gptoss120b-id-en-dev-900
+python scripts/dev.py eval run_eval --split dev --model qwen/qwen3.8-27b --interval-seconds 25 --output-dir /ai-eval/results/t5-07-20261126-qwen38-id-en-dev-900
+python scripts/dev.py eval run_eval --split dev --variants baseline --output-dir /ai-eval/results/t5-08-20261126-baseline-id-en-dev
+```
+
+Run pertama keluar 1 karena error provider, dua run berikut keluar 0. Nama direktori baseline menyatakan konteks integrasi T5-08, tetapi `split=dev` dan `datasetStatus=not-frozen`; direktori itu bukan bukti run final. Artefak lama tetap utuh dan artefak baru tidak ditulis ulang setelah eksekusi.
+
+Audit offline memvalidasi seluruh 55 record baru melalui `EvaluationRecord` v1. Kutipan diterima cocok substring ternormalisasi: sembilan pada run parsial GPT-OSS (termasuk baseline), 64 pada Qwen, dan 14 pada baseline lengkap; tidak ada kutipan yang hanya lolos fuzzy. Qwen memakai 24 attempt untuk 24 dokumen, tanpa retry output; GPT-OSS memakai empat attempt termasuk satu yang gagal provider. Pemeriksaan 22 berkas artefak lama/baru tidak menemukan nilai API key atau internal token yang dikonfigurasi. Audit memakai environment container, tidak membuka `.env`, tidak menampilkan secret/isi surat, dan tidak memanggil LLM.
+
+Pemeriksaan akhir mengulang suite runner (36 passed, satu warning rewrite anyio) serta Ruff check/format untuk runner, test runner, dan generator (lulus). `git diff --check` bersih. `python scripts/dev.py status` keluar 1: container ai-service lama berstatus Exited dan endpoint health backend tidak dapat dihubungi. Test dan evaluasi di atas berjalan melalui container sementara; kesehatan enam layanan, Anvil, dan SCN nyata tidak diklaim terverifikasi pada sesi ini.
+
+### 7.5 Koreksi bukti parsial dan review T5-07 (26 November)
+
+Review PR #53/#54 menemukan bukti parsial GPT-OSS belum ikut repository karena pola `.gitignore` untuk `results/**/tmp/`. Berkas sumber lokal masih tersedia. Koreksi menambahkan salinan byte asli, tanpa mengubah prediksi, timestamp, konfigurasi run, atau mengulangi panggilan LLM:
+
+| Berkas dalam `t5-07-20261126-gptoss120b-id-en-dev-900/` | Isi | SHA-256 |
+| --- | --- | --- |
+| `partial_raw.jsonl` | Tujuh record aktual: enam OK dan satu UNAVAILABLE | `74a0a1dc4b277e413ec58c37c17d7a4e09b34d4ca136ac4c32f62c7ec9686f50` |
+| `partial_model_outputs.jsonl` | Empat dokumen pipeline, masing-masing satu attempt; termasuk error provider | `92dec59387f53f6e7e8943376d946249a826a2c5e7ceeed1c973b52343e6e6b6` |
+
+SHA-256 `run_config.json` tetap `4d2a9249698bcc211860a2a25721710fb2299c28bcfff66607c4e5d1cb9490c3`. Tidak ada `raw.jsonl` lengkap di root direktori run ini. Berkas `partial_*` merupakan bukti audit; konsumen metrics tetap wajib menolak run tersebut, bukan menganggap tujuh record sebagai seluruh dev set.
+
+Lifecycle bersama §6 tidak diubah sepihak menjadi STOPPED. Pada kontrak saat ini, `status=RUNNING` disertai `stopReason=AI_PROVIDER_ERROR` dan `stoppedAt` berarti run berhenti tanpa kelengkapan yang diperlukan; bukan bukti proses masih aktif. Perubahan enum lifecycle perlu koordinasi B/Sat/Pash. Referensi `state=interrupted` yang tersisa pada penjelasan format lama telah diganti dengan rujukan eksplisit ke kontrak baru.
+
+Pilihan Qwen tetap berdasarkan persetujuan Dws yang disampaikan pengguna sebagaimana §7.4. Tidak dilakukan rerun GPT-OSS; pembandingan ID/EN tetap tidak setara dan tidak dijadikan klaim keunggulan umum Qwen. Bagian T5-06 pada PLAN dipulihkan sesuai `origin/dev`, mengembalikan daftar tooling/test dan perintah verifikasi yang terhapus. Pengumuman model terbaru telah dikonfirmasi pengguna sebagaimana §7.4; approval/merge tetap tindakan manusia dan tidak dilakukan agent.
+
+Verifikasi koreksi: suite ai-service lulus 254 test dan suite runner lulus 36 test (satu warning rewrite anyio). Audit offline memvalidasi 55 record melalui skema bersama, mengonfirmasi salinan parsial identik byte serta konfigurasi asli tidak berubah, dan menghitung ulang angka dev Qwen/baseline sesuai §7.4. Pemeriksaan 24 berkas artefak tidak menemukan nilai API key/internal token yang dikonfigurasi. PLAN identik dengan `origin/dev`, tautan lokal valid, dan `git diff --check` bersih. Percobaan pertama tertahan karena daemon Docker tidak aktif; setelah Docker Desktop dijalankan, pemeriksaan berhasil. Tidak ada panggilan LLM baru atau akses langsung ke `.env`.
+
+Keempat kriteria implementasi T5-07 terpenuhi: dua kandidat dijalankan pada dev (§7.1 dan §7.4); pilihan/alasan/ambang/prosedur tercatat; provenance model bantu berbeda dari model terpilih tercatat (§2); serta default diselaraskan dan pengumuman Qwen dikonfirmasi pengguna. Penyelesaian ini tidak menutup OI/TOI sepihak, tidak mengubah keterbatasan perbandingan, dan tidak menyatakan T5-08/T5-09 final.

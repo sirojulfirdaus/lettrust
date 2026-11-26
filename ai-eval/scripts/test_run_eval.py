@@ -13,6 +13,7 @@ import pytest
 import run_eval
 from _dataset import FIELDS, Entry, sha256
 from _eval_records import load_dev_entries, public_settings
+from _eval_schema import EvaluationRecord
 from generate_pdfs import render_text_pdf
 from pydantic import SecretStr
 
@@ -137,8 +138,9 @@ def test_runtime_response_and_original_model_output(dataset: Path, settings: Set
     entry = load_dev_entries(dataset)[0]
     provider = MockLLMProvider(HIGH_OUTPUT, latency_ms=7)
     record, captured = run_eval.evaluate_document(entry, dataset, settings, provider)
-    assert set(record) == {"id", "status", "result", "extraction", "error", "latencyMs"}
-    assert record["status"] == "COMPLETED"
+    assert set(record) == {"schemaVersion", "id", "variant", "status", "result", "extraction", "error", "latencyMs"}
+    assert record["status"] == "OK" and record["variant"] == "pipeline"
+    EvaluationRecord.model_validate(record)
     assert record["result"]["category"] == "HIGH"
     assert record["result"]["indicatorDetails"][0]["code"] == "PAYMENT_REQUEST"
     assert record["result"]["meta"]["latencyMs"] == 7
@@ -153,7 +155,7 @@ def test_runtime_response_and_original_model_output(dataset: Path, settings: Set
 def test_invalid_output_retry_is_preserved(dataset: Path, settings: Settings) -> None:
     provider = MockLLMProvider("not-json", HIGH_OUTPUT, latency_ms=4)
     record, captured = run_eval.evaluate_document(load_dev_entries(dataset)[0], dataset, settings, provider)
-    assert record["status"] == "COMPLETED"
+    assert record["status"] == "OK"
     assert record["result"]["meta"]["latencyMs"] == 8
     assert [attempt["content"] for attempt in captured["attempts"]] == ["not-json", HIGH_OUTPUT]
     assert len(provider.received) == 2
@@ -166,11 +168,11 @@ def test_invalid_output_never_becomes_low(dataset: Path, settings: Settings) -> 
     )
     assert record["status"] == "UNAVAILABLE"
     assert record["result"] is None
-    assert record["error"] == {"stage": "analysis", "code": "AI_OUTPUT_INVALID"}
+    assert record["error"] == {"stage": "ANALYSIS", "code": "AI_OUTPUT_INVALID", "reasonDetail": None}
     assert len(captured["attempts"]) == 2
 
 
-# Run berhenti setelah quota/timeout dan menyimpan baris NOT_PERFORMED untuk sisa dokumen tanpa panggilan tambahan.
+# Run berhenti setelah quota/timeout; hanya attempt nyata tersimpan di tmp, tanpa record atau latensi fiktif.
 @pytest.mark.parametrize("failure", [ProviderQuotaExceeded("quota"), ProviderTimeout("timeout")])
 def test_provider_failure_stops_run(
     dataset: Path, settings: Settings, tmp_path: Path, failure: ProviderQuotaExceeded | ProviderTimeout
@@ -178,14 +180,16 @@ def test_provider_failure_stops_run(
     provider = MockLLMProvider(failure)
     output = tmp_path / "run"
     config = run_eval.execute_run(dataset, output, load_dev_entries(dataset), settings, provider=provider)
-    rows = [json.loads(line) for line in (output / "raw.jsonl").read_text(encoding="utf-8").splitlines()]
+    rows = [json.loads(line) for line in (output / "tmp" / "raw.jsonl").read_text(encoding="utf-8").splitlines()]
     assert len(provider.received) == 1
-    assert config["state"] == "stopped"
+    assert config["status"] == "RUNNING"
     assert config["stopReason"] == failure.code.value
-    assert config["statusCounts"] == {"UNAVAILABLE": 1, "NOT_PERFORMED": 1}
+    assert config["counts"] == {"UNAVAILABLE": 1}
+    assert config["records"] == 1 and config["plannedRecords"] == 2
+    assert not (output / "raw.jsonl").exists()
     assert all(row["result"] is None for row in rows)
-    assert rows[1]["extraction"] is None and rows[1]["latencyMs"] is None
-    assert rows[1]["error"] == {"stage": "run", "code": "RUN_ABORTED"}
+    assert len(rows) == 1
+    EvaluationRecord.model_validate(rows[0])
 
 
 # Konfigurasi yang diserialisasi tidak mengandung kedua nilai secret maupun nama field kredensial.
@@ -222,7 +226,7 @@ def test_provider_path_is_not_written_to_artifacts(
     config = json.loads((output / "run_config.json").read_text(encoding="utf-8"))
     assert config["settings"]["baseUrl"] == origin
     assert configured.llm_base_url == url
-    for artifact in output.iterdir():
+    for artifact in (path for path in output.rglob("*") if path.is_file()):
         content = artifact.read_text(encoding="utf-8")
         assert "unit-path-secret-not-real" not in content
         assert "unit%2Dpath%2Dsecret%2Dnot%2Dreal" not in content
@@ -240,9 +244,9 @@ def test_successful_run_and_overwrite_protection(dataset: Path, settings: Settin
     output = tmp_path / "run"
     provider = MockLLMProvider(HIGH_OUTPUT, LOW_OUTPUT)
     config = run_eval.execute_run(dataset, output, load_dev_entries(dataset), settings, provider=provider)
-    assert config["state"] == "finished"
-    assert config["statusCounts"] == {"COMPLETED": 2}
-    assert config["schemaVersion"] == 1 and config["split"] == "dev" and config["method"] == "llm"
+    assert config["status"] == "COMPLETE"
+    assert config["counts"] == {"OK": 2}
+    assert config["schemaVersion"] == 1 and config["split"] == "dev" and config["variants"] == ["pipeline"]
     assert len((output / "model_outputs.jsonl").read_text(encoding="utf-8").splitlines()) == 2
     with pytest.raises(FileExistsError):
         run_eval.execute_run(dataset, output, load_dev_entries(dataset), settings, provider=provider)
@@ -309,7 +313,13 @@ def test_no_content_never_calls_provider(dataset: Path, settings: Settings, monk
     monkeypatch.setattr(run_eval, "extract_document", lambda *_: empty)
     provider = MockLLMProvider()
     record, captured = run_eval.evaluate_document(load_dev_entries(dataset)[0], dataset, settings, provider)
-    assert record["status"] == "NOT_PERFORMED"
+    assert record["status"] == "UNAVAILABLE"
+    assert record["error"] == {
+        "stage": "EXTRACTION",
+        "code": "EXTRACTION_NO_CONTENT",
+        "reasonDetail": "NO_EXTRACTABLE_TEXT",
+    }
+    EvaluationRecord.model_validate(record)
     assert record["result"] is None and captured["attempts"] == []
     assert provider.received == []
 
@@ -327,3 +337,82 @@ def test_run_boundary_checks(dataset: Path, settings: Settings, tmp_path: Path) 
             settings.model_copy(update={"app_env": "local"}),
             provider=MockLLMProvider(),
         )
+
+
+# Pipeline dan baseline memakai detector nyata masing-masing, format v1 yang sama, dan ID tanpa duplikat per varian.
+def test_combined_run_conforms_to_shared_schema(dataset: Path, settings: Settings, tmp_path: Path) -> None:
+    output = tmp_path / "combined"
+    provider = MockLLMProvider(HIGH_OUTPUT, LOW_OUTPUT)
+    config = run_eval.execute_run(
+        dataset, output, load_dev_entries(dataset), settings, provider=provider, variants=("pipeline", "baseline")
+    )
+    records = [EvaluationRecord.model_validate_json(line) for line in (output / "raw.jsonl").read_text().splitlines()]
+    assert config["status"] == "COMPLETE" and config["records"] == 4
+    assert config["variants"] == ["pipeline", "baseline"]
+    assert len({(r.variant, r.id) for r in records}) == 4
+    assert all(r.status == "OK" for r in records)
+    assert len(provider.received) == 2
+    assert {r.result.meta.model for r in records} == {"eval-unit-model", "rule-based-baseline"}
+    assert not (output / "tmp" / "raw.jsonl").exists()
+
+
+# Baseline dapat berjalan tanpa key dan tidak pernah membuat provider LLM, termasuk pada CLI.
+def test_baseline_only_does_not_construct_llm(
+    dataset: Path, settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def forbidden_provider(*args: object) -> object:
+        """Mendeteksi panggilan LLM yang tidak diizinkan pada evaluasi baseline eksplisit."""
+        raise AssertionError("Baseline tidak boleh memakai LLM")
+
+    monkeypatch.setattr(run_eval, "get_provider", forbidden_provider)
+    output = tmp_path / "baseline"
+    assert run_eval.main(["--dataset-dir", str(dataset), "--output-dir", str(output), "--variants", "baseline"]) == 0
+    config = json.loads((output / "run_config.json").read_text())
+    assert config["model"] == "rule-based-baseline"
+    assert config["baselineVersion"] == "rules-v1"
+    assert "baseUrl" not in config["settings"] and "model" not in config["settings"]
+    assert (output / "model_outputs.jsonl").read_text() == ""
+
+
+# Perubahan manifest saat panggilan model terjadi menahan raw di tmp dan membuat run tidak layak dibaca metrics.
+def test_manifest_change_prevents_publication(
+    dataset: Path, settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider = MockLLMProvider(HIGH_OUTPUT, LOW_OUTPUT)
+    original = provider.complete
+
+    def mutate_manifest(messages: list[dict[str, str]]) -> object:
+        """Meniru perubahan metadata bersamaan tanpa mengubah berkas evaluasi repository."""
+        result = original(messages)
+        manifest = dataset / "manifest.csv"
+        manifest.write_bytes(manifest.read_bytes() + b"\n")
+        return result
+
+    monkeypatch.setattr(provider, "complete", mutate_manifest)
+    output = tmp_path / "changed"
+    with pytest.raises(ValueError, match="Manifest berubah"):
+        run_eval.execute_run(dataset, output, load_dev_entries(dataset), settings, provider=provider)
+    config = json.loads((output / "run_config.json").read_text())
+    assert config["status"] == "RUNNING" and config["stopReason"] == "MANIFEST_CHANGED"
+    assert not (output / "raw.jsonl").exists()
+    assert (output / "tmp" / "raw.jsonl").exists()
+
+
+# Seluruh output yang invalid tetap dicatat; COMPLETE berarti sudah dicoba, bukan semua prediksi berhasil.
+def test_complete_run_retains_unavailable_records(dataset: Path, settings: Settings, tmp_path: Path) -> None:
+    output = tmp_path / "invalid"
+    config = run_eval.execute_run(
+        dataset, output, load_dev_entries(dataset), settings, provider=MockLLMProvider("invalid", "invalid", LOW_OUTPUT)
+    )
+    records = [EvaluationRecord.model_validate_json(line) for line in (output / "raw.jsonl").read_text().splitlines()]
+    assert config["status"] == "COMPLETE" and config["counts"] == {"UNAVAILABLE": 1, "OK": 1}
+    assert records[0].result is None and records[0].error.code == "AI_OUTPUT_INVALID"
+
+
+# Pemanggil Python tidak dapat menandai ulang entry test sebagai dev atau menyisipkan duplikat ID.
+def test_entries_must_match_selected_manifest(dataset: Path, settings: Settings, tmp_path: Path) -> None:
+    entries = load_dev_entries(dataset)
+    for supplied in ([entries[0], entries[0]], [replace(entries[0], sha256="0" * 64)]):
+        with pytest.raises(ValueError, match="metadata dev"):
+            run_eval.execute_run(dataset, tmp_path / "invalid", supplied, settings, provider=MockLLMProvider())
+    assert not (tmp_path / "invalid").exists()
