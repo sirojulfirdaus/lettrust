@@ -246,7 +246,7 @@ export function VerificationDecisionDialog({
       </CardContent>
 
       <Dialog open={confirmOpen} onOpenChange={(open) => !isSubmitting && setConfirmOpen(open)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Konfirmasi {decisionLabel}</DialogTitle>
             <DialogDescription>
