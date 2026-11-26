@@ -106,7 +106,7 @@ Status: COMPLETE = berfungsi sekarang; STUB = signature/docstring dengan kegagal
 | `app/main.py` | Dws | COMPLETE | SA §10.1–§10.2, §16 | Factory, router, X-Request-ID, CORS, handler envelope, 422→400, `/healthz`, OpenAPI tanpa 422 |
 | `app/cli.py` | Dws (init-db, export-openapi) / Zan (seed) | COMPLETE / seed STUB | SA §9.5, §10.1 | seed mencetak "belum diimplementasikan" dan exit 0 |
 | `app/core/config.py` | Dws | COMPLETE | SA §14 | pydantic-settings, SecretStr, validasi saat start |
-| `app/core/errors.py` | Dws | COMPLETE | SA §10.3 | Katalog + HTTP + pesan PRD §9.8 + `NOT_IMPLEMENTED` 501 |
+| `app/core/errors.py` | Dws | COMPLETE | SA §10.3 | Katalog + HTTP + pesan PRD §9.8 (stub 501 dihapus di T1-07) |
 | `app/core/schemas.py` | Dws | COMPLETE | SA §10.1–§10.2 | `ApiModel` camelCase, `ErrorCode`, `ErrorEnvelope`; izin domain `.test` |
 | `app/core/ids.py` | Dws | COMPLETE | SA §6.3, §6.3.1 | Generator Crockford, proofId, referenceCode, issuerRef, normalisasi |
 | `app/core/security.py` | Dws | COMPLETE | SA §8.1 | bcrypt (potong 72 byte), JWT HS256, hash token, compare constant-time |
@@ -201,7 +201,7 @@ Semua pemeriksaan dijalankan terhadap stack nyata (Anvil nyata); tidak ada mock 
 | D-01 | `dev.py openapi` juga meregenerasi `src/lib/api/schema.d.ts` kedua app via `openapi-typescript@7.13.0` di container Node. | Instruksi scaffolding; SA §15.2 hanya menyebut ekspor OpenAPI. |
 | D-02 | Port host dapat dioverride via `CONSOLE_HOST_PORT`, `PORTAL_HOST_PORT`, `BACKEND_HOST_PORT`, `AI_SERVICE_HOST_PORT`, `CHAIN_HOST_PORT` (default tetap SA §15.1). | Port 3000/8001 bentrok dengan aplikasi lain di mesin anggota; port internal tidak berubah. Bila port Console/backend diubah, `CORS_ALLOWED_ORIGINS`/`NEXT_PUBLIC_API_BASE_URL` harus ikut diubah. |
 | D-03 | Service `chain` berjalan sebagai `user: "0:0"` dan `stop_signal: SIGINT`. | Image Foundry berjalan sebagai uid 1000, sedangkan volume `/data` dibuat root-owned; SIGINT memastikan anvil menyimpan state saat berhenti (TOI-01). |
-| D-04 | Kode error tambahan `NOT_FOUND` (404) dan `METHOD_NOT_ALLOWED` (405) untuk route tidak dikenal, serta `NOT_IMPLEMENTED` (501) sementara. | SA §10.3 tidak punya kode untuk kasus routing; envelope SA §10.2 tetap dipakai. `NOT_IMPLEMENTED` harus dihapus setelah seluruh stub terisi. |
+| D-04 | Kode error tambahan `NOT_FOUND` (404) dan `METHOD_NOT_ALLOWED` (405) untuk route tidak dikenal, serta kode 501 sementara selama scaffolding. | SA §10.3 tidak punya kode untuk kasus routing; envelope SA §10.2 tetap dipakai. Kode 501 sementara sudah dihapus dari kedua service dan kontrak (T1-07); `NOT_FOUND`/`METHOD_NOT_ALLOWED` tetap. |
 | D-05 | Respons 422 bawaan FastAPI dihapus dari OpenAPI. | Validasi dipetakan ke 400 `VALIDATION_ERROR` (SA §10.1); 422 di kontrak menyesatkan frontend. |
 | D-05a | Perubahan atas D-05: yang dihapus hanya 422 validasi bawaan FastAPI (`Validation Error`/`HTTPValidationError`); 422 bisnis dari `error_responses` (API-03 `HR_NOT_AFFILIATED`, SA §10.3) tetap di OpenAPI. | Filter D-05 sebelumnya ikut menghapus 422 bisnis sehingga kontrak dan tipe frontend kehilangan `HR_NOT_AFFILIATED`. |
 | D-06 | Domain email `.test` diizinkan dengan menghapus `test` dari `email_validator.SPECIAL_USE_DOMAIN_NAMES`. | email-validator 2.4 menolak `.test`, padahal seed SA §9.5 memakai `@lettrust.test`. Berlaku untuk seluruh input email backend. **Disetujui Dws (21/11).** |
@@ -225,7 +225,7 @@ Semua pemeriksaan dijalankan terhadap stack nyata (Anvil nyata); tidak ada mock 
 
 1. **Selesai (lihat §9, Fix 1).** Multipart Starlette menyimpan berkas >1 MB ke `SpooledTemporaryFile` di disk (default `spool_max_size` 1 MB). Ini bertentangan dengan NFR-02.01/BR-05.03 (berkas hanya di memori). Owner API-04/API-07/I-01 (Zan, Dws, B) perlu memutuskan cara pembacaan berkas, misalnya menaikkan batas spool atau membaca stream mentah.
 2. **Diputuskan:** D-06 dan D-07 disetujui Dws (21/11). D-06 dan D-07 adalah keputusan keamanan kecil di `core` yang perlu disetujui Dws.
-3. Kode `NOT_IMPLEMENTED` ada di `ErrorCode` OpenAPI. Hapus setelah semua endpoint terimplementasi, lalu jalankan `dev.py openapi`.
+3. **Selesai (T1-07).** Kode error stub 501 dihapus dari `ErrorCode` backend dan ai-service, dari respons error OpenAPI, dan dari tipe frontend hasil `dev.py openapi`.
 4. **Selesai (lihat §9, Fix 2).** Dependency transitif Python tidak dikunci (hanya dependency langsung `==`). Untuk reprodusibilitas penuh, pertimbangkan `pip freeze` ke berkas constraints.
 5. Warning `StarletteDeprecationWarning` dari `fastapi.testclient` (httpx → httpx2) muncul di test backend; berasal dari upstream dan tidak memengaruhi hasil.
 6. `forge build` memberi 3 warning mutabilitas karena fungsi contract masih stub; hilang setelah implementasi.

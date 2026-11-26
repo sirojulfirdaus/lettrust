@@ -4,7 +4,7 @@ Lettrust adalah prototipe akademik (II3120 LaSTI, ITB, Kelompok 04, Deliverable 
 
 > Mock, fake, contoh kontrak, dan suite conformance untuk pengembangan paralel: [docs/MOCKS.md](docs/MOCKS.md).
 
-> Status: walking skeleton. Infrastruktur, kontrak API, skema data, dan health check berjalan; logika bisnis masih STUB (HTTP 501 `NOT_IMPLEMENTED`). Rincian: [docs/SCAFFOLD_REPORT.md](docs/SCAFFOLD_REPORT.md).
+> Status: seluruh endpoint SA §10.4 sudah diimplementasikan; tidak ada lagi respons stub 501. Catatan scaffold dan deviasi: [docs/SCAFFOLD_REPORT.md](docs/SCAFFOLD_REPORT.md).
 
 ## Prasyarat
 

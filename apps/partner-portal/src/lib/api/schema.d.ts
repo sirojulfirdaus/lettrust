@@ -283,10 +283,10 @@ export interface components {
         };
         /**
          * ErrorCode
-         * @description Katalog kode error SA §10.3 (ditambah NOT_IMPLEMENTED sementara selama scaffolding).
+         * @description Katalog kode error SA §10.3 ditambah NOT_FOUND/METHOD_NOT_ALLOWED untuk routing (D-04).
          * @enum {string}
          */
-        ErrorCode: "VALIDATION_ERROR" | "INVALID_INPUT_COMBINATION" | "AI_ONLY_REQUIRES_INCLUDE_RISK" | "INVALID_REFERENCE_CODE_FORMAT" | "EMPTY_FILE" | "MULTIPLE_FILES" | "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "FORBIDDEN_OPERATION" | "ISSUER_NOT_FOUND" | "PROOF_NOT_FOUND" | "EMAIL_ALREADY_REGISTERED" | "ACCOUNT_ALREADY_AFFILIATED" | "REGISTRATION_NUMBER_ALREADY_EXISTS" | "ISSUER_DECISION_ALREADY_MADE" | "ISSUER_NOT_VERIFIED" | "HR_ALREADY_AUTHORIZED" | "PROOF_ALREADY_REVOKED" | "IDEMPOTENCY_KEY_CONFLICT" | "DUPLICATE_ACTIVE_DOCUMENT" | "HR_NOT_AFFILIATED" | "FILE_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "INTERNAL_ERROR" | "REGISTRY_UNAVAILABLE" | "REGISTRY_TRANSACTION_FAILED" | "SERVICE_UNAVAILABLE" | "AI_PROVIDER_UNCONFIGURED" | "AI_QUOTA_EXCEEDED" | "AI_PROVIDER_ERROR" | "AI_OUTPUT_INVALID" | "AI_TIMEOUT" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "NOT_IMPLEMENTED";
+        ErrorCode: "VALIDATION_ERROR" | "INVALID_INPUT_COMBINATION" | "AI_ONLY_REQUIRES_INCLUDE_RISK" | "INVALID_REFERENCE_CODE_FORMAT" | "EMPTY_FILE" | "MULTIPLE_FILES" | "UNAUTHENTICATED" | "INVALID_CREDENTIALS" | "FORBIDDEN_OPERATION" | "ISSUER_NOT_FOUND" | "PROOF_NOT_FOUND" | "EMAIL_ALREADY_REGISTERED" | "ACCOUNT_ALREADY_AFFILIATED" | "REGISTRATION_NUMBER_ALREADY_EXISTS" | "ISSUER_DECISION_ALREADY_MADE" | "ISSUER_NOT_VERIFIED" | "HR_ALREADY_AUTHORIZED" | "PROOF_ALREADY_REVOKED" | "IDEMPOTENCY_KEY_CONFLICT" | "DUPLICATE_ACTIVE_DOCUMENT" | "HR_NOT_AFFILIATED" | "FILE_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "INTERNAL_ERROR" | "REGISTRY_UNAVAILABLE" | "REGISTRY_TRANSACTION_FAILED" | "SERVICE_UNAVAILABLE" | "AI_PROVIDER_UNCONFIGURED" | "AI_QUOTA_EXCEEDED" | "AI_PROVIDER_ERROR" | "AI_OUTPUT_INVALID" | "AI_TIMEOUT" | "NOT_FOUND" | "METHOD_NOT_ALLOWED";
         /**
          * ErrorDetail
          * @description Rincian error validasi per field (hanya untuk VALIDATION_ERROR).
@@ -898,15 +898,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
         };
     };
     login: {
@@ -958,15 +949,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
         };
     };
     getSession: {
@@ -1007,15 +989,6 @@ export interface operations {
             };
             /** @description Kode error: INTERNAL_ERROR */
             500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1076,15 +1049,6 @@ export interface operations {
             };
             /** @description Kode error: INTERNAL_ERROR */
             500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1161,15 +1125,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
         };
     };
     getIssuer: {
@@ -1221,15 +1176,6 @@ export interface operations {
             };
             /** @description Kode error: INTERNAL_ERROR */
             500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1310,15 +1256,6 @@ export interface operations {
             };
             /** @description Kode error: INTERNAL_ERROR */
             500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1415,15 +1352,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
         };
     };
     listProofs: {
@@ -1477,15 +1405,6 @@ export interface operations {
             };
             /** @description Kode error: INTERNAL_ERROR */
             500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1582,15 +1501,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
             /** @description Kode error: REGISTRY_UNAVAILABLE, REGISTRY_TRANSACTION_FAILED */
             503: {
                 headers: {
@@ -1660,15 +1570,6 @@ export interface operations {
             };
             /** @description Kode error: INTERNAL_ERROR */
             500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1767,15 +1668,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
             /** @description Kode error: REGISTRY_UNAVAILABLE, REGISTRY_TRANSACTION_FAILED */
             503: {
                 headers: {
@@ -1856,15 +1748,6 @@ export interface operations {
             };
             /** @description Kode error: INTERNAL_ERROR */
             500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Kode error: NOT_IMPLEMENTED */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
