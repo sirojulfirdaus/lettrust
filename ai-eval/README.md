@@ -13,7 +13,8 @@ Tooling dataset dan evaluasi pipeline AI. Protokol: [`docs/evaluation/protocol.m
 | `scripts/generate_fixtures.py` | COMPLETE: entry point T5-06 yang memanggil `../fixtures/fixture_builder.py` dengan renderer T5-05; mendukung `--check` dan `--test` |
 | `scripts/baseline.py`, `scripts/_eval_schema.py` | COMPLETE: baseline regex ID/EN dan kontrak hasil evaluasi v1; CLI pengembangan hanya memproses dev |
 | `scripts/run_eval.py`, `scripts/_eval_records.py` | COMPLETE: pemilihan model T5-07 hanya pada dev; format terdahulu belum mengikuti kontrak bersama §6 |
-| `scripts/freeze_testset.py`, `scripts/metrics.py` | STUB: tooling evaluasi lanjutan, belum boleh dipakai untuk menyatakan hasil test set |
+| `scripts/freeze_testset.py` | STUB: pembekuan checksum test set belum tersedia |
+| `scripts/metrics.py` | COMPLETE: menghasilkan `metrics.json` dan `confusion.csv`; 9 test sintetis lulus. Belum ada metrik final dari test set. |
 | `results/<timestamp>/` | `raw.jsonl`, `metrics.json`, `confusion.csv`, `run_config.json` |
 
 Menjalankan tooling yang tersedia dari root repository (di image `ai-service`, `ai-eval/` dan `fixtures/` ter-mount):
@@ -27,6 +28,8 @@ python scripts/dev.py eval generate_fixtures --check
 python scripts/dev.py eval generate_fixtures --test
 python scripts/dev.py eval baseline --split dev --check
 python scripts/dev.py eval baseline --split dev
+python scripts/dev.py eval metrics /ai-eval/results/<nama-run> --dataset-dir /ai-eval/dataset
+python scripts/dev.py eval metrics --test
 ```
 
 Cara memakai fixture, checksum, test validator backend, dan hasil skenario yang diharapkan dijelaskan di [fixtures/README.md](../fixtures/README.md). FX-01–FX-10 dibuat mandiri dan bukan tambahan dev/test set.
@@ -43,7 +46,7 @@ Baseline mendeteksi tujuh indikator melalui pola ID/EN dengan pengecualian per k
 
 `--check` menjalankan ekstraksi/OCR asli pada PDF dev dan memvalidasi checksum, tanpa menulis hasil. Tanpa flag itu, `--output <direktori-baru>` memilih lokasi run; default `results/<UTC>-baseline/`. Hasilnya `raw.jsonl` dan `run_config.json`, bukan metrik. Direktori lama dan output di dalam dataset ditolak. Kegagalan dokumen tetap dicatat sebagai UNAVAILABLE dengan result null dan exit code 1. PDF test tidak dibuka; CLI menolak `--split test` selama pengembangan.
 
-Kontrak yang harus dipakai **B (T5-07/T5-08), Pash (T4-07), dan Sat (T6-05)** ada di [protocol.md §6](../docs/evaluation/protocol.md#6-kontrak-output-evaluasi-v1), dengan model bersama `scripts/_eval_schema.py`. Baseline sudah memakai kontrak tersebut. Runner T5-07 sudah diimplementasikan, tetapi formatnya masih berbeda dan harus diselaraskan B sebelum evaluasi gabungan; `metrics.py` masih menunggu Pash. Protokol berstatus DRAF, dengan hasil dev dan keputusan sementara di [§7](../docs/evaluation/protocol.md#7-hasil-aktual-dan-keputusan). Bukti T5-07 dipertahankan dalam format asal. Belum ada hasil evaluasi final atau klaim kinerja test set.
+Kontrak yang harus dipakai **B (T5-07/T5-08), Pash (T4-07), dan Sat (T6-05)** ada di [protocol.md §6](../docs/evaluation/protocol.md#6-kontrak-output-evaluasi-v1), dengan model bersama `scripts/_eval_schema.py`. Baseline sudah memakai kontrak tersebut. `metrics.py` (T4-07) COMPLETE dan memiliki adapter untuk output legacy T5-07 serta kontrak v1, termasuk validasi subset ID/checksum dan lifecycle run. Runner T5-07 saat ini masih mengeluarkan format legacy dan hanya menjalankan dev; B perlu menyelaraskannya sebelum evaluasi final gabungan. Protokol berstatus DRAF, dengan hasil dev dan keputusan sementara di [§7](../docs/evaluation/protocol.md#7-hasil-aktual-dan-keputusan). Bukti T5-07 dipertahankan dalam format asal. Belum ada hasil evaluasi final atau klaim kinerja test set.
 
 Jika user non-root di image tidak dapat menulis bind mount Linux, jalankan container dengan UID/GID pemilik workspace, tanpa mengubah launcher/file bersama atau permission seluruh repository:
 
