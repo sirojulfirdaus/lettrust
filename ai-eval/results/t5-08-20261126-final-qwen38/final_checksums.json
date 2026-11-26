@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "manifestSha256": "e7cb70b0e2a0e99a06be30c064903c2eff5baf79f3c8741357423c8edb7f86fb",
+  "snapshotSha256": "2500f7c7544417aa3800bd5dbe7e86dc7f86971dd7350f00437077b8fa1ecb34",
+  "files": {
+    "completion_authorization.json": "7f413a679afc0c77db6bf6d5e6bafcae52503e3e8d8444935c39ea49006cf784",
+    "completion_model_outputs.jsonl": "5bfbe2c5f798a911eacdacc354fd736911b5ea3621817d1809891fb0f3bb2053",
+    "completion_plan.json": "3ae39b7ac579314c167648c1b2cfc589da00759592589ae2f97baa10c3de6bd7",
+    "completion_raw.jsonl": "a6f0dbffe5b6676cec57993456a7523fb438b7d421ccb3f6d2eb44296eb3f7f6",
+    "completion_summary.json": "5f0843e0f93610e5676fa551220892f3d5e1cac499066a0df4761d29fdd4e7f2",
+    "confusion.csv": "d7babb7cfcfd4f580b8a0c179b5f544c6403ed94dff037efba534527959e6496",
+    "human_review_index.json": "f7f067ce05d6e437da6adf7bec16edc250a83efbed683586bdef1c52d8351194",
+    "metrics.json": "bede10b51a01f6b28eb3338f9e759db92020156367b5c8a98bcb10ca3ceb228a",
+    "model_outputs.jsonl": "78bc51b6702b7fc54a4d102140cfa5f9c94bd47e841413d0a24551f8ad42538f",
+    "partial_checksums.json": "7b9bae12fb9129b3f626c9fa75054ac39d508540035d274c0e93b937cfc7ed53",
+    "partial_model_outputs.jsonl": "b28d5773bd9d3658eeddb4b4af0983b23786c163284c91974d0368a753e2c2bd",
+    "partial_raw.jsonl": "65e00ced540b8b0c0042689b7ff4e5ece42fba98fa7db0a842f630a7b24e1348",
+    "partial_run_config.json": "6fa64fb8feafb0440490690bacc9bacdf5a0b77a8bd6f57bc39a863ddfaee0dc",
+    "raw.jsonl": "6273275531c5112e5b03e7662e8409d66e13ea1910e63fa7cd807b932b926d96",
+    "remaining_baseline.jsonl": "102938d8b453e4a1c2eaf1a85b20e71cbca13b701d408bd0e6c415fee8a44edd",
+    "retry_attempts.jsonl": "2d082e28aad20e7c7c349df67ef2b18b8d5d3e6b87aade23709b7e719d808caf",
+    "retry_model_outputs.jsonl": "0cd75b339efdc3f33c7c3a71e87bc6fdfc84087a5cebbdce01a8b3d72310597e",
+    "retry_raw.jsonl": "8307b0504fb3b201946f5d3204bc3d99069763c5b34d99ee96dcddb6ff79ba6a",
+    "run_config.json": "7dd4617353b705ec6608e698f5396105b2422b7324d086b875b0242783288615"
+  }
+}
