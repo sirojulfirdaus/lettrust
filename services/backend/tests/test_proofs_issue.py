@@ -439,3 +439,141 @@ def test_parallel_requests_share_pending_row_and_receipt(
     assert first_response.status_code == second_response.status_code == 201
     assert first_response.json() == second_response.json()
     assert [operation for operation, _ in registry.calls] == ["issue_proof"]
+
+
+def test_duplicate_active_document_rejected_before_registry(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """FR-03.06 AC-01: hash ACTIVE yang sama dari penerbit sama dengan kunci baru → 409 tanpa baris atau transaksi."""
+    issuer_id, headers = make_account()
+    assert issue(client, headers, "offer-1").status_code == 201
+    registry.calls.clear()
+    assert_error(issue(client, headers, "offer-2"), 409, "DUPLICATE_ACTIVE_DOCUMENT")
+    assert registry.calls == []
+    assert len(issuer_proofs(issuer_id)) == 1
+
+
+def test_same_hash_from_other_issuer_is_issued(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """SA §6.5 butir 5 membatasi duplikat pada penerbit yang sama; penerbit lain boleh mencatat hash yang sama."""
+    _, first = make_account()
+    _, second = make_account()
+    assert issue(client, first).status_code == 201
+    response = issue(client, second)
+    assert response.status_code == 201
+    assert [operation for operation, _ in registry.calls].count("issue_proof") == 2
+
+
+def test_same_hash_after_revocation_is_new_proof(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """FR-03.06 AC-03: berkas identik dengan bukti REVOKED dicatat sebagai bukti baru."""
+    _, headers = make_account()
+    revoked_id = issue(client, headers, "offer-1").json()["proofId"]
+    revoked = client.post(f"{URL}/{revoked_id}/revocations", headers=headers, json={"reasonCode": "OFFER_WITHDRAWN"})
+    assert revoked.status_code == 201
+    response = issue(client, headers, "offer-2")
+    assert response.status_code == 201
+    assert response.json()["proofId"] != revoked_id
+    assert response.json()["lifecycleStatus"] == "ACTIVE"
+
+
+def test_idempotent_replay_is_not_duplicate(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """SCN-15: kunci dan berkas sama mengembalikan hasil awal (bukan 409) karena idempotensi diperiksa lebih dulu."""
+    issuer_id, headers = make_account()
+    first = issue(client, headers, "offer-1")
+    replay = issue(client, headers, "offer-1")
+    assert first.status_code == replay.status_code == 201
+    assert replay.json() == first.json()
+    assert [operation for operation, _ in registry.calls] == ["issue_proof"]
+    assert len(issuer_proofs(issuer_id)) == 1
+
+
+def issue_operations(registry: MockRegistryAdapter) -> int:
+    """Jumlah pengiriman transaksi issueProof yang dicatat mock."""
+    return [operation for operation, _ in registry.calls].count("issue_proof")
+
+
+def revoke(client: TestClient, headers: dict[str, str], proof_id: str) -> Response:
+    """Mencabut bukti melalui API-06 dengan alasan enum tetap."""
+    return client.post(f"{URL}/{proof_id}/revocations", headers=headers, json={"reasonCode": "OFFER_WITHDRAWN"})
+
+
+def test_issue_receipt_timeout_on_chain_blocks_new_key(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Receipt penerbitan terlambat tetapi bukti sudah ACTIVE di registry → kunci baru 409 tanpa transaksi kedua."""
+    issuer_id, headers = make_account()
+    registry.fail_next("issue_proof", registry_adapter.RegistryTransactionPending(), commit=True)
+    assert_error(issue(client, headers, "offer-1"), 503, "REGISTRY_TRANSACTION_FAILED")
+    assert [proof.status for proof in issuer_proofs(issuer_id)] == ["PENDING"]
+    registry.calls.clear()
+    assert_error(issue(client, headers, "offer-2"), 409, "DUPLICATE_ACTIVE_DOCUMENT")
+    assert issue_operations(registry) == 0
+    assert len(issuer_proofs(issuer_id)) == 1
+
+
+def test_issue_receipt_unknown_stops_without_transaction(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Penerbitan PENDING yang belum terlihat di registry belum pasti → 503 tanpa transaksi; kunci semula memulihkan."""
+    issuer_id, headers = make_account()
+    registry.fail_next("issue_proof", registry_adapter.RegistryTransactionPending())
+    assert_error(issue(client, headers, "offer-1"), 503, "REGISTRY_TRANSACTION_FAILED")
+    registry.calls.clear()
+    assert_error(issue(client, headers, "offer-2"), 503, "REGISTRY_TRANSACTION_FAILED")
+    assert issue_operations(registry) == 0
+    assert issue(client, headers, "offer-1").status_code == 201
+    assert len(issuer_proofs(issuer_id)) == 1
+
+
+def test_revoke_receipt_timeout_allows_reissue(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Receipt pencabutan terlambat tetapi registry sudah REVOKED → berkas sama boleh diterbitkan ulang (AC-03)."""
+    _, headers = make_account()
+    proof_id = issue(client, headers, "offer-1").json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending(), commit=True)
+    assert_error(revoke(client, headers, proof_id), 503, "REGISTRY_TRANSACTION_FAILED")
+    response = issue(client, headers, "offer-2")
+    assert response.status_code == 201
+    assert response.json()["proofId"] != proof_id
+
+
+def test_revoke_receipt_unknown_still_duplicate(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Pencabutan tertunda yang belum terlihat di registry → bukti masih ACTIVE, penerbitan ulang tetap 409."""
+    _, headers = make_account()
+    proof_id = issue(client, headers, "offer-1").json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending())
+    assert_error(revoke(client, headers, proof_id), 503, "REGISTRY_TRANSACTION_FAILED")
+    registry.calls.clear()
+    assert_error(issue(client, headers, "offer-2"), 409, "DUPLICATE_ACTIVE_DOCUMENT")
+    assert issue_operations(registry) == 0
+
+
+def test_unfinished_duplicate_with_registry_down_stops(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Status baris belum final tidak dapat dibaca karena registry mati → 503 REGISTRY_UNAVAILABLE tanpa baris baru."""
+    issuer_id, headers = make_account()
+    registry.fail_next("issue_proof", registry_adapter.RegistryTransactionPending(), commit=True)
+    issue(client, headers, "offer-1")
+    registry.set_unavailable(True)
+    assert_error(issue(client, headers, "offer-2"), 503, "REGISTRY_UNAVAILABLE")
+    assert len(issuer_proofs(issuer_id)) == 1
+
+
+def test_definitive_failure_does_not_block_new_key(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Penerbitan FAILED yang tidak ada di registry bukan duplikat; kunci baru menerbitkan bukti."""
+    _, headers = make_account()
+    registry.fail_next("issue_proof", registry_adapter.RegistryTransactionFailed())
+    assert_error(issue(client, headers, "offer-1"), 503, "REGISTRY_TRANSACTION_FAILED")
+    assert issue(client, headers, "offer-2").status_code == 201
+
+
+def test_retry_old_key_rejected_when_other_key_active(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Urutan A → B → A: retry kunci lama yang akan mengirim transaksi baru ditolak bila hash sama sudah ACTIVE."""
+    issuer_id, headers = make_account()
+    registry.fail_next("issue_proof", registry_adapter.RegistryUnavailable())
+    assert_error(issue(client, headers, "offer-a"), 503, "REGISTRY_UNAVAILABLE")
+    failed_id = issuer_proofs(issuer_id)[0].proof_id
+    active_id = issue(client, headers, "offer-b").json()["proofId"]
+    registry.calls.clear()
+    assert_error(issue(client, headers, "offer-a"), 409, "DUPLICATE_ACTIVE_DOCUMENT")
+    assert issue_operations(registry) == 0
+    assert {proof.proof_id: proof.status for proof in issuer_proofs(issuer_id)} == {
+        failed_id: "FAILED",
+        active_id: "ACTIVE",
+    }
+    # Setelah bukti B dicabut, kunci A boleh melanjutkan proofId semula (AC-03).
+    assert revoke(client, headers, active_id).status_code == 201
+    response = issue(client, headers, "offer-a")
+    assert response.status_code == 201
+    assert response.json()["proofId"] == failed_id

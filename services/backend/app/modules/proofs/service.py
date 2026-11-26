@@ -66,6 +66,7 @@ def issue_proof(
         proof = db.scalar(select(Proof).where(Proof.issuer_id == hr.issuer_id, Proof.idempotency_key == key))
         retry = proof is not None
         if proof is None:
+            _reject_active_duplicate(db, hr, document_hash)
             proof = _reserve_proof(db, hr, document_hash, key)
         elif proof.document_hash != document_hash:
             raise AppError(ErrorCode.IDEMPOTENCY_KEY_CONFLICT)
@@ -74,7 +75,7 @@ def issue_proof(
 
         # Lepas transaksi SQLite sebelum RPC; baris PENDING sudah tersimpan untuk pemulihan.
         db.commit()
-        tx = _confirm_issue(db, proof, hr.issuer_ref, retry=retry)
+        tx = _confirm_issue(db, hr, proof, retry=retry)
         proof.status = "ACTIVE"
         proof.issue_tx_hash = tx.tx_hash
         proof.issue_block = tx.block_number
@@ -83,6 +84,39 @@ def issue_proof(
         proof.updated_at = datetime.now(UTC)
         db.commit()
         return _issue_response(proof)
+
+
+def _reject_active_duplicate(
+    db: Session, hr: AuthorizedHrContext, document_hash: str, exclude_proof_id: str | None = None
+) -> None:
+    """FR-03.06 / SA §6.5 butir 5: tolak hash yang sama dengan bukti ACTIVE penerbit yang sama sebelum transaksi.
+
+    Berlaku untuk kunci idempotensi baru (sebelum INSERT) dan retry kunci lama yang akan mengirim transaksi baru
+    (baris retry itu dikecualikan lewat `exclude_proof_id`). Bukti REVOKED dan penerbit lain tidak menghalangi
+    (AC-03). Cermin ACTIVE tanpa pencabutan tertunda sudah final sehingga ditolak tanpa RPC. Baris yang belum final
+    (penerbitan PENDING setelah receipt timeout, ACTIVE dengan pencabutan tertunda, atau FAILED) dibaca dari registry
+    tanpa transaksi; bila status belum dapat dipastikan, penerbitan dihentikan sebelum transaksi baru dikirim.
+    """
+    rows = db.execute(
+        select(Proof.proof_id, Proof.status, Proof.revoke_idempotency_key).where(
+            Proof.issuer_id == hr.issuer_id,
+            Proof.document_hash == document_hash,
+            Proof.status.in_(("ACTIVE", "PENDING", "FAILED")),
+            Proof.proof_id != exclude_proof_id if exclude_proof_id else true(),
+        )
+    ).all()
+    if any(row.status == "ACTIVE" and row.revoke_idempotency_key is None for row in rows):
+        raise AppError(ErrorCode.DUPLICATE_ACTIVE_DOCUMENT)
+    for row in rows:
+        try:
+            record = _read_registry_proof(row.proof_id, hr.issuer_ref)
+        except registry_adapter.RegistryUnavailable:
+            raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+        if record.exists and record.status == registry_adapter.OnChainStatus.ACTIVE:
+            raise AppError(ErrorCode.DUPLICATE_ACTIVE_DOCUMENT)
+        if not record.exists and row.status != "FAILED":
+            # Transaksi penerbitan sebelumnya masih dapat terkonfirmasi; ulangi dengan Idempotency-Key semula.
+            raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
 
 
 def _reserve_proof(db: Session, hr: AuthorizedHrContext, document_hash: str, key: str) -> Proof:
@@ -110,14 +144,17 @@ def _reserve_proof(db: Session, hr: AuthorizedHrContext, document_hash: str, key
     raise RuntimeError("Tidak dapat menyimpan identifier bukti yang unik")
 
 
-def _confirm_issue(db: Session, proof: Proof, issuer_ref: str, *, retry: bool) -> registry_adapter.TxResult:
+def _confirm_issue(db: Session, hr: AuthorizedHrContext, proof: Proof, *, retry: bool) -> registry_adapter.TxResult:
     """Memulihkan receipt yang sudah ada atau mengirim transaksi untuk proofId yang dicadangkan."""
     # Bergantung pada T6-02; diuji dengan MockRegistryAdapter.
+    issuer_ref = hr.issuer_ref
     registry = registry_adapter.get_registry_adapter()
     if retry:
         tx = _find_confirmed_issue(registry, proof, issuer_ref)
         if tx is not None:
             return tx
+        # Kunci lama akan mengirim transaksi baru; bukti lain dengan hash sama bisa sudah ACTIVE (FR-03.06).
+        _reject_active_duplicate(db, hr, proof.document_hash, exclude_proof_id=proof.proof_id)
 
     if proof.status == "FAILED":
         proof.status = "PENDING"
