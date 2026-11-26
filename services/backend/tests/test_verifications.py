@@ -24,6 +24,9 @@ from fakes.proofs import (
 )
 from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
+from test_proofs_issue import PDF as ISSUED_PDF
+from test_proofs_issue import registry as registry
+from test_proofs_read import owned_proof as owned_proof
 
 from app.core.config import get_settings
 from app.core.db import get_session_factory
@@ -368,25 +371,24 @@ def test_found_without_hash_not_checked(client, partner_headers, install, caplog
     assert (logged["reason"], logged["exception"], logged["lookup"]) == ("unexpected_error", "ValueError", "FOUND")
 
 
-# DLT-14: stub T3-05 (NotImplementedError) → 200 dengan proofCheck UNAVAILABLE / REGISTRY_UNAVAILABLE dan
-# integritas NOT_CHECKED; tugas AI tidak dibatalkan (COMPLETED). Log memakai reason=not_implemented tanpa pesan.
-def test_proof_reader_stub_unavailable(client, partner_headers, install, monkeypatch, caplog):
-    _, fake = install(analysis="low")
-
-    # Meniru stub proofs.service yang belum diimplementasikan, dengan pesan berisi penanda sintetis.
-    async def stub_reader(reference_code: str):
-        raise NotImplementedError("NILAI-RAHASIA belum diimplementasikan")
-
-    monkeypatch.setattr("app.modules.proofs.service.read_proof_for_verification", stub_reader)
+# Pembaca bukti nyata tanpa stub (SQLite + MockRegistryAdapter; proofs_service tidak diganti) → FOUND/ACTIVE dan
+# MATCH, tanpa log proof.read_failed. Isolasi exception pembaca diuji test_unexpected_proof_exception_is_isolated.
+def test_real_proof_reader_found(client, partner_headers, registry, owned_proof, caplog):
+    _, _, proof = owned_proof
+    registry.calls.clear()
     with caplog.at_level(logging.WARNING):
-        response = post(client, partner_headers, code=CODE, file=MATCHING_FILE_BYTES, include_risk=True)
+        response = post(client, partner_headers, code=proof["referenceCode"], file=ISSUED_PDF)
     assert response.status_code == 200, response.text
-    assert_matches_example(response.json(), "api-07.registry-unavailable.json")
-    assert fake.requests and fake.requests[0].url.path == EXTRACTION_PATH
-    logged = formatted_log(caplog, "proof.read_failed")
-    assert (logged["reason"], logged["exception"]) == ("not_implemented", "NotImplementedError")
-    assert (logged["errorCode"], logged["lookup"]) == ("REGISTRY_UNAVAILABLE", "UNAVAILABLE")
-    assert "NILAI-RAHASIA" not in json.dumps(logged) and "NILAI-RAHASIA" not in caplog.text
+    body = response.json()
+    assert (body["mode"], body["proofCheck"]["lookup"], body["proofCheck"]["lifecycleStatus"]) == (
+        "REFERENCE_CHECK",
+        "FOUND",
+        "ACTIVE",
+    )
+    assert body["integrityCheck"] == {"result": "MATCH", "reason": None, "hashAlgorithm": "SHA-256"}
+    assert body["riskAnalysis"]["state"] == "NOT_REQUESTED"
+    assert registry.calls == [("get_proof", (proof["proofId"],))]
+    assert not [r for r in caplog.records if getattr(r, "event", None) == "proof.read_failed"]
 
 
 # Membaca baris verification_logs untuk satu verificationId sebagai dict kolom → nilai (None bila tidak ada).

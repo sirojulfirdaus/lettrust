@@ -2,7 +2,7 @@
 
 Owner: Pash (PIC 4). Portal job simulasi untuk pelamar tanpa akun, dengan route server (BFF) `/api/verify` sebagai satu-satunya client API-07 (PRD FR-02; SA §11.3).
 
-Status: kerangka (walking skeleton). Halaman masih placeholder; `POST /api/verify` mengembalikan 501 `NOT_IMPLEMENTED`; modul `src/lib/verification/*` masih stub. Modul `src/lib/server/config.ts` (validasi env server) sudah lengkap.
+Status: halaman pemeriksaan, route server `POST /api/verify` (meneruskan ke API-07), modul `src/lib/verification/*`, dan `src/lib/server/config.ts` sudah diimplementasikan.
 
 ## Konfigurasi server (tanpa prefiks `NEXT_PUBLIC_`)
 

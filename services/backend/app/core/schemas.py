@@ -19,7 +19,7 @@ class ApiModel(BaseModel):
 
 
 class ErrorCode(StrEnum):
-    """Katalog kode error SA §10.3 (ditambah NOT_IMPLEMENTED sementara selama scaffolding)."""
+    """Katalog kode error SA §10.3 ditambah NOT_FOUND/METHOD_NOT_ALLOWED untuk routing (D-04)."""
 
     VALIDATION_ERROR = "VALIDATION_ERROR"
     INVALID_INPUT_COMBINATION = "INVALID_INPUT_COMBINATION"
@@ -56,7 +56,6 @@ class ErrorCode(StrEnum):
     AI_TIMEOUT = "AI_TIMEOUT"
     NOT_FOUND = "NOT_FOUND"
     METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED"
-    NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
 
 
 class ErrorDetail(ApiModel):

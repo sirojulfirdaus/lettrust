@@ -70,7 +70,7 @@ def resolve_reference_code(raw_code: str | None, has_file: bool, include_risk: b
 # Bukti dan AI berjalan paralel; AI_ONLY tidak memanggil pembacaan bukti/registry. `file.sha256` dihitung
 # core.files dari byte yang sama yang dikirim ke ekstraksi, dan dipakai integrity_from(mode, proof_check,
 # registry_document_hash, file_sha256) tanpa hash ulang. Hanya pembatalan request yang diteruskan (tugas AI
-# dibatalkan); kegagalan lain, termasuk stub T3-05 (NotImplementedError), menjadi status komponen.
+# dibatalkan); kegagalan lain menjadi status komponen.
 # Setiap respons yang dihasilkan dicatat ke verification_logs (T1-06) atas nama `partner`.
 async def verify_offer(
     partner: Partner,
@@ -139,21 +139,18 @@ def _enum_value(value: Enum | None) -> str | None:
     return value.value if value is not None else None
 
 
-# Komponen proofCheck dan documentHash registry (SA §5.3.1). Kontrak T3-05: pembaca tidak raise. Pengaman kedua
-# (DLT-14): exception apa pun, termasuk stub NotImplementedError, menjadi UNAVAILABLE / REGISTRY_UNAVAILABLE (bukan
-# NOT_FOUND); stub dicatat dengan reason=not_implemented agar tetap terlihat di log.
+# Komponen proofCheck dan documentHash registry (SA §5.3.1). Kontrak pembaca bukti: tidak raise. Pengaman kedua
+# (DLT-14): exception apa pun menjadi UNAVAILABLE / REGISTRY_UNAVAILABLE (bukan NOT_FOUND) dan HTTP 200.
 async def _proof_check(reference_code: str | None) -> tuple[ProofCheck, str | None]:
     if not reference_code:
         return PROOF_NOT_REQUESTED, None
     try:
-        # Bergantung pada T3-05; diuji dengan FakeProofReader.
         read = await proofs_service.read_proof_for_verification(reference_code)
         return read.proof_check, read.registry_document_hash
     except Exception as exc:
         _log_unexpected(
             "proof.read_failed",
             exc,
-            reason="not_implemented" if isinstance(exc, NotImplementedError) else "unexpected_error",
             errorCode=ProofReason.REGISTRY_UNAVAILABLE.value,
             lookup=ProofLookup.UNAVAILABLE.value,
         )
