@@ -556,3 +556,24 @@ def test_definitive_failure_does_not_block_new_key(client: TestClient, registry:
     registry.fail_next("issue_proof", registry_adapter.RegistryTransactionFailed())
     assert_error(issue(client, headers, "offer-1"), 503, "REGISTRY_TRANSACTION_FAILED")
     assert issue(client, headers, "offer-2").status_code == 201
+
+
+def test_retry_old_key_rejected_when_other_key_active(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Urutan A → B → A: retry kunci lama yang akan mengirim transaksi baru ditolak bila hash sama sudah ACTIVE."""
+    issuer_id, headers = make_account()
+    registry.fail_next("issue_proof", registry_adapter.RegistryUnavailable())
+    assert_error(issue(client, headers, "offer-a"), 503, "REGISTRY_UNAVAILABLE")
+    failed_id = issuer_proofs(issuer_id)[0].proof_id
+    active_id = issue(client, headers, "offer-b").json()["proofId"]
+    registry.calls.clear()
+    assert_error(issue(client, headers, "offer-a"), 409, "DUPLICATE_ACTIVE_DOCUMENT")
+    assert issue_operations(registry) == 0
+    assert {proof.proof_id: proof.status for proof in issuer_proofs(issuer_id)} == {
+        failed_id: "FAILED",
+        active_id: "ACTIVE",
+    }
+    # Setelah bukti B dicabut, kunci A boleh melanjutkan proofId semula (AC-03).
+    assert revoke(client, headers, active_id).status_code == 201
+    response = issue(client, headers, "offer-a")
+    assert response.status_code == 201
+    assert response.json()["proofId"] == failed_id
