@@ -1,0 +1,159 @@
+{
+  "testCaseId": "TC-005",
+  "scenario": "SCN-05",
+  "startedAtUtc": "2026-11-26T17:06:16.305193+00:00",
+  "finishedAtUtc": "2026-11-26T17:06:17.596535+00:00",
+  "completed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "5a-kode-saja",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_669DC4798C82AA47",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": false,
+        "file": null
+      },
+      "expected": {
+        "httpStatus": 200,
+        "lookup": "FOUND",
+        "lifecycleStatus": "ACTIVE",
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "NO_FILE",
+        "riskState": "NOT_REQUESTED"
+      },
+      "actual": {
+        "httpStatus": 200,
+        "mode": "REFERENCE_CHECK",
+        "lookup": "FOUND",
+        "proofReason": null,
+        "lifecycleStatus": "ACTIVE",
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "NO_FILE",
+        "riskState": "NOT_REQUESTED",
+        "riskReason": null,
+        "category": null,
+        "indicatorCodes": []
+      },
+      "matches": true,
+      "info": {
+        "proofId": "0xcc1cafc3dfc03f7ab6d53287dccfe3565bdc445e3ac542430a3ef8570e088900",
+        "issueTransaction": {
+          "hash": "0x542af2b9e9626cd5d8c94acbc800412be6f650fe60c44b8d5a8ab56c4a8b0d7c",
+          "blockNumber": 5
+        },
+        "guidanceG05": "Panduan G-05 adalah tampilan portal; diperiksa manual di UI, bukan oleh skrip API."
+      },
+      "response": {
+        "verificationId": "VER-XBEXJ8ENM4",
+        "mode": "REFERENCE_CHECK",
+        "proofCheck": {
+          "lookup": "FOUND",
+          "reason": null,
+          "issuer": {
+            "issuerId": "ISS-WAHK7EH8",
+            "companyName": "PT Sinar Demo Sejahtera"
+          },
+          "issuerVerified": true,
+          "lifecycleStatus": "ACTIVE",
+          "issuedAt": "2026-11-26T17:06:17Z",
+          "revokedAt": null
+        },
+        "integrityCheck": {
+          "result": "NOT_CHECKED",
+          "reason": "NO_FILE",
+          "hashAlgorithm": null
+        },
+        "riskAnalysis": {
+          "state": "NOT_REQUESTED",
+          "reason": null,
+          "category": null,
+          "indicators": [],
+          "indicatorDetails": [],
+          "explanation": null,
+          "recommendation": null,
+          "extractionMethod": null,
+          "contentTruncated": null,
+          "pagesAnalyzed": null,
+          "pagesTotal": null
+        }
+      }
+    },
+    {
+      "name": "5b-kode-saja-include-risk",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_CC3AD2FF56E93879",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": null
+      },
+      "expected": {
+        "httpStatus": 200,
+        "lookup": "FOUND",
+        "integrityReason": "NO_FILE",
+        "riskState": "NOT_PERFORMED",
+        "riskReason": "DOCUMENT_CONTENT_UNAVAILABLE",
+        "category": null
+      },
+      "actual": {
+        "httpStatus": 200,
+        "mode": "REFERENCE_CHECK",
+        "lookup": "FOUND",
+        "proofReason": null,
+        "lifecycleStatus": "ACTIVE",
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "NO_FILE",
+        "riskState": "NOT_PERFORMED",
+        "riskReason": "DOCUMENT_CONTENT_UNAVAILABLE",
+        "category": null,
+        "indicatorCodes": []
+      },
+      "matches": true,
+      "info": {
+        "proofId": "0xcc1cafc3dfc03f7ab6d53287dccfe3565bdc445e3ac542430a3ef8570e088900",
+        "issueTransaction": {
+          "hash": "0x542af2b9e9626cd5d8c94acbc800412be6f650fe60c44b8d5a8ab56c4a8b0d7c",
+          "blockNumber": 5
+        }
+      },
+      "response": {
+        "verificationId": "VER-65C4BFWBY9",
+        "mode": "REFERENCE_CHECK",
+        "proofCheck": {
+          "lookup": "FOUND",
+          "reason": null,
+          "issuer": {
+            "issuerId": "ISS-WAHK7EH8",
+            "companyName": "PT Sinar Demo Sejahtera"
+          },
+          "issuerVerified": true,
+          "lifecycleStatus": "ACTIVE",
+          "issuedAt": "2026-11-26T17:06:17Z",
+          "revokedAt": null
+        },
+        "integrityCheck": {
+          "result": "NOT_CHECKED",
+          "reason": "NO_FILE",
+          "hashAlgorithm": null
+        },
+        "riskAnalysis": {
+          "state": "NOT_PERFORMED",
+          "reason": "DOCUMENT_CONTENT_UNAVAILABLE",
+          "category": null,
+          "indicators": [],
+          "indicatorDetails": [],
+          "explanation": null,
+          "recommendation": null,
+          "extractionMethod": null,
+          "contentTruncated": null,
+          "pagesAnalyzed": null,
+          "pagesTotal": null
+        }
+      }
+    }
+  ]
+}
