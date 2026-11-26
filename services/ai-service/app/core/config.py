@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai_compatible", "mock"] = "openai_compatible"
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_api_key: SecretStr = SecretStr("")
-    llm_model: str = Field(default="openai/gpt-oss-120b", min_length=1)
+    llm_model: str = Field(default="qwen/qwen3.8-27b", min_length=1)
     llm_reasoning_effort: Literal["", "low", "medium", "high"] = ""
     llm_request_timeout_seconds: float = Field(default=40, gt=0)
     llm_max_output_tokens: int = Field(default=900, ge=1)
