@@ -439,3 +439,46 @@ def test_parallel_requests_share_pending_row_and_receipt(
     assert first_response.status_code == second_response.status_code == 201
     assert first_response.json() == second_response.json()
     assert [operation for operation, _ in registry.calls] == ["issue_proof"]
+
+
+def test_duplicate_active_document_rejected_before_registry(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """FR-03.06 AC-01: hash ACTIVE yang sama dari penerbit sama dengan kunci baru → 409 tanpa baris atau transaksi."""
+    issuer_id, headers = make_account()
+    assert issue(client, headers, "offer-1").status_code == 201
+    registry.calls.clear()
+    assert_error(issue(client, headers, "offer-2"), 409, "DUPLICATE_ACTIVE_DOCUMENT")
+    assert registry.calls == []
+    assert len(issuer_proofs(issuer_id)) == 1
+
+
+def test_same_hash_from_other_issuer_is_issued(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """SA §6.5 butir 5 membatasi duplikat pada penerbit yang sama; penerbit lain boleh mencatat hash yang sama."""
+    _, first = make_account()
+    _, second = make_account()
+    assert issue(client, first).status_code == 201
+    response = issue(client, second)
+    assert response.status_code == 201
+    assert [operation for operation, _ in registry.calls].count("issue_proof") == 2
+
+
+def test_same_hash_after_revocation_is_new_proof(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """FR-03.06 AC-03: berkas identik dengan bukti REVOKED dicatat sebagai bukti baru."""
+    _, headers = make_account()
+    revoked_id = issue(client, headers, "offer-1").json()["proofId"]
+    revoked = client.post(f"{URL}/{revoked_id}/revocations", headers=headers, json={"reasonCode": "OFFER_WITHDRAWN"})
+    assert revoked.status_code == 201
+    response = issue(client, headers, "offer-2")
+    assert response.status_code == 201
+    assert response.json()["proofId"] != revoked_id
+    assert response.json()["lifecycleStatus"] == "ACTIVE"
+
+
+def test_idempotent_replay_is_not_duplicate(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """SCN-15: kunci dan berkas sama mengembalikan hasil awal (bukan 409) karena idempotensi diperiksa lebih dulu."""
+    issuer_id, headers = make_account()
+    first = issue(client, headers, "offer-1")
+    replay = issue(client, headers, "offer-1")
+    assert first.status_code == replay.status_code == 201
+    assert replay.json() == first.json()
+    assert [operation for operation, _ in registry.calls] == ["issue_proof"]
+    assert len(issuer_proofs(issuer_id)) == 1

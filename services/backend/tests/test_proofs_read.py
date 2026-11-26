@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import update
-from test_proofs_issue import BLOCK_TIME, URL, issue, make_account
+from test_proofs_issue import BLOCK_TIME, PDF, URL, issue, make_account
 from test_proofs_issue import registry as registry
 
 from app.core.db import get_session_factory
@@ -38,7 +38,7 @@ def test_list_scopes_filters_and_pages_mirror(client: TestClient, registry: Mock
     _, other = make_account()
     proof_ids = []
     for key, owner in [(str(i), headers) for i in range(6)] + [("other", other)]:
-        response = issue(client, owner, key)
+        response = issue(client, owner, key, pdf=PDF + key.encode())
         assert response.status_code == 201
         proof_ids.append(response.json()["proofId"])
     active_a, active_b, newest, revoked, pending, failed, _ = proof_ids

@@ -66,6 +66,7 @@ def issue_proof(
         proof = db.scalar(select(Proof).where(Proof.issuer_id == hr.issuer_id, Proof.idempotency_key == key))
         retry = proof is not None
         if proof is None:
+            _reject_active_duplicate(db, hr.issuer_id, document_hash)
             proof = _reserve_proof(db, hr, document_hash, key)
         elif proof.document_hash != document_hash:
             raise AppError(ErrorCode.IDEMPOTENCY_KEY_CONFLICT)
@@ -83,6 +84,20 @@ def issue_proof(
         proof.updated_at = datetime.now(UTC)
         db.commit()
         return _issue_response(proof)
+
+
+def _reject_active_duplicate(db: Session, issuer_id: str, document_hash: str) -> None:
+    """FR-03.06 / SA §6.5 butir 5: tolak hash yang sama dengan bukti ACTIVE penerbit yang sama sebelum INSERT.
+
+    Hanya untuk kunci idempotensi baru; bukti REVOKED dan penerbit lain tidak menghalangi (AC-03).
+    """
+    duplicate = db.scalar(
+        select(Proof.proof_id)
+        .where(Proof.issuer_id == issuer_id, Proof.document_hash == document_hash, Proof.status == "ACTIVE")
+        .limit(1)
+    )
+    if duplicate is not None:
+        raise AppError(ErrorCode.DUPLICATE_ACTIVE_DOCUMENT)
 
 
 def _reserve_proof(db: Session, hr: AuthorizedHrContext, document_hash: str, key: str) -> Proof:
