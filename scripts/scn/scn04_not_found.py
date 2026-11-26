@@ -16,6 +16,7 @@ from _verification_scn import (
     post_verification,
     response_body,
     run_scenario,
+    scenario_cli,
     summarize,
 )
 from common import ScenarioSettings
@@ -78,4 +79,5 @@ def execute(_: ScenarioSettings, client: httpx.Client) -> list[Step]:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_scenario("SCN-04", "TC-004", "scn04-not-found", execute))
+    args = scenario_cli("SCN-04: kode tidak terdaftar pada stack lokal.")
+    raise SystemExit(run_scenario("SCN-04", "TC-004", "scn04-not-found", execute, args.compose_project))

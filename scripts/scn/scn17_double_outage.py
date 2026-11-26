@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-import argparse
-
 import httpx
 
 from _verification_scn import (
@@ -14,24 +12,39 @@ from _verification_scn import (
     post_verification,
     response_body,
     run_scenario,
+    scenario_cli,
     summarize,
     wait_health,
 )
-from common import ScenarioSettings, run_dev_service
+from common import ScenarioError, ScenarioSettings, run_dev_service
+
+SERVICES = ("chain", "ai-service")
+
+
+def restore_services(services: tuple[str, ...] = SERVICES) -> None:
+    """Menjalankan kembali setiap service secara terpisah; kegagalan satu service tidak melewatkan yang lain."""
+    failed = []
+    for service in services:
+        try:
+            run_dev_service("start", service)
+        except ScenarioError:
+            failed.append(service)
+    if failed:
+        commands = "; ".join(f"python scripts/dev.py start {service}" for service in failed)
+        raise ScenarioError(f"Service belum berjalan kembali: {', '.join(failed)}. Jalankan manual: {commands}.")
 
 
 def execute(settings: ScenarioSettings, client: httpx.Client) -> list[Step]:
     """Menyiapkan bukti FX-01 saat chain hidup, menghentikan dua service, lalu selalu menjalankannya kembali."""
     proof = ensure_active_proof(settings)
     try:
-        run_dev_service("stop", "chain")
-        run_dev_service("stop", "ai-service")
+        for service in SERVICES:
+            run_dev_service("stop", service)
         response, request, _ = post_verification(
             client, code=proof.reference_code, file=("FX-01.pdf", fixture_bytes("FX-01.pdf")), include_risk=True
         )
     finally:
-        run_dev_service("start", "chain")
-        run_dev_service("start", "ai-service")
+        restore_services()
         wait_health(client, ("database", "registry", "aiService"))
     return [
         Step(
@@ -54,10 +67,5 @@ def execute(settings: ScenarioSettings, client: httpx.Client) -> list[Step]:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="SCN-17: menghentikan chain dan ai-service lokal sementara.")
-    parser.add_argument(
-        "--allow-service-interruption", action="store_true", help="Izinkan stop/start chain dan ai-service."
-    )
-    if not parser.parse_args().allow_service_interruption:
-        parser.error("Tambahkan --allow-service-interruption; skrip menghentikan chain dan ai-service lokal.")
-    raise SystemExit(run_scenario("SCN-17", "TC-017", "scn17-double-outage", execute))
+    args = scenario_cli("SCN-17: menghentikan chain dan ai-service lokal sementara.", interruption=True)
+    raise SystemExit(run_scenario("SCN-17", "TC-017", "scn17-double-outage", execute, args.compose_project))

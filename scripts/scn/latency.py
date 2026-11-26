@@ -23,8 +23,10 @@ import httpx
 from _verification_scn import (
     PROOFS_PATH,
     active_llm_model,
+    add_target_argument,
     ensure_active_proof,
     fixture_bytes,
+    local_settings,
     post_verification,
     response_body,
     summarize,
@@ -33,7 +35,6 @@ from common import (
     ROOT,
     ScenarioError,
     create_api07_client,
-    load_settings,
     login_seed_hr,
     new_request_id,
     print_expected_actual,
@@ -50,6 +51,8 @@ TARGETS_MS = {
     "api04Issue": 5000,
     "api06Revoke": 5000,
 }
+# Alasan AI yang tidak akan pulih dalam satu run; panggilan AI berikutnya dihentikan agar kuota tidak dihabiskan.
+AI_STOP_REASONS = {"AI_QUOTA_EXCEEDED", "AI_PROVIDER_UNCONFIGURED"}
 
 
 def nearest_rank(values: list[float], percentile: float) -> float:
@@ -59,9 +62,17 @@ def nearest_rank(values: list[float], percentile: float) -> float:
 
 
 def stats(samples: list[dict[str, Any]], target: int | None) -> dict[str, Any]:
-    """Ringkasan sampel sukses: n, median, P95, min, maks, kegagalan, dan status target."""
+    """Ringkasan sampel sukses: n, median, P95, min, maks, kegagalan, status target, dan kelengkapan.
+
+    Varian tanpa satu pun sampel sukses ditandai `complete=False` (pengukuran tidak lengkap, bukan lulus).
+    """
     ok = [sample["ms"] for sample in samples if sample["ok"]]
-    result: dict[str, Any] = {"samples": len(samples), "succeeded": len(ok), "failed": len(samples) - len(ok)}
+    result: dict[str, Any] = {
+        "samples": len(samples),
+        "succeeded": len(ok),
+        "failed": len(samples) - len(ok),
+        "complete": bool(ok),
+    }
     if ok:
         result.update(
             medianMs=round(statistics.median(ok), 1),
@@ -80,7 +91,7 @@ def stats(samples: list[dict[str, Any]], target: int | None) -> dict[str, Any]:
 def measure_api07(
     client: httpx.Client, count: int, warmup: bool, interval: float, accept: Callable[[dict], bool], **kwargs: Any
 ) -> list[dict[str, Any]]:
-    """Menjalankan API-07 `count` kali; satu permintaan pemanasan opsional tidak dicatat."""
+    """Menjalankan API-07 `count` kali; pemanasan opsional tidak dicatat; berhenti bila AI_STOP_REASONS muncul."""
     if warmup:
         post_verification(client, **kwargs)
     samples = []
@@ -90,7 +101,15 @@ def measure_api07(
         response, request, elapsed = post_verification(client, **kwargs)
         actual = summarize(response)
         samples.append({"requestId": request["requestId"], "ms": round(elapsed, 1), "ok": accept(actual), **actual})
+        if actual.get("riskReason") in AI_STOP_REASONS:
+            break
     return samples
+
+
+def ai_stop_reason(samples: list[dict[str, Any]]) -> str | None:
+    """Alasan penghentian AI dari sampel terakhir, bila ada."""
+    reason = samples[-1].get("riskReason") if samples else None
+    return reason if reason in AI_STOP_REASONS else None
 
 
 def measure_issue_revoke(settings: Any, count: int) -> tuple[list[dict], list[dict]]:
@@ -150,6 +169,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ai-samples", type=int, default=5, help="Sampel API-07 dengan AI per varian (LLM nyata).")
     parser.add_argument("--ai-interval", type=float, default=5, help="Jeda detik antarpanggilan AI (di luar ukuran).")
     parser.add_argument("--issue-samples", type=int, default=5, help="Pasangan API-04/API-06 (HR seed).")
+    add_target_argument(parser)
     args = parser.parse_args()
     if min(args.samples, args.ai_samples, args.issue_samples) < 1 or args.ai_interval < 0:
         parser.error("Jumlah sampel minimal 1 dan jeda tidak boleh negatif.")
@@ -160,8 +180,9 @@ def main() -> int:
     """Menjalankan seluruh varian, menyimpan evidence tanpa kode referensi, dan mencetak target vs aktual."""
     args = parse_args()
     started = datetime.now(UTC)
+    ai_stopped = None
     try:
-        settings = load_settings()
+        settings = local_settings(args.compose_project)
         proof = ensure_active_proof(settings)
         fx01 = ("FX-01.pdf", fixture_bytes("FX-01.pdf"))
         found = lambda a: a.get("httpStatus") == 200 and a.get("lookup") == "FOUND"  # noqa: E731
@@ -190,7 +211,12 @@ def main() -> int:
                     file=("FX-03.pdf", fixture_bytes("FX-03.pdf")),
                     include_risk=True,
                 ),
-                "api07AiScanPdf": measure_api07(
+            }
+            ai_stopped = ai_stop_reason(samples["api07AiTextPdf"])
+            samples["api07AiScanPdf"] = (
+                []
+                if ai_stopped
+                else measure_api07(
                     client,
                     args.ai_samples,
                     False,
@@ -198,8 +224,9 @@ def main() -> int:
                     completed,
                     file=("FX-04.pdf", fixture_bytes("FX-04.pdf")),
                     include_risk=True,
-                ),
-            }
+                )
+            )
+            ai_stopped = ai_stopped or ai_stop_reason(samples["api07AiScanPdf"])
         samples["api04Issue"], samples["api06Revoke"] = measure_issue_revoke(settings, args.issue_samples)
     except ScenarioError as exc:
         print(f"Pengukuran latensi tidak dapat dijalankan: {exc}", file=sys.stderr)
@@ -208,6 +235,7 @@ def main() -> int:
         print(f"Request gagal ({type(exc).__name__}).", file=sys.stderr)
         return 2
     results = {name: stats(items, TARGETS_MS[name]) for name, items in samples.items()}
+    incomplete = [name for name, result in results.items() if not result["complete"]]
     evidence = {
         "testCaseId": TEST_CASE,
         "metrics": ["MET-16", "MET-17"],
@@ -228,6 +256,9 @@ def main() -> int:
         },
         "model": active_llm_model(),
         "activeProof": {"proofId": proof.proof_id, "issueTransaction": proof.issue_transaction},
+        "complete": not incomplete,
+        "incompleteVariants": incomplete,
+        "aiStoppedReason": ai_stopped,
         "results": results,
         "samples": samples,
     }
@@ -240,11 +271,18 @@ def main() -> int:
     print_expected_actual(
         {name: {"targetP95Ms": target} for name, target in TARGETS_MS.items()},
         {
-            name: {key: result.get(key) for key in ("succeeded", "failed", "medianMs", "p95Ms", "meetsTarget")}
+            name: {
+                key: result.get(key) for key in ("complete", "succeeded", "failed", "medianMs", "p95Ms", "meetsTarget")
+            }
             for name, result in results.items()
         },
     )
     print(f"Evidence tersimpan: {path.relative_to(ROOT).as_posix()}")
+    if ai_stopped:
+        print(f"Panggilan AI dihentikan karena {ai_stopped}.", file=sys.stderr)
+    if incomplete:
+        print(f"Pengukuran tidak lengkap; tanpa sampel sukses: {', '.join(incomplete)}.", file=sys.stderr)
+        return 2
     return 0 if all(result["meetsTarget"] is not False for result in results.values()) else 1
 
 

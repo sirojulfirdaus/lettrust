@@ -12,6 +12,7 @@ from _verification_scn import (
     post_verification,
     response_body,
     run_scenario,
+    scenario_cli,
     summarize,
 )
 from common import ScenarioSettings
@@ -53,4 +54,5 @@ def execute(settings: ScenarioSettings, client: httpx.Client) -> list[Step]:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_scenario("SCN-11", "TC-011", "scn11-invalid-file", execute))
+    args = scenario_cli("SCN-11: berkas tidak valid pada stack lokal.")
+    raise SystemExit(run_scenario("SCN-11", "TC-011", "scn11-invalid-file", execute, args.compose_project))

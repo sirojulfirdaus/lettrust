@@ -5,7 +5,15 @@ from __future__ import annotations
 
 import httpx
 
-from _verification_scn import Step, ensure_active_proof, post_verification, response_body, run_scenario, summarize
+from _verification_scn import (
+    Step,
+    ensure_active_proof,
+    post_verification,
+    response_body,
+    run_scenario,
+    scenario_cli,
+    summarize,
+)
 from common import ScenarioSettings
 
 
@@ -49,4 +57,5 @@ def execute(settings: ScenarioSettings, client: httpx.Client) -> list[Step]:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_scenario("SCN-05", "TC-005", "scn05-code-only", execute))
+    args = scenario_cli("SCN-05: kode bukti ACTIVE tanpa berkas pada stack lokal.")
+    raise SystemExit(run_scenario("SCN-05", "TC-005", "scn05-code-only", execute, args.compose_project))

@@ -3,14 +3,17 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import os
+import re
 import secrets
 import subprocess
 import sys
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -27,12 +30,50 @@ from common import (
     print_expected_actual,
     save_evidence,
 )
+from scn14_authz_negative import local_url, require_compose_port
 
 API = "/api/v1"
 VERIFY_PATH = f"{API}/verifications"
 PROOFS_PATH = f"{API}/proofs"
 FIXTURES = ROOT / "fixtures"
 JsonObject = dict[str, Any]
+
+
+def add_target_argument(parser: argparse.ArgumentParser) -> None:
+    """Menambahkan pilihan project Compose lokal yang menjadi satu-satunya target skrip."""
+    parser.add_argument(
+        "--compose-project",
+        default=os.getenv("COMPOSE_PROJECT_NAME", "lettrust"),
+        help="Project Compose lokal yang diuji (port backend dan service yang dihentikan harus miliknya).",
+    )
+
+
+def scenario_cli(description: str, *, interruption: bool = False) -> argparse.Namespace:
+    """Argumen skrip SCN; skenario yang menghentikan service wajib memakai --allow-service-interruption."""
+    parser = argparse.ArgumentParser(description=description)
+    add_target_argument(parser)
+    if interruption:
+        parser.add_argument(
+            "--allow-service-interruption", action="store_true", help="Izinkan stop/start chain dan ai-service."
+        )
+    args = parser.parse_args()
+    if interruption and not args.allow_service_interruption:
+        parser.error("Tambahkan --allow-service-interruption; skrip menghentikan chain dan ai-service lokal.")
+    return args
+
+
+def local_settings(project: str) -> ScenarioSettings:
+    """Memuat settings lalu mengunci API ke loopback milik project Compose sebelum login atau token dipakai.
+
+    COMPOSE_PROJECT_NAME diset agar `dev.py stop/start`, `docker compose logs`, dan `exec` mengenai project yang sama.
+    """
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", project):
+        raise ScenarioError("Nama project Compose tidak valid.")
+    os.environ["COMPOSE_PROJECT_NAME"] = project
+    settings = load_settings()
+    url = local_url(settings.api_base_url)
+    require_compose_port(project, "backend", 8000, url)
+    return replace(settings, api_base_url=url)
 
 
 def fixture_bytes(name: str) -> bytes:
@@ -195,19 +236,34 @@ class ActiveProof:
 def ensure_active_proof(settings: ScenarioSettings, fixture: str = "FX-01.pdf") -> ActiveProof:
     """Memakai bukti ACTIVE HR seed dengan hash fixture yang sama; menerbitkan baru hanya bila belum ada.
 
-    Pencarian dilakukan lebih dulu agar run berulang tidak menambah bukti di registry (FR-03.06 tidak diandalkan).
+    Seluruh halaman daftar diperiksa lebih dulu; kegagalan daftar atau detail menghentikan setup tanpa penerbitan,
+    agar gangguan sementara tidak menambah bukti di registry (FR-03.06 tidak diandalkan).
     """
     content = fixture_bytes(fixture)
     digest = hashlib.sha256(content).hexdigest()
     with httpx.Client(base_url=settings.api_base_url, timeout=60, trust_env=False) as client:
         headers = {"Authorization": f"Bearer {login_seed_hr(client, settings)}"}
-        listed = client.get(PROOFS_PATH, headers=headers, params={"status": "ACTIVE", "limit": 100})
-        if listed.status_code != 200:
-            raise ScenarioError(f"Daftar bukti HR seed gagal: HTTP {listed.status_code}.")
-        for item in (response_body(listed) or {}).get("items", []):
-            status = response_body(client.get(f"{PROOFS_PATH}/{item['proofId']}", headers=headers)) or {}
-            if status.get("documentHash") == digest and status.get("lifecycleStatus") == "ACTIVE":
-                return ActiveProof(status["referenceCode"], status["proofId"], digest, status.get("issueTransaction"))
+        offset = 0
+        while True:
+            listed = client.get(
+                PROOFS_PATH, headers=headers, params={"status": "ACTIVE", "limit": 100, "offset": offset}
+            )
+            page = response_body(listed) if listed.status_code == 200 else None
+            items, total = (page.get("items"), page.get("total")) if isinstance(page, dict) else (None, None)
+            if not isinstance(items, list) or not isinstance(total, int):
+                raise ScenarioError(f"Daftar bukti HR seed gagal: HTTP {listed.status_code}; penerbitan dibatalkan.")
+            for item in items:
+                detail = client.get(f"{PROOFS_PATH}/{item['proofId']}", headers=headers)
+                status = response_body(detail) if detail.status_code == 200 else None
+                if not isinstance(status, dict):
+                    raise ScenarioError(f"Detail bukti gagal: HTTP {detail.status_code}; penerbitan dibatalkan.")
+                if status.get("documentHash") == digest and status.get("lifecycleStatus") == "ACTIVE":
+                    return ActiveProof(
+                        status["referenceCode"], status["proofId"], digest, status.get("issueTransaction")
+                    )
+            offset += len(items)
+            if not items or offset >= total:
+                break
         issued = client.post(
             PROOFS_PATH,
             headers={**headers, "X-Request-ID": new_request_id(), "Idempotency-Key": f"t108-{secrets.token_hex(8)}"},
@@ -246,15 +302,22 @@ def check_ai_subset(step: Step, expected_codes: set[str]) -> None:
 
 
 def run_scenario(
-    scenario: str, test_case: str, slug: str, execute: Callable[[ScenarioSettings, httpx.Client], list[Step]]
+    scenario: str,
+    test_case: str,
+    slug: str,
+    execute: Callable[[ScenarioSettings, httpx.Client], list[Step]],
+    project: str,
 ) -> int:
-    """Menjalankan langkah, menyimpan evidence tersanitasi, dan mencetak expected vs actual (tanpa mengisi TC)."""
+    """Menjalankan langkah, menyimpan evidence tersanitasi, dan mencetak expected vs actual (tanpa mengisi TC).
+
+    Target dikunci ke loopback project Compose sebelum klien bertoken partner dibuat dan sebelum langkah apa pun.
+    """
     settings: ScenarioSettings | None = None
     steps: list[Step] = []
     failure = None
     started = datetime.now(UTC)
     try:
-        settings = load_settings()
+        settings = local_settings(project)
         with create_api07_client(settings) as client:
             steps = execute(settings, client)
     except ScenarioError as exc:
