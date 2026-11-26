@@ -6,9 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 import metrics
+import pytest
 from _dataset import FIELDS
 
 
@@ -68,6 +67,7 @@ def synthetic_run(tmp_path: Path) -> tuple[Path, Path, list[dict[str, Any]]]:
     records = [high, low]
     (run / "raw.jsonl").write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
     config = {
+        "schemaVersion": 1,
         "manifestSha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
         "split": "dev",
         "method": "llm",
@@ -97,8 +97,9 @@ def test_metrics_cli_outputs_expected_synthetic_metrics(tmp_path: Path) -> None:
     assert next(row for row in rows if row["actual"] == "HIGH" and row["predicted"] == "HIGH")["count"] == "1"
 
 
-# Menerima kontrak v1 yang sudah COMPLETE dan memakai nama field camelCase dari EvaluationRecord.
-def test_metrics_accepts_complete_v1_record(tmp_path: Path) -> None:
+# Menerima subset kontrak v1 dari documents hanya jika checksum setiap dokumen cocok dengan manifest.
+@pytest.mark.parametrize("failure", [None, "checksum", "version"])
+def test_metrics_accepts_valid_v1_subset_and_rejects_invalid_metadata(tmp_path: Path, failure: str | None) -> None:
     dataset, run, records = synthetic_run(tmp_path)
     normalized = []
     for record in records:
@@ -147,15 +148,64 @@ def test_metrics_accepts_complete_v1_record(tmp_path: Path) -> None:
                 "latencyMs": 50,
             }
         )
+    normalized = normalized[:1]
     (run / "raw.jsonl").write_text("".join(json.dumps(record) + "\n" for record in normalized), encoding="utf-8")
     config = json.loads((run / "run_config.json").read_text(encoding="utf-8"))
-    config.update(status="COMPLETE", variants=["pipeline"], records=len(normalized), counts={"OK": len(normalized)})
+    config.update(
+        status="COMPLETE",
+        variants=["pipeline"],
+        records=len(normalized),
+        counts={"OK": len(normalized)},
+        documents=[{"id": normalized[0]["id"], "sha256": "a" * 64}],
+    )
+    if failure == "checksum":
+        config["documents"][0]["sha256"] = "0" * 64
+    if failure == "version":
+        config["schemaVersion"] = 99
     config.pop("method")
     config.pop("state")
     (run / "run_config.json").write_text(json.dumps(config), encoding="utf-8")
-    assert metrics.main([str(run), "--dataset-dir", str(dataset)]) == 0
+    expected = 0 if failure is None else 1
+    assert metrics.main([str(run), "--dataset-dir", str(dataset)]) == expected
+    if failure is not None:
+        assert not (run / "metrics.json").exists()
+        return
     output = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
     assert output["variants"]["pipeline"]["classification"]["accuracy"] == 1.0
+    assert output["recordCount"] == 1
+
+
+# Menghitung NO_CONTENT dengan latensi ekstraksi, tetapi tidak memberi RUN_ABORTED kategori atau latensi.
+def test_legacy_no_content_latency_is_distinct_from_run_aborted(tmp_path: Path) -> None:
+    dataset, run, _ = synthetic_run(tmp_path)
+    records = [
+        {
+            "id": "id-high-01-text",
+            "status": "NOT_PERFORMED",
+            "result": None,
+            "extraction": {"status": "NO_CONTENT", "reasonDetail": "NO_EXTRACTABLE_TEXT"},
+            "error": {"stage": "extraction", "code": "NO_EXTRACTABLE_TEXT"},
+            "latencyMs": 42,
+        },
+        {
+            "id": "id-low-01-scan",
+            "status": "NOT_PERFORMED",
+            "result": None,
+            "extraction": None,
+            "error": {"stage": "run", "code": "RUN_ABORTED"},
+            "latencyMs": None,
+        },
+    ]
+    (run / "raw.jsonl").write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+    config_path = run / "run_config.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    config["state"] = "stopped"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    assert metrics.main([str(run), "--dataset-dir", str(dataset)]) == 0
+    result = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
+    pipeline = result["variants"]["pipeline"]
+    assert pipeline["latency"] == {"count": 1, "medianMs": 42, "p95Ms": 42, "minMs": 42, "maxMs": 42}
+    assert pipeline["reliability"]["failureReasons"] == {"NO_EXTRACTABLE_TEXT": 1, "RUN_ABORTED": 1}
 
 
 # Menolak keluaran incomplete, duplikat, dan perbedaan checksum sebelum menghasilkan file metrik.

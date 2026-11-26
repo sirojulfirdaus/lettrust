@@ -13,6 +13,7 @@ from typing import Any
 
 from _dataset import FIELDS, ROOT, Entry, validate_labels
 from _eval_schema import EvaluationRecord
+
 from app.analysis.scoring import score
 from app.analysis.taxonomy import TAXONOMY
 
@@ -67,9 +68,14 @@ def read_json(path: Path) -> dict[str, Any]:
 
 
 # Memvalidasi lifecycle dan manifest run; format legacy hanya diterima jika producer menyatakan selesai.
-def load_run(directory: Path, entries: dict[str, Entry], manifest_path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def load_run(
+    directory: Path, entries: dict[str, Entry], manifest_path: Path
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     config = read_json(directory / "run_config.json")
     manifest_hash = file_sha256(manifest_path)
+    version = config.get("schemaVersion")
+    if not isinstance(version, int) or isinstance(version, bool) or version != 1:
+        raise ValueError("Versi run_config.schemaVersion tidak didukung.")
     if config.get("manifestSha256") != manifest_hash:
         raise ValueError("Checksum manifest tidak cocok dengan run.")
     if config.get("status") == "COMPLETE":
@@ -92,24 +98,7 @@ def load_run(directory: Path, entries: dict[str, Entry], manifest_path: Path) ->
     split = config.get("split")
     if split not in {"dev", "test"}:
         raise ValueError("Split pada konfigurasi run tidak valid.")
-    expected_entries = {identifier: entry for identifier, entry in entries.items() if entry.split == split}
-    if legacy:
-        configured_documents = config.get("documents")
-        if not isinstance(configured_documents, list) or not configured_documents:
-            raise ValueError("Daftar dokumen pada run legacy tidak valid.")
-        configured_ids: set[str] = set()
-        for item in configured_documents:
-            if not isinstance(item, dict) or not isinstance(item.get("id"), str):
-                raise ValueError("Daftar dokumen pada run legacy tidak valid.")
-            identifier = item["id"]
-            if (
-                identifier in configured_ids
-                or identifier not in expected_entries
-                or item.get("sha256") != expected_entries[identifier].sha256
-            ):
-                raise ValueError("Dokumen run legacy tidak cocok dengan split/checksum manifest.")
-            configured_ids.add(identifier)
-        expected_entries = {identifier: expected_entries[identifier] for identifier in configured_ids}
+    expected_entries = selected_entries(config, entries, split, legacy)
     if not expected_entries:
         raise ValueError("Manifest tidak memiliki dokumen pada split run.")
     try:
@@ -150,12 +139,58 @@ def load_run(directory: Path, entries: dict[str, Entry], manifest_path: Path) ->
         if not isinstance(configured_counts, dict) or configured_counts != dict(actual_counts):
             raise ValueError("Rincian status record tidak cocok dengan run_config.json.")
     if legacy:
-        allowed_statuses = {"COMPLETED", "UNAVAILABLE"}
-        if expected_status == "stopped":
-            allowed_statuses.add("NOT_PERFORMED")
-        if any(record["status"] not in allowed_statuses for record in records):
+        if any(not legacy_status_matches(record, expected_status) for record in records):
             raise ValueError("Status record run legacy tidak valid.")
     return config, records
+
+
+# Memvalidasi subset dokumen run dan checksum-nya; tanpa daftar, kontrak v1 memakai seluruh split manifest.
+def selected_entries(config: dict[str, Any], entries: dict[str, Entry], split: str, legacy: bool) -> dict[str, Entry]:
+    split_entries = {identifier: entry for identifier, entry in entries.items() if entry.split == split}
+    documents = config.get("documents")
+    if documents is None and not legacy:
+        return split_entries
+    if not isinstance(documents, list) or not documents:
+        raise ValueError("Daftar dokumen run tidak valid.")
+    selected: dict[str, Entry] = {}
+    for item in documents:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+            raise ValueError("Daftar dokumen run tidak valid.")
+        identifier = item["id"]
+        entry = split_entries.get(identifier)
+        if identifier in selected or entry is None or item.get("sha256") != entry.sha256:
+            raise ValueError("Dokumen run tidak cocok dengan split/checksum manifest.")
+        selected[identifier] = entry
+    return selected
+
+
+# Membedakan NO_CONTENT yang sudah diekstrak dari RUN_ABORTED yang belum mulai dikerjakan.
+def legacy_status_matches(record: dict[str, Any], run_state: str) -> bool:
+    if record["status"] in {"COMPLETED", "UNAVAILABLE"}:
+        return True
+    if record["status"] != "NOT_PERFORMED":
+        return False
+    error = record.get("error")
+    if not isinstance(error, dict):
+        return False
+    if error.get("stage") == "extraction":
+        extraction = record.get("extraction")
+        return (
+            run_state in {"finished", "stopped"}
+            and error.get("code") in {"PDF_UNREADABLE", "NO_EXTRACTABLE_TEXT"}
+            and isinstance(extraction, dict)
+            and extraction.get("status") == "NO_CONTENT"
+            and isinstance(record.get("latencyMs"), int)
+            and not isinstance(record.get("latencyMs"), bool)
+            and record["latencyMs"] >= 0
+        )
+    return (
+        run_state == "stopped"
+        and error.get("stage") == "run"
+        and error.get("code") == "RUN_ABORTED"
+        and record.get("extraction") is None
+        and record.get("latencyMs") is None
+    )
 
 
 # Menormalisasi keluaran runner T5-07 lama secara eksplisit tanpa menganggap NOT_PERFORMED sebagai hasil sukses.
@@ -185,8 +220,6 @@ def validate_legacy_record(raw: dict[str, Any]) -> dict[str, Any]:
         variant = "pipeline"
     elif result is not None or not isinstance(error, dict):
         raise ValueError("Record gagal legacy tidak valid.")
-    elif status == "NOT_PERFORMED" and latency is not None:
-        raise ValueError("Dokumen legacy yang belum dijalankan tidak boleh memiliki latensi.")
     else:
         variant = "pipeline"
     return {
@@ -345,7 +378,9 @@ def write_confusion(path: Path, variants: dict[str, dict[str, Any]]) -> None:
 
 
 # Menghasilkan metrik semua variant, breakdown bahasa/format, dan selisih pada dokumen yang sama-sama sukses.
-def calculate_metrics(config: dict[str, Any], records: list[dict[str, Any]], entries: dict[str, Entry]) -> dict[str, Any]:
+def calculate_metrics(
+    config: dict[str, Any], records: list[dict[str, Any]], entries: dict[str, Entry]
+) -> dict[str, Any]:
     labels = {identifier: entry.label for identifier, entry in entries.items()}
     variants = sorted({record["variant"] for record in records})
     output: dict[str, Any] = {
@@ -360,7 +395,7 @@ def calculate_metrics(config: dict[str, Any], records: list[dict[str, Any]], ent
             "indicatorDenominator": "Semua dokumen run; record gagal tidak menghasilkan indikator prediksi.",
             "extractionSuccessRate": "Jumlah extraction.status=OK dibagi semua dokumen format tersebut.",
             "p95": "Nearest-rank percentile; latency null tidak disertakan.",
-            "zeroDivision": "Precision/recall/F1 tanpa denominator bernilai 0; recall indikator tanpa support bernilai null.",
+            "zeroDivision": "Metrik tanpa denominator bernilai 0; recall indikator tanpa support bernilai null.",
         },
     }
     report: dict[str, dict[str, Any]] = {}
@@ -468,7 +503,13 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, KeyError, TypeError) as error:
         print(f"[metrics] gagal: {error}", file=sys.stderr)
         return 1
-    print(json.dumps({"split": config["split"], "records": len(records), "variants": sorted(metrics["variants"]), "output": str(run_dir)}))
+    summary = {
+        "split": config["split"],
+        "records": len(records),
+        "variants": sorted(metrics["variants"]),
+        "output": str(run_dir),
+    }
+    print(json.dumps(summary))
     return 0
 
 
