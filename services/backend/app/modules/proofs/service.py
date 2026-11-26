@@ -66,7 +66,7 @@ def issue_proof(
         proof = db.scalar(select(Proof).where(Proof.issuer_id == hr.issuer_id, Proof.idempotency_key == key))
         retry = proof is not None
         if proof is None:
-            _reject_active_duplicate(db, hr.issuer_id, document_hash)
+            _reject_active_duplicate(db, hr, document_hash)
             proof = _reserve_proof(db, hr, document_hash, key)
         elif proof.document_hash != document_hash:
             raise AppError(ErrorCode.IDEMPOTENCY_KEY_CONFLICT)
@@ -86,18 +86,33 @@ def issue_proof(
         return _issue_response(proof)
 
 
-def _reject_active_duplicate(db: Session, issuer_id: str, document_hash: str) -> None:
+def _reject_active_duplicate(db: Session, hr: AuthorizedHrContext, document_hash: str) -> None:
     """FR-03.06 / SA §6.5 butir 5: tolak hash yang sama dengan bukti ACTIVE penerbit yang sama sebelum INSERT.
 
-    Hanya untuk kunci idempotensi baru; bukti REVOKED dan penerbit lain tidak menghalangi (AC-03).
+    Hanya untuk kunci idempotensi baru; bukti REVOKED dan penerbit lain tidak menghalangi (AC-03). Cermin ACTIVE
+    tanpa pencabutan tertunda sudah final sehingga ditolak tanpa RPC. Baris yang belum final (penerbitan PENDING
+    setelah receipt timeout, ACTIVE dengan pencabutan tertunda, atau FAILED) dibaca dari registry tanpa transaksi;
+    bila status belum dapat dipastikan, penerbitan dihentikan sebelum transaksi baru dikirim.
     """
-    duplicate = db.scalar(
-        select(Proof.proof_id)
-        .where(Proof.issuer_id == issuer_id, Proof.document_hash == document_hash, Proof.status == "ACTIVE")
-        .limit(1)
-    )
-    if duplicate is not None:
+    rows = db.execute(
+        select(Proof.proof_id, Proof.status, Proof.revoke_idempotency_key).where(
+            Proof.issuer_id == hr.issuer_id,
+            Proof.document_hash == document_hash,
+            Proof.status.in_(("ACTIVE", "PENDING", "FAILED")),
+        )
+    ).all()
+    if any(row.status == "ACTIVE" and row.revoke_idempotency_key is None for row in rows):
         raise AppError(ErrorCode.DUPLICATE_ACTIVE_DOCUMENT)
+    for row in rows:
+        try:
+            record = _read_registry_proof(row.proof_id, hr.issuer_ref)
+        except registry_adapter.RegistryUnavailable:
+            raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+        if record.exists and record.status == registry_adapter.OnChainStatus.ACTIVE:
+            raise AppError(ErrorCode.DUPLICATE_ACTIVE_DOCUMENT)
+        if not record.exists and row.status != "FAILED":
+            # Transaksi penerbitan sebelumnya masih dapat terkonfirmasi; ulangi dengan Idempotency-Key semula.
+            raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
 
 
 def _reserve_proof(db: Session, hr: AuthorizedHrContext, document_hash: str, key: str) -> Proof:
