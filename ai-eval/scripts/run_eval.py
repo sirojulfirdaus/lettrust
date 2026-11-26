@@ -1,8 +1,5 @@
 # Owner: B (PIC 5) | Status: COMPLETE | Ref: PLAN T5-07/T5-08; PRD §10.4.3; SA §7.9
-"""Runner dev pipeline/baseline dengan EvaluationRecord v1 dan artefak atomik tanpa secret.
-
-Test split tetap ditolak sampai metrics dan prosedur run final siap; bukti dev lama tidak dimigrasikan.
-"""
+"""Runner dev/final pipeline dan baseline; test memerlukan freeze, profil dev, dan reservasi satu run."""
 
 import argparse
 import json
@@ -19,7 +16,9 @@ from uuid import uuid4
 from _dataset import ROOT, Entry, pdf_path, sha256
 from _eval_records import append_record, load_dev_entries, parse_manifest_metadata, public_settings, write_json
 from _eval_schema import EvaluationError, EvaluationRecord, ExtractionMetadata
+from _final_eval import load_frozen_entries, reserve_final_run, validate_final_run
 from baseline import BASELINE_VERSION, analyze_text
+from freeze_testset import verify_freeze
 from pydantic import ValidationError
 
 from app.analysis.prompt import build_messages
@@ -146,6 +145,9 @@ def source_hashes() -> dict[str, str]:
         "extraction": Path(extract_document.__code__.co_filename),
         "baseline": Path(analyze_text.__code__.co_filename),
         "schema": Path(__file__).with_name("_eval_schema.py"),
+        "finalGate": Path(__file__).with_name("_final_eval.py"),
+        "freeze": Path(__file__).with_name("freeze_testset.py"),
+        "metrics": Path(__file__).with_name("metrics.py"),
         **{
             name: Path(OpenAICompatibleProvider.complete.__code__.co_filename).with_name(f"{name}.py")
             for name in ("scoring", "taxonomy", "validator", "compose")
@@ -184,9 +186,14 @@ def execute_run(
     provider: LLMProvider | None = None,
     *,
     variants: tuple[str, ...] = ("pipeline",),
+    split: str = "dev",
+    freeze: Path | None = None,
+    reference_run: Path | None = None,
 ) -> dict[str, Any]:
-    if not entries or any(entry.split != "dev" for entry in entries):
-        raise ValueError("Runner T5-07 hanya menerima dokumen dev.")
+    if split not in {"dev", "test"} or not entries or any(entry.split != split for entry in entries):
+        raise ValueError("Runner hanya menerima dokumen dev/test sesuai split yang dipilih.")
+    if split == "test" and (freeze is None or reference_run is None):
+        raise ValueError("Run test memerlukan snapshot freeze dan referensi dev.")
     if not math.isfinite(interval_seconds) or not 0 <= interval_seconds <= 60:
         raise ValueError("Interval harus berada pada rentang 0 sampai 60 detik.")
     if not variants or len(set(variants)) != len(variants) or set(variants) - {"pipeline", "baseline"}:
@@ -198,18 +205,24 @@ def execute_run(
     if output.resolve().is_relative_to(directory.resolve()):
         raise ValueError("Output evaluasi harus berada di luar dataset.")
     manifest_content = (directory / "manifest.csv").read_bytes()
-    metadata = {entry.id: entry for entry in parse_manifest_metadata(manifest_content) if entry.split == "dev"}
+    metadata = {entry.id: entry for entry in parse_manifest_metadata(manifest_content) if entry.split == split}
     if len({entry.id for entry in entries}) != len(entries) or any(
         metadata.get(entry.id) != entry for entry in entries
     ):
-        raise ValueError("Dokumen run tidak cocok dengan metadata dev.")
+        raise ValueError(f"Dokumen run tidak cocok dengan metadata {split}.")
+    hashes = source_hashes()
+    final_metadata = (
+        validate_final_run(directory, entries, settings, variants, freeze, reference_run, hashes)
+        if split == "test"
+        else None
+    )
     config: dict[str, Any] = {
         "schemaVersion": 1,
         "status": "RUNNING",
         "variants": list(variants),
-        "split": "dev",
-        "purpose": "provisional-model-selection",
-        "datasetStatus": "not-frozen",
+        "split": split,
+        "purpose": "final-evaluation" if split == "test" else "provisional-model-selection",
+        "datasetStatus": "frozen" if split == "test" else "not-frozen",
         "startedAt": datetime.now(UTC).isoformat(),
         "finishedAt": None,
         "settings": public_run_settings(settings, variants),
@@ -220,13 +233,19 @@ def execute_run(
         "formats": sorted({entry.format for entry in entries}),
         "manifestSha256": sha256(manifest_content),
         "documents": [{"id": entry.id, "sha256": entry.sha256} for entry in entries],
-        "sourceSha256": source_hashes(),
+        "sourceSha256": hashes,
         "intervalSeconds": interval_seconds,
         "latencyDefinition": "extraction+analysis+runtime-output-retry; excludes inter-document delay",
         "plannedRecords": len(entries) * len(variants),
         "records": 0,
         "counts": {},
     }
+    if final_metadata is not None:
+        config["freeze"] = final_metadata
+        if output.exists():
+            raise FileExistsError("Direktori run sudah ada.")
+        reservation = reserve_final_run(directory, output, final_metadata, config["manifestSha256"])
+        config["reservation"] = str(reservation)
     output.mkdir(parents=True, exist_ok=False)
     temporary = output / "tmp"
     temporary.mkdir()
@@ -274,6 +293,17 @@ def execute_run(
         if sha256((directory / "manifest.csv").read_bytes()) != config["manifestSha256"]:
             stop_reason = "MANIFEST_CHANGED"
             raise ValueError("Manifest berubah selama evaluasi.")
+        if final_metadata is not None:
+            if source_hashes() != hashes:
+                stop_reason = "CODE_CHANGED"
+                raise ValueError("Kode evaluasi berubah selama run final.")
+            try:
+                verified = verify_freeze(directory, freeze)
+                if verified["snapshotSha256"] != final_metadata["snapshotSha256"]:
+                    raise ValueError("Snapshot berubah selama evaluasi.")
+            except (OSError, ValueError, TypeError, KeyError):
+                stop_reason = "FREEZE_CHANGED"
+                raise ValueError("Snapshot atau test set berubah selama evaluasi.") from None
         if not stop_reason:
             (temporary / "model_outputs.jsonl").replace(output / "model_outputs.jsonl")
             (temporary / "raw.jsonl").replace(output / "raw.jsonl")
@@ -287,6 +317,12 @@ def execute_run(
         )
         if config["status"] != "COMPLETE":
             config["stoppedAt"] = datetime.now(UTC).isoformat()
+            if split == "test":
+                for name in ("raw.jsonl", "model_outputs.jsonl"):
+                    source = temporary / name
+                    if source.exists():
+                        with (output / f"partial_{name}").open("xb") as stream:
+                            stream.write(source.read_bytes())
         write_run_config(output, config)
     return config
 
@@ -309,14 +345,16 @@ def experiment_settings(args: argparse.Namespace) -> Settings:
     return settings
 
 
-# CLI ini menolak test split sebelum membaca dataset, membangun Settings, atau memanggil provider.
+# CLI test menolak subset atau gate yang hilang sebelum membaca PDF dan memanggil provider.
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--split", choices=["dev"], default="dev")
+    parser.add_argument("--split", choices=["dev", "test"], default="dev")
+    parser.add_argument("--freeze", type=Path)
+    parser.add_argument("--reference-run", type=Path)
     parser.add_argument("--dataset-dir", type=Path, default=ROOT / "dataset")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--model")
-    parser.add_argument("--variants", nargs="+", choices=["pipeline", "baseline"], default=["pipeline"])
+    parser.add_argument("--variants", nargs="+", choices=["pipeline", "baseline"])
     parser.add_argument("--limit", type=int)
     parser.add_argument("--interval-seconds", type=float, default=10)
     parser.add_argument("--max-output-tokens", type=int)
@@ -327,23 +365,48 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--test", action="store_true")
     args = parser.parse_args(argv)
+    args.variants = args.variants or (["pipeline", "baseline"] if args.split == "test" else ["pipeline"])
+    if args.split == "test" and (not args.freeze or not args.reference_run or args.limit is not None):
+        parser.error("Test memerlukan --freeze dan --reference-run serta tidak menerima --limit.")
     if len(set(args.variants)) != len(args.variants):
         parser.error("Varian tidak boleh duplikat.")
     if args.test:
         import pytest
 
-        return pytest.main(["-q", "-p", "no:cacheprovider", str(Path(__file__).with_name("test_run_eval.py"))])
+        return pytest.main(
+            [
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                str(Path(__file__).with_name("test_run_eval.py")),
+                str(Path(__file__).with_name("test_final_eval.py")),
+            ]
+        )
     try:
-        entries = load_dev_entries(args.dataset_dir, args.limit)
+        entries = (
+            load_dev_entries(args.dataset_dir, args.limit)
+            if args.split == "dev"
+            else load_frozen_entries(args.dataset_dir, args.freeze)[0]
+        )
         settings = experiment_settings(args)
         if "pipeline" in args.variants and settings.llm_provider != "openai_compatible":
             raise ValueError("Runner nyata tidak menerima provider mock.")
         public_run_settings(settings, tuple(args.variants))
+        if args.split == "test":
+            validate_final_run(
+                args.dataset_dir,
+                entries,
+                settings,
+                tuple(args.variants),
+                args.freeze,
+                args.reference_run,
+                source_hashes(),
+            )
         if args.dry_run:
             print(
                 json.dumps(
                     {
-                        "split": "dev",
+                        "split": args.split,
                         "documents": len(entries),
                         "variants": args.variants,
                         "model": settings.llm_model if "pipeline" in args.variants else "rule-based-baseline",
@@ -361,7 +424,15 @@ def main(argv: list[str] | None = None) -> int:
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
         output = args.output_dir or ROOT / "results" / f"{stamp}-{uuid4().hex[:8]}"
         config = execute_run(
-            args.dataset_dir, output, entries, settings, args.interval_seconds, variants=tuple(args.variants)
+            args.dataset_dir,
+            output,
+            entries,
+            settings,
+            args.interval_seconds,
+            variants=tuple(args.variants),
+            split=args.split,
+            freeze=args.freeze,
+            reference_run=args.reference_run,
         )
     except (OSError, ValueError, ValidationError) as error:
         # Pesan validasi Settings/SDK dapat memuat input sensitif; jangan mencetak exception aslinya.

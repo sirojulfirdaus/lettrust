@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "finishedAt": "2026-11-26T15:57:08.724240+00:00",
+  "primaryRecords": 96,
+  "primaryCounts": {
+    "OK": 95,
+    "UNAVAILABLE": 1
+  },
+  "supplementalRetries": 1,
+  "pipelineDocumentsWithSuccessfulResponse": 48,
+  "primaryFailuresRetained": [
+    "id-medium-05-scan"
+  ],
+  "humanReview": "PENDING; no human review claimed by the runner",
+  "snapshotSha256": "2500f7c7544417aa3800bd5dbe7e86dc7f86971dd7350f00437077b8fa1ecb34"
+}
