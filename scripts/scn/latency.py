@@ -26,7 +26,9 @@ from _verification_scn import (
     add_target_argument,
     ensure_active_proof,
     fixture_bytes,
+    health_component,
     local_settings,
+    partner_client,
     post_verification,
     response_body,
     summarize,
@@ -34,7 +36,6 @@ from _verification_scn import (
 from common import (
     ROOT,
     ScenarioError,
-    create_api07_client,
     login_seed_hr,
     new_request_id,
     print_expected_actual,
@@ -52,7 +53,9 @@ TARGETS_MS = {
     "api06Revoke": 5000,
 }
 # Alasan AI yang tidak akan pulih dalam satu run; panggilan AI berikutnya dihentikan agar kuota tidak dihabiskan.
-AI_STOP_REASONS = {"AI_QUOTA_EXCEEDED", "AI_PROVIDER_UNCONFIGURED"}
+# API-07 memetakan provider belum dikonfigurasi dan ai-service mati ke AI_SERVICE_UNAVAILABLE; keduanya juga dicegah
+# lebih awal oleh pemeriksaan health `aiService` sebelum varian AI.
+AI_STOP_REASONS = {"AI_QUOTA_EXCEEDED", "AI_SERVICE_UNAVAILABLE"}
 
 
 def nearest_rank(values: list[float], percentile: float) -> float:
@@ -187,7 +190,7 @@ def main() -> int:
         fx01 = ("FX-01.pdf", fixture_bytes("FX-01.pdf"))
         found = lambda a: a.get("httpStatus") == 200 and a.get("lookup") == "FOUND"  # noqa: E731
         completed = lambda a: a.get("httpStatus") == 200 and a.get("riskState") == "COMPLETED"  # noqa: E731
-        with create_api07_client(settings) as client:
+        with partner_client(settings) as client:
             samples = {
                 "api07CodeOnly": measure_api07(
                     client, args.samples, True, 0, found, code=proof.reference_code, include_risk=False
@@ -202,31 +205,25 @@ def main() -> int:
                     file=fx01,
                     include_risk=False,
                 ),
-                "api07AiTextPdf": measure_api07(
-                    client,
-                    args.ai_samples,
-                    False,
-                    args.ai_interval,
-                    completed,
-                    file=("FX-03.pdf", fixture_bytes("FX-03.pdf")),
-                    include_risk=True,
-                ),
             }
-            ai_stopped = ai_stop_reason(samples["api07AiTextPdf"])
-            samples["api07AiScanPdf"] = (
-                []
-                if ai_stopped
-                else measure_api07(
-                    client,
-                    args.ai_samples,
-                    False,
-                    args.ai_interval,
-                    completed,
-                    file=("FX-04.pdf", fixture_bytes("FX-04.pdf")),
-                    include_risk=True,
+            # Tanpa LLM terkonfigurasi atau ai-service sehat, varian AI tidak dipanggil sama sekali.
+            ai_health = health_component(client, "aiService")
+            ai_stopped = None if ai_health == "ok" else f"HEALTH_AI_SERVICE_{str(ai_health).upper()}"
+            for name, fixture in (("api07AiTextPdf", "FX-03.pdf"), ("api07AiScanPdf", "FX-04.pdf")):
+                samples[name] = (
+                    []
+                    if ai_stopped
+                    else measure_api07(
+                        client,
+                        args.ai_samples,
+                        False,
+                        args.ai_interval,
+                        completed,
+                        file=(fixture, fixture_bytes(fixture)),
+                        include_risk=True,
+                    )
                 )
-            )
-            ai_stopped = ai_stopped or ai_stop_reason(samples["api07AiScanPdf"])
+                ai_stopped = ai_stopped or ai_stop_reason(samples[name])
         samples["api04Issue"], samples["api06Revoke"] = measure_issue_revoke(settings, args.issue_samples)
     except ScenarioError as exc:
         print(f"Pengukuran latensi tidak dapat dijalankan: {exc}", file=sys.stderr)

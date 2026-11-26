@@ -23,7 +23,6 @@ from common import (
     ROOT,
     ScenarioError,
     ScenarioSettings,
-    create_api07_client,
     load_settings,
     login_seed_hr,
     new_request_id,
@@ -209,6 +208,27 @@ def active_llm_model() -> str | None:
     return result.stdout.strip() or None
 
 
+def partner_client(settings: ScenarioSettings) -> httpx.Client:
+    """Klien API-07 bertoken partner yang tidak memakai proxy dari environment (token hanya ke loopback lokal)."""
+    return httpx.Client(
+        base_url=settings.api_base_url,
+        timeout=httpx.Timeout(120.0),
+        headers={"Authorization": f"Bearer {settings.partner_token}"},
+        trust_env=False,
+    )
+
+
+def health_component(client: httpx.Client, name: str) -> str | None:
+    """Status satu komponen health backend (`ok`, `unconfigured`, `unavailable`); None bila tidak terbaca."""
+    try:
+        response = client.get(f"{API}/health", timeout=10)
+        components = response.json().get("components", {})
+    except (httpx.HTTPError, ValueError, AttributeError):
+        return None
+    value = components.get(name) if isinstance(components, dict) else None
+    return value if isinstance(value, str) else None
+
+
 def wait_health(client: httpx.Client, components: tuple[str, ...], timeout: float = 120) -> None:
     """Menunggu komponen health backend berstatus ok setelah service dijalankan ulang."""
     deadline = time.monotonic() + timeout
@@ -318,7 +338,7 @@ def run_scenario(
     started = datetime.now(UTC)
     try:
         settings = local_settings(project)
-        with create_api07_client(settings) as client:
+        with partner_client(settings) as client:
             steps = execute(settings, client)
     except ScenarioError as exc:
         failure = str(exc)

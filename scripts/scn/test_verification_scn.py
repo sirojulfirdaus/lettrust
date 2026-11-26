@@ -141,15 +141,18 @@ def test_restore_services_tries_each_service(monkeypatch: pytest.MonkeyPatch) ->
             raise ScenarioError("gagal")
 
     monkeypatch.setattr(scn17_double_outage, "run_dev_service", fake_dev)
-    with pytest.raises(ScenarioError, match="chain"):
+    monkeypatch.setenv("COMPOSE_PROJECT_NAME", "lettrust_uji")
+    with pytest.raises(ScenarioError, match="chain") as error:
         scn17_double_outage.restore_services()
+    assert "COMPOSE_PROJECT_NAME=lettrust_uji" in str(error.value)
     assert calls == [("start", "chain"), ("start", "ai-service")]
 
 
-def test_ai_measurement_stops_on_quota() -> None:
-    """AI_QUOTA_EXCEEDED menghentikan panggilan AI berikutnya; varian tanpa sukses ditandai tidak lengkap."""
+@pytest.mark.parametrize("reason", ["AI_QUOTA_EXCEEDED", "AI_SERVICE_UNAVAILABLE"])
+def test_ai_measurement_stops_on_quota(reason: str) -> None:
+    """Kuota habis atau ai-service/provider tak tersedia menghentikan panggilan AI berikutnya; varian tidak lengkap."""
     calls: list[int] = []
-    quota = {**BODY, "riskAnalysis": {"state": "UNAVAILABLE", "reason": "AI_QUOTA_EXCEEDED", "category": None}}
+    quota = {**BODY, "riskAnalysis": {"state": "UNAVAILABLE", "reason": reason, "category": None}}
 
     def handler(_: httpx.Request) -> httpx.Response:
         calls.append(1)
@@ -158,5 +161,25 @@ def test_ai_measurement_stops_on_quota() -> None:
     with httpx.Client(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(handler)) as client:
         samples = measure_api07(client, 5, False, 0, lambda a: a.get("riskState") == "COMPLETED", include_risk=True)
     assert len(calls) == len(samples) == 1
-    assert ai_stop_reason(samples) == "AI_QUOTA_EXCEEDED"
+    assert ai_stop_reason(samples) == reason
     assert stats(samples, None)["complete"] is False
+
+
+def test_partner_client_ignores_proxy_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Token partner tidak boleh dikirim lewat proxy dari environment (HTTP_PROXY/HTTPS_PROXY/ALL_PROXY)."""
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"):
+        monkeypatch.setenv(name, "http://127.0.0.1:9")
+    with helper.partner_client(SETTINGS) as client:
+        assert client.trust_env is False
+        assert client.headers["Authorization"] == "Bearer token-uji"
+
+
+@pytest.mark.parametrize(("value", "expected"), [("unconfigured", "unconfigured"), ("ok", "ok"), (None, None)])
+def test_health_component_reads_ai_status(value: str | None, expected: str | None) -> None:
+    """Status aiService dibaca dari health backend agar varian AI dilewati bila LLM belum siap."""
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"status": "degraded", "components": {"aiService": value}})
+
+    with httpx.Client(base_url="http://127.0.0.1:8000", transport=httpx.MockTransport(handler)) as client:
+        assert helper.health_component(client, "aiService") == expected

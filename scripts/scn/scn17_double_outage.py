@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import os
+
 import httpx
 
 from _verification_scn import (
@@ -30,8 +32,13 @@ def restore_services(services: tuple[str, ...] = SERVICES) -> None:
         except ScenarioError:
             failed.append(service)
     if failed:
+        # local_settings() sudah menetapkan COMPOSE_PROJECT_NAME; perintah manual harus mengenai project yang sama.
+        project = os.environ.get("COMPOSE_PROJECT_NAME", "lettrust")
         commands = "; ".join(f"python scripts/dev.py start {service}" for service in failed)
-        raise ScenarioError(f"Service belum berjalan kembali: {', '.join(failed)}. Jalankan manual: {commands}.")
+        raise ScenarioError(
+            f"Service project Compose '{project}' belum berjalan kembali: {', '.join(failed)}. "
+            f"Jalankan manual dengan COMPOSE_PROJECT_NAME={project}: {commands}."
+        )
 
 
 def execute(settings: ScenarioSettings, client: httpx.Client) -> list[Step]:
