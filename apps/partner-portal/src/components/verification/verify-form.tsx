@@ -75,6 +75,12 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
     setForm((current) => withFile(current, selected && !rejection ? selected : null));
   }
 
+  // Menyimpan persetujuan AI; mencentangnya menghapus pesan persetujuan di banner (hanya pesan itu, bukan error lain).
+  function changeConsent(checked: boolean) {
+    setForm((current) => ({ ...current, consent: checked }));
+    if (checked) setError((current) => (current === CONSENT_REQUIRED_MESSAGE ? null : current));
+  }
+
   // Menjaga input tetap relevan saat pemohon berpindah mode pemeriksaan.
   function changeMode(nextMode: VerificationMode) {
     setForm(initialFormState(nextMode));
@@ -134,7 +140,7 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
         {mode === "REFERENCE_CHECK" && (
           <div className="space-y-2">
             <label htmlFor="reference-code" className="font-medium">Kode referensi</label>
-            <Input id="reference-code" autoComplete="off" placeholder={REFERENCE_CODE_EXAMPLE} value={referenceCode} onChange={(event) => { const value = event.target.value; setForm((current) => ({ ...current, referenceCode: value })); }} disabled={isProcessing} aria-describedby={showCodeError ? "reference-help reference-error" : "reference-help"} aria-invalid={showCodeError} />
+            <Input id="reference-code" autoComplete="off" placeholder={REFERENCE_CODE_EXAMPLE} value={referenceCode} onChange={(event) => { const value = event.target.value; setForm((current) => ({ ...current, referenceCode: value })); setCodeSubmitted(false); }} disabled={isProcessing} aria-describedby={showCodeError ? "reference-help reference-error" : "reference-help"} aria-invalid={showCodeError} />
             <p id="reference-help" className="text-sm text-muted-foreground">Contoh: {REFERENCE_CODE_EXAMPLE}. Spasi dan tanda hubung akan dinormalisasi.</p>
             {/* Live region selalu ada (kosong tanpa error) agar perubahan isinya diumumkan pembaca layar; tanpa isi disembunyikan visual. */}
             <p id="reference-error" aria-live="polite" aria-atomic="true" className="text-sm text-destructive empty:sr-only">{showCodeError ? verificationErrorMessage(400, "INVALID_REFERENCE_CODE_FORMAT") : ""}</p>
@@ -150,7 +156,7 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
               Pilih berkas PDF
             </label>
             <span id="file-name" className="min-w-0 break-all text-sm text-muted-foreground">{file ? `${file.name} · ${(file.size / (1024 * 1024)).toFixed(2)} MB` : "Belum ada berkas dipilih"}</span>
-            {file && <Button type="button" variant="outline" size="sm" disabled={isProcessing} onClick={() => setForm((current) => withFile(current, null))}>Hapus berkas</Button>}
+            {file && <Button type="button" variant="outline" size="sm" disabled={isProcessing} onClick={() => { setForm((current) => withFile(current, null)); setFileError(null); }}>Hapus berkas</Button>}
           </div>
           <p id="file-help" className="text-sm text-muted-foreground">Berkas dipakai untuk pemeriksaan ini saja.</p>
           <p id="file-error" aria-live="polite" aria-atomic="true" className="text-sm text-destructive empty:sr-only">{fileError ?? ""}</p>
@@ -162,7 +168,7 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
           </label>
         )}
         {mode === "AI_ONLY" && <p className="rounded-lg bg-muted p-3 text-sm">Apabila perusahaan menyatakan menggunakan Lettrust, mintalah kode referensi kepada perusahaan.</p>}
-        {riskRequested && <ConsentCheckbox checked={consent} disabled={isProcessing} invalid={error === CONSENT_REQUIRED_MESSAGE} describedBy={error === CONSENT_REQUIRED_MESSAGE ? "form-error" : undefined} onCheckedChange={(checked) => setForm((current) => ({ ...current, consent: checked }))} />}
+        {riskRequested && <ConsentCheckbox checked={consent} disabled={isProcessing} invalid={error === CONSENT_REQUIRED_MESSAGE} describedBy={error === CONSENT_REQUIRED_MESSAGE ? "form-error" : undefined} onCheckedChange={changeConsent} />}
         {/* Banner error selalu ada di DOM sebagai live region; tampil visual hanya bila ada pesan. */}
         <div id="form-error" role="alert" aria-atomic="true" className={error ? "rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive" : "sr-only"}>{error ?? ""}</div>
         {isProcessing && <ProcessingStatus includeRisk={riskRequested} />}

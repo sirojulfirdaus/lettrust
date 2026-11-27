@@ -97,4 +97,49 @@ describe("aksesibilitas pesan error inline formulir portal", () => {
     expect(consent.getAttribute("aria-describedby")).toBe("form-error");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  // Mencentang persetujuan setelah error menghapus pesan persetujuan dan melepas aria-invalid kotak.
+  it("mencentang persetujuan setelah error menghapus pesan dan status invalid", () => {
+    const { form } = renderForm();
+    fireEvent.change(screen.getByLabelText("Kode referensi"), { target: { value: "LTR-7K3M-9QX2-H4TD" } });
+    const pdf = new File(["%PDF-1.4\n"], "surat.pdf", { type: "application/pdf" });
+    fireEvent.change(document.getElementById("offer-letter") as HTMLInputElement, { target: { files: [pdf] } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Analisis indikasi risiko dengan AI/ }));
+    fireEvent.submit(form);
+    const banner = document.getElementById("form-error") as HTMLElement;
+    expect(banner.textContent).toBe(CONSENT_REQUIRED_MESSAGE);
+    const consent = screen.getByRole("checkbox", { name: /Saya menyetujui pemrosesan AI/ });
+    fireEvent.click(consent);
+    expect(banner.textContent).toBe("");
+    expect(consent.getAttribute("aria-invalid")).toBeNull();
+    expect(consent.getAttribute("aria-describedby")).toBeNull();
+    // Banner tetap ada di DOM sebagai live region untuk error berikutnya.
+    expect(banner.getAttribute("role")).toBe("alert");
+  });
+
+  // Pesan kode hasil submit hilang saat kode diubah; kode valid tidak menampilkan pesan.
+  it("pesan kode hilang saat kode diubah menjadi valid", () => {
+    const { form } = renderForm();
+    const input = screen.getByLabelText("Kode referensi");
+    fireEvent.submit(form);
+    const region = document.getElementById("reference-error") as HTMLElement;
+    expect(region.textContent).toBe(CODE_MESSAGE);
+    fireEvent.change(input, { target: { value: "LTR-7K3M-9QX2-H4TD" } });
+    expect(region.textContent).toBe("");
+    expect(input.getAttribute("aria-invalid")).toBe("false");
+    expect(input.getAttribute("aria-describedby")).toBe("reference-help");
+  });
+
+  // Pesan berkas hilang saat berkas diganti dengan PDF valid atau dihapus.
+  it("pesan berkas hilang saat berkas diganti", () => {
+    renderForm();
+    const input = document.getElementById("offer-letter") as HTMLInputElement;
+    const region = document.getElementById("file-error") as HTMLElement;
+    fireEvent.change(input, { target: { files: [new File(["x"], "catatan.txt", { type: "text/plain" })] } });
+    expect(region.textContent).not.toBe("");
+    fireEvent.change(input, { target: { files: [new File(["%PDF-1.4\n"], "surat.pdf", { type: "application/pdf" })] } });
+    expect(region.textContent).toBe("");
+    expect(input.getAttribute("aria-invalid")).toBe("false");
+    expect(input.getAttribute("aria-describedby")?.split(" ")).not.toContain("file-error");
+  });
 });
