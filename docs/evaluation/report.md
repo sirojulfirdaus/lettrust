@@ -71,6 +71,7 @@ Dws menyetujui Qwen dan pengguna mengonfirmasi pengumumannya ke tim. Dasar opera
 Tabel memakai observasi pertama dalam raw utama, dibulatkan empat desimal; metrics menyimpan presisi penuh. P/R/F1 adalah rasio 0–1.
 
 - Kategori dihitung hanya pada respons sukses: Qwen n=47, baseline n=48. Kegagalan dilaporkan lewat coverage/reliabilitas, bukan diberi kategori. Accuracy = kategori benar / respons berkategori; macro F1 adalah rata-rata F1 tiga kelas.
+- Metrik strict memakai penyebut seluruh dokumen test (48, atau 24 per kelompok MET-12): UNAVAILABLE dihitung salah, yaitu FN untuk kelas referensinya dan bukan prediksi kelas mana pun. Nilai ini dihitung ulang dari raw utama dan manifest; `metrics.json` tetap memakai penyebut respons sukses.
 - Indikator dihitung pada seluruh 48 dokumen per varian dari `result.indicatorDetails`. Record gagal mempunyai himpunan prediksi kosong, sehingga indikator referensinya menjadi FN. TP/FP/FN dihitung per pasangan dokumen–kode, bukan per kutipan.
 - MET-11 memakai 47 ID yang sukses pada kedua varian, termasuk saat membandingkan indikator. Delta = pipeline dikurangi baseline; denominator ini berbeda dari MET-10 seluruh test.
 - Precision/F1 dengan denominator nol diberi 0; recall tanpa support bernilai null. Semua kode indikator mempunyai support pada test ini.
@@ -79,10 +80,12 @@ Tabel memakai observasi pertama dalam raw utama, dibulatkan empat desimal; metri
 
 ## 5. MET-09 — Klasifikasi kategori
 
-| Varian | Diklasifikasi / test | Kategori benar | Accuracy | Macro F1 |
-| --- | ---: | ---: | ---: | ---: |
-| Qwen | 47/48 | 47/47 | 1,0000 | 1,0000 |
-| Baseline | 48/48 | 26/48 | 0,5417 | 0,5183 |
+| Varian | Diklasifikasi / test | Kategori benar | Accuracy | Macro F1 | Akurasi strict (penyebut 48) | Macro F1 strict |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Qwen | 47/48 | 47/47 | 1,0000 | 1,0000 | 47/48 = 0,9792 | 0,9892 |
+| Baseline | 48/48 | 26/48 | 0,5417 | 0,5183 | 26/48 = 0,5417 | 0,5183 |
+
+Accuracy dan macro F1 dihitung pada respons sukses; kolom strict menghitung UNAVAILABLE sebagai salah. Pada strict, MEDIUM Qwen menjadi P/R/F1 1,0000 / 0,9375 / 0,9677 (support 16, satu FN), sedangkan LOW dan HIGH tetap 1,0000. Baseline tidak mempunyai kegagalan sehingga nilai strict sama dengan nilai sukses.
 
 | Kategori | Support Qwen | P Qwen | R Qwen | F1 Qwen | Support baseline | P baseline | R baseline | F1 baseline |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -143,12 +146,14 @@ Recall pipeline meningkat, tetapi precision UNOFFICIAL_CONTACT dan URGENCY_PRESS
 
 Setiap kelompok berisi 24 PDF. Satu kegagalan pipeline berada pada kelompok Indonesia dan scan; keduanya mempunyai 23 respons berkategori. Kelompok bahasa/format saling tumpang tindih dan tidak boleh dijumlahkan sebagai observasi independen.
 
-| Kelompok | Qwen diklasifikasi | Accuracy Qwen | Macro F1 Qwen | Baseline diklasifikasi | Accuracy baseline | Macro F1 baseline |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Indonesia | 23/24 | 1,0000 | 1,0000 | 24/24 | 0,5833 | 0,5556 |
-| Inggris | 24/24 | 1,0000 | 1,0000 | 24/24 | 0,5000 | 0,4571 |
-| PDF teks | 24/24 | 1,0000 | 1,0000 | 24/24 | 0,5417 | 0,5183 |
-| PDF scan | 23/24 | 1,0000 | 1,0000 | 24/24 | 0,5417 | 0,5183 |
+| Kelompok | Qwen diklasifikasi | Accuracy Qwen | Macro F1 Qwen | Akurasi strict Qwen (penyebut 24) | Macro F1 strict Qwen | Baseline diklasifikasi | Accuracy baseline | Macro F1 baseline |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Indonesia | 23/24 | 1,0000 | 1,0000 | 23/24 = 0,9583 | 0,9778 | 24/24 | 0,5833 | 0,5556 |
+| Inggris | 24/24 | 1,0000 | 1,0000 | 24/24 = 1,0000 | 1,0000 | 24/24 | 0,5000 | 0,4571 |
+| PDF teks | 24/24 | 1,0000 | 1,0000 | 24/24 = 1,0000 | 1,0000 | 24/24 | 0,5417 | 0,5183 |
+| PDF scan | 23/24 | 1,0000 | 1,0000 | 23/24 = 0,9583 | 0,9778 | 24/24 | 0,5417 | 0,5183 |
+
+Kolom strict menghitung UNAVAILABLE sebagai salah dengan penyebut 24 per kelompok; baseline tidak mempunyai kegagalan sehingga nilai strict-nya sama dengan kolom baseline. Pada Indonesia dan scan, MEDIUM Qwen strict menjadi P/R/F1 1,0000 / 0,8750 / 0,9333.
 
 Rincian kelas memakai urutan P/R/F1. Support baseline setiap kelas adalah 8; Qwen juga 8 kecuali MEDIUM Indonesia/scan masing-masing 7. Baris teks/scan diringkas bersama karena nilai P/R/F1 identik, bukan karena dokumennya digabung saat penghitungan.
 
@@ -204,7 +209,7 @@ Satu retry ini adalah pengecualian prosedur sekali pada PRD §10.4.3 dan tetap h
 | Qwen | 48 | 1749,5 ms | 4401 ms | 411 ms | 20916 ms |
 | Baseline | 48 | 552,5 ms | 3648 ms | 26 ms | 3991 ms |
 
-Failure pertama masuk 48 observasi Qwen; retry dan waktu menunggu kelanjutan dikecualikan. Latensi ekstraksi+analisis offline ini bukan MET-16/API-07 dan tidak membuktikan target performa skenario terintegrasi.
+Failure pertama masuk 48 observasi Qwen; retry dan waktu menunggu kelanjutan dikecualikan. Maksimum Qwen 20916 ms berasal dari record UNAVAILABLE `id-medium-05-scan`; maksimum di antara 47 respons sukses adalah 4739 ms. Latensi ekstraksi+analisis offline ini bukan MET-16/API-07 dan tidak membuktikan target performa skenario terintegrasi.
 
 ## 10. Analisis kualitatif kesalahan
 

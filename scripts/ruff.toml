@@ -1,0 +1,11 @@
+# Konfigurasi ruff untuk scripts/ (dev.py, export_abi.py, scn/); aturan disamakan dengan services/backend.
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]
+
+[lint.isort]
+# Modul lokal scripts/scn diimpor tanpa paket; ditandai first-party agar urutan impor stabil dari cwd mana pun.
+known-first-party = ["common", "latency", "_registry_scn", "_verification_scn", "scn*"]

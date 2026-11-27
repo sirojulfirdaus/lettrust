@@ -29,6 +29,7 @@ import {
   readSession,
   saveSession,
   SESSION_STORAGE_KEY,
+  sessionRedirectPath,
 } from "@/lib/session";
 
 // Storage in-memory sederhana untuk meniru window.sessionStorage di lingkungan Node Vitest.
@@ -99,6 +100,36 @@ describe("manajemen sesi Console", () => {
     storage.setItem(SESSION_STORAGE_KEY, "{bukan-json");
     expect(readSession(now)).toBeNull();
     expect(storage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+  });
+});
+
+describe("tujuan redirect login saat sesi kosong (FR-01.02 AC-05)", () => {
+  beforeEach(() => {
+    vi.stubGlobal("window", {
+      sessionStorage: createMemoryStorage(),
+      location: { pathname: "/hr", assign: vi.fn() },
+      dispatchEvent: () => true,
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("membedakan sesi kedaluwarsa dari tidak ada sesi", () => {
+    const now = Date.parse("2026-11-22T10:00:00Z");
+    expect(readSession(now)).toBeNull();
+    expect(sessionRedirectPath()).toBe("/login");
+
+    saveSession(createSession("token-lama", 60, now));
+    expect(readSession(now + 61_000)).toBeNull();
+    expect(sessionRedirectPath()).toBe("/login?reason=session_expired");
+
+    clearSession();
+    expect(sessionRedirectPath()).toBe("/login");
+
+    saveSession(createSession("token-baru", 60, now));
+    expect(sessionRedirectPath()).toBe("/login");
   });
 });
 

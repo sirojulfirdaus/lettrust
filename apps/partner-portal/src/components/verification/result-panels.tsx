@@ -1,6 +1,6 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD FR-02.09, §9.6, §9.9.3
 import type { VerificationResponse } from "@/lib/api/types";
-import { indicatorLabel, integrityCheckLabel, proofCheckLabel, riskAnalysisLabel } from "@/lib/verification/labels";
+import { indicatorLabel, integrityCheckLabel, proofCheckLabel, proofDetailLines, riskAnalysisLabel } from "@/lib/verification/labels";
 
 type ResultPanelsProps = { result: VerificationResponse };
 
@@ -39,6 +39,9 @@ export function ResultPanels({ result }: ResultPanelsProps) {
             {id === "proof" && result.proofCheck.issuer?.companyName && (
               <p className="mt-3 text-sm">Penerbit: <span className="font-medium">{result.proofCheck.issuer.companyName}</span></p>
             )}
+            {id === "proof" && proofDetailLines(result.proofCheck).map((line) => (
+              <p key={line} className="mt-1 text-sm">{line}</p>
+            ))}
             {id === "proof" && result.proofCheck.lookup !== "NOT_REQUESTED" && (
               <p className="mt-3 text-xs text-muted-foreground">Sumber status bukti: registry.</p>
             )}

@@ -4,10 +4,16 @@
 import { CheckCircle2, Clock, ShieldAlert, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { components } from "@/lib/api/schema";
+import {
+  getAuthorizationPresentation,
+  getIssuerStatusPresentation,
+  type StatusTone,
+} from "@/app/hr/hr-status";
 
 type IssuerStatus = components["schemas"]["IssuerStatus"];
 type AuthorizationStatus = components["schemas"]["AuthorizationStatus"];
-type StatusTone = "positive" | "warning" | "danger" | "neutral";
+
+export { formatUtcTimestamp as formatIssuerTimestamp } from "@/lib/timestamp";
 
 // Mengembalikan kelas warna badge sesuai token status PRD §9.9.3.
 function getToneClassName(tone: StatusTone): string {
@@ -20,31 +26,6 @@ function getToneClassName(tone: StatusTone): string {
       return "border-status-danger/30 bg-status-danger/10 text-status-danger";
     case "neutral":
       return "border-status-neutral/30 bg-status-neutral/10 text-status-neutral";
-  }
-}
-
-// Memetakan status verifikasi penerbit ke label bahasa Indonesia dan nada warna.
-function getIssuerStatusMeta(status: IssuerStatus): { label: string; tone: StatusTone } {
-  switch (status) {
-    case "VERIFIED":
-      return { label: "Terverifikasi", tone: "positive" };
-    case "PENDING":
-      return { label: "Menunggu Verifikasi", tone: "warning" };
-    case "REJECTED":
-      return { label: "Ditolak", tone: "danger" };
-  }
-}
-
-// Memetakan status otorisasi HR ke label bahasa Indonesia dan nada warna.
-function getAuthorizationStatusMeta(status: AuthorizationStatus): {
-  label: string;
-  tone: StatusTone;
-} {
-  switch (status) {
-    case "AUTHORIZED":
-      return { label: "Diotorisasi", tone: "positive" };
-    case "NOT_AUTHORIZED":
-      return { label: "Menunggu Otorisasi", tone: "neutral" };
   }
 }
 
@@ -68,27 +49,18 @@ function StatusPill({ label, tone }: { label: string; tone: StatusTone }) {
 
 // Badge status verifikasi penerbit (PENDING, VERIFIED, REJECTED).
 export function IssuerStatusBadge({ status }: { status: IssuerStatus }) {
-  const meta = getIssuerStatusMeta(status);
+  const meta = getIssuerStatusPresentation(status);
   return <StatusPill label={meta.label} tone={meta.tone} />;
 }
 
-// Badge status otorisasi anggota HR (AUTHORIZED, NOT_AUTHORIZED).
-export function HrAuthorizationBadge({ status }: { status: AuthorizationStatus }) {
-  const meta = getAuthorizationStatusMeta(status);
+// Badge status otorisasi anggota HR; status penerbit menentukan label NOT_AUTHORIZED (menunggu atau ditolak).
+export function HrAuthorizationBadge({
+  status,
+  issuerStatus,
+}: {
+  status: AuthorizationStatus;
+  issuerStatus: IssuerStatus;
+}) {
+  const meta = getAuthorizationPresentation(status, issuerStatus);
   return <StatusPill label={meta.label} tone={meta.tone} />;
-}
-
-// Memformat stempel waktu ISO ke format lokal Indonesia yang mudah dibaca.
-export function formatIssuerTimestamp(isoString: string | null): string {
-  if (!isoString) {
-    return "-";
-  }
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) {
-    return isoString;
-  }
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
 }

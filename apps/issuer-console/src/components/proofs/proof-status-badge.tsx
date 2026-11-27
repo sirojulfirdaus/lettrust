@@ -5,6 +5,8 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { LifecycleStatus, RevocationReasonCode } from "@/lib/api/client";
 
+export { formatUtcTimestamp as formatProofTimestamp } from "@/lib/timestamp";
+
 export type RevocationReasonOption = {
   code: RevocationReasonCode;
   label: string;
@@ -39,24 +41,6 @@ export const REVOCATION_REASON_OPTIONS: readonly RevocationReasonOption[] = [
 export function getRevocationReasonLabel(code: RevocationReasonCode): string {
   const match = REVOCATION_REASON_OPTIONS.find((item) => item.code === code);
   return match ? match.label : code;
-}
-
-// Memformat stempel waktu ISO-8601 ke tampilan tanggal dan waktu UTC berbahasa Indonesia.
-export function formatProofTimestamp(isoValue: string): string {
-  const parsed = new Date(isoValue);
-  if (Number.isNaN(parsed.getTime())) {
-    return isoValue;
-  }
-  return (
-    new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "UTC",
-    }).format(parsed) + " UTC"
-  );
 }
 
 // Menampilkan badge status siklus hidup bukti (ACTIVE/REVOKED) dengan warna, ikon, dan teks PRD §9.9.3.

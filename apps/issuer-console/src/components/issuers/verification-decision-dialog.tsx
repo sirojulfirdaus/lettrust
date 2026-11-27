@@ -23,12 +23,15 @@ import {
   submitVerificationDecision,
   validateVerificationDecisionInput,
   type IssuerDecision,
+  type VerifyIssuerResponse,
 } from "@/app/admin/issuers/admin-issuers-flow";
 
 interface VerificationDecisionDialogProps {
   issuerId: string;
   companyName: string;
   onSuccess: () => void;
+  // Dipanggil dengan respons API-02 agar induk menampilkan status baru dan waktu peninjauan.
+  onDecisionSaved: (data: VerifyIssuerResponse) => void;
   onConflict: (message: string) => void;
 }
 
@@ -37,6 +40,7 @@ export function VerificationDecisionDialog({
   issuerId,
   companyName,
   onSuccess,
+  onDecisionSaved,
   onConflict,
 }: VerificationDecisionDialogProps) {
   const router = useRouter();
@@ -108,7 +112,7 @@ export function VerificationDecisionDialog({
       }
 
       setConfirmOpen(false);
-      onSuccess();
+      onDecisionSaved(result.data);
     } finally {
       submitGuardRef.current = false;
       setIsSubmitting(false);

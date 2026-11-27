@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, Building2, Loader2, ShieldAlert } from "lucide-react";
+import { AlertCircle, ArrowLeft, Building2, CheckCircle2, Loader2, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,13 @@ import {
 } from "@/components/issuers/issuer-status-badge";
 import { VerificationDecisionDialog } from "@/components/issuers/verification-decision-dialog";
 import type { IssuerDetailResponse } from "@/lib/api/client";
-import { loadIssuerDetail } from "../admin-issuers-flow";
+import { decodeRouteParam } from "@/lib/routes";
+import {
+  buildVerificationDecisionNotice,
+  loadIssuerDetail,
+  type VerificationDecisionNotice,
+  type VerifyIssuerResponse,
+} from "../admin-issuers-flow";
 
 type DetailState =
   | { status: "loading" }
@@ -28,11 +34,10 @@ type DetailState =
 export default function IssuerDetailPage() {
   const params = useParams<{ issuerId: string }>();
   const router = useRouter();
-  const rawIssuerId = params?.issuerId ?? "";
-  const issuerId = decodeURIComponent(rawIssuerId);
+  const issuerId = decodeRouteParam(params?.issuerId);
 
   const [refreshCount, setRefreshCount] = useState(0);
-  const [decisionConflictMessage, setDecisionConflictMessage] = useState<string | null>(null);
+  const [decisionNotice, setDecisionNotice] = useState<VerificationDecisionNotice | null>(null);
   const [state, setState] = useState<DetailState>({ status: "loading" });
 
   useEffect(() => {
@@ -75,6 +80,20 @@ export default function IssuerDetailPage() {
 
   const handleRefresh = useCallback(() => {
     setRefreshCount((n) => n + 1);
+  }, []);
+
+  // Menampilkan konfirmasi keputusan tersimpan (PRD §9.5) menggantikan konflik sebelumnya, lalu memuat ulang detail.
+  const handleDecisionSaved = useCallback(
+    (data: VerifyIssuerResponse) => {
+      setDecisionNotice(buildVerificationDecisionNotice({ kind: "saved", data }));
+      handleRefresh();
+    },
+    [handleRefresh],
+  );
+
+  // Menampilkan konflik 409 keputusan menggantikan notifikasi sukses sebelumnya.
+  const handleDecisionConflict = useCallback((message: string) => {
+    setDecisionNotice(buildVerificationDecisionNotice({ kind: "conflict", message }));
   }, []);
 
   if (!issuerId) {
@@ -175,11 +194,19 @@ export default function IssuerDetailPage() {
         </Button>
       </div>
 
-      {decisionConflictMessage ? (
+      {decisionNotice?.kind === "conflict" ? (
         <Alert variant="destructive">
           <AlertCircle className="size-4" aria-hidden="true" />
           <AlertTitle>Keputusan verifikasi sudah ditetapkan</AlertTitle>
-          <AlertDescription>{decisionConflictMessage}</AlertDescription>
+          <AlertDescription>{decisionNotice.message}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {decisionNotice?.kind === "success" ? (
+        <Alert>
+          <CheckCircle2 className="size-4 text-status-positive" aria-hidden="true" />
+          <AlertTitle>Keputusan tersimpan</AlertTitle>
+          <AlertDescription>{decisionNotice.message}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -257,7 +284,8 @@ export default function IssuerDetailPage() {
           issuerId={issuer.issuerId}
           companyName={issuer.companyName}
           onSuccess={handleRefresh}
-          onConflict={(message) => setDecisionConflictMessage(message)}
+          onDecisionSaved={handleDecisionSaved}
+          onConflict={handleDecisionConflict}
         />
       ) : null}
 

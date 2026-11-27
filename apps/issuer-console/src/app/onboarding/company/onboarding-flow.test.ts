@@ -12,7 +12,7 @@ import {
   s03SessionHrUnaffiliated,
 } from "@/fixtures/api";
 import { buildApiUrl } from "@/lib/api/client";
-import { clearSession, createSession, saveSession } from "@/lib/session";
+import { clearSession, createSession, saveSession, SESSION_CHANGE_EVENT } from "@/lib/session";
 import { loadOnboardingGuard, submitCompanyRegistration } from "./onboarding-flow";
 
 // Storage in-memory untuk meniru window.sessionStorage saat pengujian Vitest.
@@ -129,6 +129,9 @@ describe("alur halaman onboarding perusahaan", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(api01RegisterIssuerResponse, 201));
     vi.stubGlobal("fetch", fetchMock);
 
+    const dispatchMock = vi.mocked(window.dispatchEvent);
+    dispatchMock.mockClear();
+
     const result = await submitCompanyRegistration(api01RegisterIssuerRequest);
 
     expect(result).toEqual({
@@ -136,6 +139,8 @@ describe("alur halaman onboarding perusahaan", () => {
       data: api01RegisterIssuerResponse,
       redirectTo: "/hr",
     });
+    // Afiliasi baru memicu event sesi agar header memuat ulang profil tanpa refetch per navigasi.
+    expect(dispatchMock.mock.calls.map(([event]) => event.type)).toContain(SESSION_CHANGE_EVENT);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [calledUrl, calledInit] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(calledUrl).toBe(buildApiUrl("/api/v1/issuers"));

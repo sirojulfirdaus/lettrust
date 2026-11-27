@@ -124,7 +124,7 @@ describe("alur halaman Beranda HR", () => {
     expect(result.kind).toBe("ready");
     if (result.kind === "ready") {
       expect(result.status.issuerStatusLabel).toBe("Terverifikasi");
-      expect(result.status.authorizationLabel).toBe("Menunggu Otorisasi");
+      expect(result.status.authorizationLabel).toBe("Belum Diotorisasi");
       expect(result.status.canIssueProof).toBe(false);
       expect(result.proofs).toBeNull();
     }

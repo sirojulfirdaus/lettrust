@@ -1,11 +1,14 @@
 # Owner: Sat (PIC 6) | Status: COMPLETE | Ref: SA §6.3, §6.4, AD-22; T6-02
 """Menguji batas RPC, konfirmasi transaksi, dan lock; conformance nyata tetap dijalankan terhadap Anvil."""
 
+import json
+import logging
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
+import requests
 from web3 import Web3
 from web3.exceptions import (
     ContractCustomError,
@@ -18,6 +21,7 @@ from web3.exceptions import (
 )
 
 from app.core.config import get_settings
+from app.core.logging import JsonFormatter
 from app.modules.registry import adapter as registry_adapter
 from app.modules.registry.adapter import (
     SIGNER_LOCK,
@@ -351,3 +355,94 @@ def test_invalid_deployment_is_unavailable(
     assert adapter.health() is False
     with pytest.raises(RegistryUnavailable):
         adapter.issue_proof(PROOF_ID, DOCUMENT_HASH, ISSUER_REF)
+
+
+# Formatter produksi untuk record event registry tertentu.
+def registry_events(caplog: pytest.LogCaptureFixture, event: str) -> list[dict[str, Any]]:
+    formatter = JsonFormatter(service="backend")
+    return [json.loads(formatter.format(r)) for r in caplog.records if getattr(r, "event", None) == event]
+
+
+# NFR-09.05: transaksi sukses mencatat tx_sent dan tx_confirmed (operasi dan hash), tanpa input bukti.
+@pytest.mark.parametrize(("method", "operation"), [("issue_proof", "issueProof"), ("revoke_proof", "revokeProof")])
+def test_transaction_events_logged(
+    adapter: Web3RegistryAdapter, rpc: Mock, caplog: pytest.LogCaptureFixture, method: str, operation: str
+) -> None:
+    with caplog.at_level(logging.INFO):
+        result = write_proof(adapter, method)
+    [sent] = registry_events(caplog, "registry.tx_sent")
+    [confirmed] = registry_events(caplog, "registry.tx_confirmed")
+    assert (sent["operation"], sent["txHash"]) == (operation, Web3.to_hex(TX_HASH))
+    assert (confirmed["operation"], confirmed["txHash"]) == (operation, result.tx_hash)
+    output = caplog.text + json.dumps(registry_events(caplog, "registry.tx_sent"))
+    assert all(value not in output for value in (PROOF_ID[2:], DOCUMENT_HASH, ISSUER_REF))
+
+
+# Timeout RPC dan koneksi gagal sama-sama Unavailable bagi pemanggil, tetapi penyebabnya terbedakan di log.
+@pytest.mark.parametrize("cause", [requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError])
+def test_transport_failure_cause_is_logged(
+    adapter: Web3RegistryAdapter, rpc: Mock, caplog: pytest.LogCaptureFixture, cause: type[Exception]
+) -> None:
+    rpc.eth.get_transaction_count.side_effect = cause("detail-transport-sensitif")
+    with caplog.at_level(logging.WARNING), pytest.raises(RegistryUnavailable):
+        adapter.issue_proof(PROOF_ID, DOCUMENT_HASH, ISSUER_REF)
+    [failed] = registry_events(caplog, "registry.tx_failed")
+    assert (failed["operation"], failed["errorCode"], failed["reason"]) == (
+        "issueProof",
+        "RegistryUnavailable",
+        cause.__name__,
+    )
+    assert "detail-transport-sensitif" not in caplog.text
+    assert not registry_events(caplog, "registry.tx_sent")
+
+
+# Receipt status 0: nama revert diambil lewat eth_call pada blok receipt lalu dipetakan seperti revert estimasi gas.
+@pytest.mark.parametrize(
+    ("method", "error_name", "expected"),
+    [
+        ("issue_proof", "ProofAlreadyExists", RegistryTransactionFailed),
+        ("revoke_proof", "ProofNotActive", ProofNotActiveOnChain),
+        ("revoke_proof", "IssuerMismatch", IssuerMismatchOnChain),
+    ],
+)
+def test_failed_receipt_revert_name_is_decoded(
+    adapter: Web3RegistryAdapter,
+    rpc: Mock,
+    caplog: pytest.LogCaptureFixture,
+    method: str,
+    error_name: str,
+    expected: type[RegistryError],
+) -> None:
+    function_name = "issueProof" if method == "issue_proof" else "revokeProof"
+    function = getattr(rpc.eth.contract.return_value.functions, function_name).return_value
+    function.build_transaction.return_value = {"from": "0x" + "66" * 20, "to": CONTRACT_ADDRESS, "data": "0x1234"}
+    rpc.eth.get_transaction_receipt.return_value = {"status": 0, "blockNumber": 42}
+    selector = Web3.to_hex(Web3.keccak(text=error_name + "()")[:4])
+    rpc.eth.call.side_effect = ContractCustomError("execution reverted", data=selector)
+    with caplog.at_level(logging.WARNING), pytest.raises(expected) as error:
+        write_proof(adapter, method)
+    if expected is RegistryTransactionFailed:
+        assert error.value.revert_name == error_name
+    # Replay pada state sebelum blok receipt (42 − 1), dan hash broadcast ikut tercatat.
+    rpc.eth.call.assert_called_once_with({"from": "0x" + "66" * 20, "to": CONTRACT_ADDRESS, "data": "0x1234"}, 41)
+    [failed] = registry_events(caplog, "registry.tx_failed")
+    assert (failed["errorCode"], failed["reason"]) == (expected.__name__, error_name)
+    assert failed["txHash"] == Web3.to_hex(TX_HASH)
+    assert not SIGNER_LOCK.locked()
+
+
+# Replay yang tidak revert atau gagal RPC tetap kegagalan pasti tanpa nama revert.
+@pytest.mark.parametrize("replay_error", [None, OSError("replay gagal")])
+def test_failed_receipt_without_decodable_revert(
+    adapter: Web3RegistryAdapter, rpc: Mock, replay_error: Exception | None
+) -> None:
+    rpc.eth.contract.return_value.functions.issueProof.return_value.build_transaction.return_value = {
+        "from": "0x" + "66" * 20,
+        "to": CONTRACT_ADDRESS,
+        "data": "0x1234",
+    }
+    rpc.eth.get_transaction_receipt.return_value = {"status": 0, "blockNumber": 42}
+    rpc.eth.call.side_effect = replay_error
+    with pytest.raises(RegistryTransactionFailed) as error:
+        adapter.issue_proof(PROOF_ID, DOCUMENT_HASH, ISSUER_REF)
+    assert error.value.revert_name is None

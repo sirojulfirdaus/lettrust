@@ -5,6 +5,7 @@ name: lettrust
 services:
   chain:
     image: ghcr.io/foundry-rs/foundry:v1.9.0
+    # Tanpa restart otomatis: crash Anvil harus terlihat karena state bisa hilang (SCAFFOLD_REPORT K-10).
     # Volume bernama dibuat root-owned karena /data tidak ada di image; anvil perlu menulis state.
     user: "0:0"
     entrypoint: ["anvil"]
@@ -52,6 +53,7 @@ services:
     build:
       context: ./services/backend
     image: lettrust-backend:local
+    restart: unless-stopped
     environment:
       APP_ENV: ${APP_ENV:-local}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -93,6 +95,7 @@ services:
     build:
       context: ./services/ai-service
     image: lettrust-ai-service:local
+    restart: unless-stopped
     environment:
       APP_ENV: ${APP_ENV:-local}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -127,6 +130,7 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
     image: lettrust-issuer-console:local
+    restart: unless-stopped
     ports:
       - "127.0.0.1:${CONSOLE_HOST_PORT:-3000}:3000"
     depends_on:
@@ -143,10 +147,12 @@ services:
     build:
       context: ./apps/partner-portal
     image: lettrust-partner-portal:local
+    restart: unless-stopped
     environment:
       LETTRUST_API_BASE_URL: ${LETTRUST_API_BASE_URL:-http://backend:8000}
       LETTRUST_PARTNER_TOKEN: ${PARTNER_TOKEN:?PARTNER_TOKEN belum diisi; jalankan python scripts/dev.py up}
       PORTAL_UPSTREAM_TIMEOUT_MS: ${PORTAL_UPSTREAM_TIMEOUT_MS:-120000}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
     ports:
       - "127.0.0.1:${PORTAL_HOST_PORT:-3001}:3001"
     depends_on:

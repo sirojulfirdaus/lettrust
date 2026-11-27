@@ -727,7 +727,7 @@ documentContent
 | Client | SDK `openai` Python dengan `base_url` dapat dikonfigurasi. |
 | Provider | Penyedia API OpenAI-compatible free tier, dipilih PIC AI melalui `LLM_BASE_URL` dan `LLM_API_KEY`. Default konfigurasi: Groq (`https://api.groq.com/openai/v1`). Penggantian provider hanya mengubah konfigurasi, tanpa perubahan kode. |
 | Syarat provider dan model | Gratis untuk seluruh anggota; mendukung JSON mode; konteks memadai untuk `AI_MAX_CHARS` ditambah instruksi; kuat dalam bahasa Indonesia; hanya data sintetis yang dikirim. Seluruh anggota memakai provider dan model yang sama dengan kunci masing-masing. |
-| Model | `LLM_MODEL`; kandidat awal `openai/gpt-oss-120b` dan `qwen/qwen3.8-27b`. PIC AI boleh mengganti kandidat atau provider selama memenuhi syarat di atas; pilihan final ditetapkan melalui dev set (OI-01). |
+| Model | `LLM_MODEL`; kandidat awal `openai/gpt-oss-120b` dan `qwen/qwen3.8-27b`. PIC AI boleh mengganti kandidat atau provider selama memenuhi syarat di atas; pilihan final ditetapkan melalui dev set (OI-01): `qwen/qwen3.8-27b` melalui Groq (disetujui Dws 26/11). |
 | Parameter | `temperature=0`, `response_format={"type":"json_object"}`, `max_tokens` dibatasi, `reasoning_effort` opsional melalui `LLM_REASONING_EFFORT` apabila didukung model. Nama provider, URL, model, dan parameter khusus model tidak ditulis langsung di kode selain sebagai nilai default konfigurasi. |
 | Timeout | `LLM_REQUEST_TIMEOUT_SECONDS` |
 | Retry | Hanya satu kali untuk output tidak valid. Tidak ada retry untuk 429/kuota. |
@@ -1597,13 +1597,15 @@ Guard route di client hanya untuk UX; backend tetap menjadi penegak otorisasi.
 ```ts
 // Meneruskan permintaan pemeriksaan pelamar ke API-07 menggunakan token partner di sisi server.
 export async function POST(req: Request): Promise<Response> {
-  // 1. Pastikan multipart; ambil hanya field referenceCode, file, includeRisk.
-  // 2. Susun FormData baru (field lain dibuang).
-  // 3. fetch(`${LETTRUST_API_BASE_URL}/api/v1/verifications`, {
+  // 1. Tolak 413 FILE_TOO_LARGE bila header content-length > MAX_UPLOAD_BYTES + 64 KiB, sebelum body dibaca.
+  // 2. Pastikan multipart; includeRisk=true wajib disertai aiConsent=true (persetujuan pelamar, FR-02.06 AC-05),
+  //    bila tidak → 400 VALIDATION_ERROR tanpa memanggil API-07.
+  // 3. Ambil hanya field referenceCode, file, includeRisk; susun FormData baru (aiConsent dan field lain dibuang).
+  // 4. fetch(`${LETTRUST_API_BASE_URL}/api/v1/verifications`, {
   //      method: "POST", body, headers: { Authorization: `Bearer ${LETTRUST_PARTNER_TOKEN}`, "X-Request-ID": id },
   //      signal: AbortSignal.timeout(PORTAL_UPSTREAM_TIMEOUT_MS) })
-  // 4. Teruskan status dan body JSON apa adanya.
-  // 5. Error jaringan/timeout/401 dari upstream → 503 { error: { code: "SERVICE_UNAVAILABLE" } }.
+  // 5. Teruskan status dan body JSON apa adanya.
+  // 6. Error jaringan/timeout/401 dari upstream → 503 { error: { code: "SERVICE_UNAVAILABLE" } }.
 }
 ```
 
@@ -1764,7 +1766,7 @@ Direktori dibuat saat dibutuhkan, bukan sebagai folder kosong.
 
 1. Satu berkas `.env` di root dibaca Compose; setiap layanan hanya menerima variabel yang dibutuhkannya melalui `environment:` pada `compose.yaml`.
 2. `.env.example` memuat seluruh nama variabel dengan nilai contoh non-rahasia.
-3. `dev.py` membuat `.env` dari `.env.example` pada eksekusi pertama dan mengisi secret lokal acak (`JWT_SECRET`, `INTERNAL_API_TOKEN`, `PARTNER_TOKEN`). `LLM_API_KEY` diisi manual oleh setiap anggota.
+3. `dev.py` membuat `.env` dari `.env.example` pada eksekusi pertama dan mengisi secret lokal acak (`JWT_SECRET`, `INTERNAL_API_TOKEN`, `PARTNER_TOKEN`). `LLM_API_KEY` diisi manual oleh setiap anggota. Perubahan `.env` berlaku setelah `python scripts/dev.py up` membuat ulang container; `stop`/`start` memakai container lama.
 4. Setiap layanan memvalidasi konfigurasi saat start (pydantic-settings). Variabel wajib yang hilang menghentikan start dengan pesan jelas, kecuali `LLM_API_KEY` yang membuat AI berstatus `unconfigured` (§7.4.1).
 
 ## 14.2 Variabel
@@ -1795,7 +1797,7 @@ Direktori dibuat saat dibutuhkan, bukan sebagai folder kosong.
 | `LLM_PROVIDER` | ai-service | `openai_compatible` (`mock` hanya `APP_ENV=test`) | Tidak |
 | `LLM_BASE_URL` | ai-service | `https://api.groq.com/openai/v1` (default; disesuaikan dengan provider terpilih) | Tidak |
 | `LLM_API_KEY` | ai-service | kosong (diisi anggota) | Ya |
-| `LLM_MODEL` | ai-service | `openai/gpt-oss-120b` (default sementara, OI-01) | Tidak |
+| `LLM_MODEL` | ai-service | `qwen/qwen3.8-27b` (pilihan final, OI-01 Closed) | Tidak |
 | `LLM_REASONING_EFFORT` | ai-service | kosong / `low` | Tidak |
 | `LLM_REQUEST_TIMEOUT_SECONDS` | ai-service | `40` | Tidak |
 | `LLM_MAX_OUTPUT_TOKENS` | ai-service | `900` | Tidak |
@@ -1951,13 +1953,39 @@ Format JSON satu baris per event:
 | `event` | Misalnya `http.request`, `registry.tx_sent`, `registry.tx_confirmed`, `verification.completed`, `ai.provider_error` |
 | `method`, `path`, `status`, `durationMs` | Untuk `http.request` |
 | `errorCode` | Kode error atau `reason` komponen |
-| Field spesifik | `proofId`, `txHash`, `mode`, `lookup`, `riskState`, `model` (tanpa konten) |
+| Field spesifik | `proofId`, `txHash`, `mode`, `lookup`, `riskState`, `model`, `operation`, `integrity`, `reason` (tanpa konten) |
+
+Seluruh event yang dipancarkan kode (`requestId`, `ts`, `level`, `service` selalu diisi formatter; `exception` berisi nama kelas saja bila ada exc_info):
+
+| Service | Event | Level | Field |
+| ----- | ----- | ----- | ----- |
+| backend, ai-service | `http.request` | INFO | `method`, `path`, `status`, `durationMs` (backend melewati `/healthz`) |
+| backend, ai-service | `http.unhandled_exception` | ERROR | `errorCode` = nama tipe exception; respons 500 `INTERNAL_ERROR` |
+| backend | `app.error` | WARN | `errorCode`, `status` untuk setiap respons AppError (NFR-09.05) |
+| backend | `partner.auth_db_failed` | ERROR | `errorCode` = nama tipe exception SQLAlchemy; respons 503 `SERVICE_UNAVAILABLE` |
+| backend | `proof.registry_unavailable` | WARN | `errorCode` = `REGISTRY_UNAVAILABLE`, `reason` = penyebab (mis. `ReadTimeout`, `ConnectionError`) pada API-07 |
+| backend | `proof.registry_issuer_mismatch` | WARN | tanpa field tambahan; record registry milik issuerRef lain diperlakukan UNAVAILABLE |
+| backend | `proof.lookup_db_failed` | ERROR | `errorCode` = `REGISTRY_UNAVAILABLE`; pembacaan mirror API-07 gagal |
+| backend | `proof.read_failed`, `integrity.check_failed`, `ai.pipeline_failed` (tak terduga) | ERROR | `reason` = `unexpected_error`, field komponen (`errorCode`, `riskState` untuk AI) |
+| backend | `ai.pipeline_failed` (kegagalan terkendali) | WARN | `errorCode` = reason `riskAnalysis` (mis. `AI_TIMEOUT`, `AI_QUOTA_EXCEEDED`), `reason`/`fields` untuk pelanggaran skema (nama field saja) |
+| backend | `registry.tx_sent` | INFO | `operation` (`issueProof`/`revokeProof`), `txHash` |
+| backend | `registry.tx_confirmed` | INFO | `operation`, `txHash` |
+| backend | `registry.tx_failed` | WARN | `operation`, `errorCode` = kategori (`RegistryUnavailable`, `RegistryTransactionPending`, `RegistryTransactionFailed`, `ProofNotActiveOnChain`, `IssuerMismatchOnChain`), `reason` = nama revert atau tipe exception asal, `txHash` bila sudah broadcast (termasuk receipt `status == 0`) |
+| backend | `registry.health_failed` | WARN | `errorCode` = nama tipe exception RPC |
+| backend | `verification.completed` | INFO | `mode`, `lookup`, `integrity`, `riskState`, `reason` (objek reason per komponen yang terisi), `durationMs`; tanpa kategori risiko |
+| backend | `verification.log_failed` | ERROR | tanpa field tambahan; respons API-07 tidak berubah |
+| backend | `health.database_failed`, `health.ai_service_failed` | WARN | `errorCode` = nama tipe exception |
+| backend (CLI) | `db.initialized`, `seed.completed`, `seed.skipped_existing`, `seed.skipped_nonempty`, `seed.data_conflict`, `seed.database_error`, `verification_logs.exported`, `verification_logs.export_database_error` | INFO/ERROR | tanpa field tambahan |
+| ai-service | `ai.output_truncated` | WARN | `component` = `llm`, `model` (field lain disaring allowlist ai-service); tanpa isi output |
+| ai-service | `ocr.tesseract_unavailable` | WARN | `errorCode` = nama tipe exception |
+
+Event di atas tidak memuat `proofId`, kode referensi, hash dokumen, isi dokumen, kutipan, keluaran model, pesan exception, atau token. Event `ai.provider_error` belum dipancarkan (SCAFFOLD_REPORT K-13).
 
 Dilarang mencatat: body request, berkas, teks dokumen, kutipan bukti, respons model mentah, password, token, kunci, `referenceCode` utuh (cukup 4 karakter terakhir).
 
 ## 17.5 Pengukuran Performa
 
-`scripts/scn/measure_latency.py` menjalankan N permintaan per varian (MET-16, MET-17) terhadap stack berjalan, mencatat median dan P95, dan menyimpan hasil ke `docs/testing/evidence/`.
+`scripts/scn/latency.py` menjalankan N permintaan per varian (MET-16, MET-17) terhadap stack berjalan, mencatat median dan P95, dan menyimpan hasil ke `docs/testing/evidence/TC-023/`.
 
 # 18. Testing Architecture
 

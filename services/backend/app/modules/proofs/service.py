@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from threading import Lock
 from uuid import uuid4
 
-from sqlalchemy import func, select, true
+from sqlalchemy import func, select, true, update
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -36,6 +36,9 @@ from app.modules.verifications.schemas import ProofCheck, ProofLifecycleStatus, 
 logger = logging.getLogger(__name__)
 _VISIBLE_STATUSES = (LifecycleStatus.ACTIVE, LifecycleStatus.REVOKED)
 _SQLITE_MAX_OFFSET = 2**63 - 1
+
+# Pesan netral untuk kegagalan registry pada operasi baca (API-05, PRD §9.8); pesan katalog bermakna penulisan gagal.
+REGISTRY_READ_UNAVAILABLE_MESSAGE = "Data bukti dari registry belum dapat dimuat. Coba lagi beberapa saat lagi."
 
 # Backend memakai satu worker (AD-22). Kunci ini menjaga satu percobaan per penerbit dan kunci idempotensi.
 _ISSUE_LOCKS = tuple(Lock() for _ in range(64))
@@ -95,10 +98,12 @@ def _reject_active_duplicate(
     (baris retry itu dikecualikan lewat `exclude_proof_id`). Bukti REVOKED dan penerbit lain tidak menghalangi
     (AC-03). Cermin ACTIVE tanpa pencabutan tertunda sudah final sehingga ditolak tanpa RPC. Baris yang belum final
     (penerbitan PENDING setelah receipt timeout, ACTIVE dengan pencabutan tertunda, atau FAILED) dibaca dari registry
-    tanpa transaksi; bila status belum dapat dipastikan, penerbitan dihentikan sebelum transaksi baru dikirim.
+    tanpa transaksi. Penerbitan PENDING yang belum ada di registry ditandai FAILED hanya bila transaksinya pasti gagal
+    atau hilang dari antrean node (D-24); bila status belum dapat dipastikan, penerbitan dihentikan sebelum transaksi
+    baru dikirim.
     """
     rows = db.execute(
-        select(Proof.proof_id, Proof.status, Proof.revoke_idempotency_key).where(
+        select(Proof.proof_id, Proof.status, Proof.revoke_idempotency_key, Proof.issue_tx_hash).where(
             Proof.issuer_id == hr.issuer_id,
             Proof.document_hash == document_hash,
             Proof.status.in_(("ACTIVE", "PENDING", "FAILED")),
@@ -114,9 +119,38 @@ def _reject_active_duplicate(
             raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
         if record.exists and record.status == registry_adapter.OnChainStatus.ACTIVE:
             raise AppError(ErrorCode.DUPLICATE_ACTIVE_DOCUMENT)
-        if not record.exists and row.status != "FAILED":
-            # Transaksi penerbitan sebelumnya masih dapat terkonfirmasi; ulangi dengan Idempotency-Key semula.
-            raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
+        if not record.exists and row.status == "PENDING":
+            _fail_dropped_issue(db, row.proof_id, row.issue_tx_hash, hr.issuer_ref)
+
+
+def _fail_dropped_issue(db: Session, proof_id: str, tx_hash: str | None, issuer_ref: str) -> None:
+    """Menandai penerbitan PENDING FAILED bila transaksinya pasti gagal/hilang; selain itu 503 tanpa transaksi.
+
+    Registry dibaca ulang setelah pemeriksaan antrean: retry kunci lama dapat menambang bukti yang sama selagi
+    pemeriksaan menunggu SIGNER_LOCK, sehingga hasil `get_proof` sebelumnya sudah basi (FR-03.06).
+    """
+    try:
+        dropped = registry_adapter.get_registry_adapter().is_issue_failed_or_dropped(tx_hash, proof_id)
+    except registry_adapter.RegistryUnavailable:
+        raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+    if not dropped:
+        # Transaksi penerbitan sebelumnya masih dapat terkonfirmasi; ulangi dengan Idempotency-Key semula.
+        raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
+    try:
+        record = _read_registry_proof(proof_id, issuer_ref)
+    except registry_adapter.RegistryUnavailable:
+        raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+    if record.exists:
+        if record.status == registry_adapter.OnChainStatus.ACTIVE:
+            raise AppError(ErrorCode.DUPLICATE_ACTIVE_DOCUMENT)
+        # Sudah tercatat lalu dicabut: bukan duplikat aktif dan bukan kegagalan; mirror diselesaikan retry kunci lama.
+        return
+    db.execute(
+        update(Proof)
+        .where(Proof.proof_id == proof_id, Proof.status == "PENDING")
+        .values(status="FAILED", failure_code=ErrorCode.REGISTRY_TRANSACTION_FAILED, updated_at=datetime.now(UTC))
+    )
+    db.commit()
 
 
 def _reserve_proof(db: Session, hr: AuthorizedHrContext, document_hash: str, key: str) -> Proof:
@@ -156,6 +190,8 @@ def _confirm_issue(db: Session, hr: AuthorizedHrContext, proof: Proof, *, retry:
         # Kunci lama akan mengirim transaksi baru; bukti lain dengan hash sama bisa sudah ACTIVE (FR-03.06).
         _reject_active_duplicate(db, hr, proof.document_hash, exclude_proof_id=proof.proof_id)
 
+    # Percobaan PENDING sebelumnya belum pasti gagal: transaksinya bisa masih di antrean node.
+    prior_pending = retry and proof.status == "PENDING"
     if proof.status == "FAILED":
         proof.status = "PENDING"
         proof.failure_code = None
@@ -164,7 +200,13 @@ def _confirm_issue(db: Session, hr: AuthorizedHrContext, proof: Proof, *, retry:
 
     try:
         return registry.issue_proof(proof.proof_id, proof.document_hash, issuer_ref)
-    except registry_adapter.RegistryTransactionPending:
+    except registry_adapter.RegistryTransactionPending as exc:
+        if exc.tx_hash is not None:
+            # Hash percobaan yang belum terkonfirmasi (baris tetap PENDING dan tidak terlihat) untuk deteksi D-24;
+            # ditimpa hash receipt saat penerbitan terkonfirmasi.
+            proof.issue_tx_hash = exc.tx_hash
+            proof.updated_at = datetime.now(UTC)
+            db.commit()
         raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED) from None
     except (registry_adapter.RegistryUnavailable, registry_adapter.RegistryTransactionFailed) as exc:
         if isinstance(exc, registry_adapter.RegistryUnavailable):
@@ -177,6 +219,10 @@ def _confirm_issue(db: Session, hr: AuthorizedHrContext, proof: Proof, *, retry:
                 if tx is not None:
                     return tx
                 raise AppError(error_code) from None
+        if prior_pending:
+            # Gagal sebelum broadcast pada retry tidak membuktikan transaksi percobaan sebelumnya gagal (pola
+            # retry_pending pada pencabutan); baris tetap PENDING agar kunci baru tidak menerbitkan duplikat.
+            raise AppError(error_code) from None
         proof.status = "FAILED"
         proof.failure_code = error_code
         proof.updated_at = datetime.now(UTC)
@@ -272,7 +318,7 @@ def get_proof_status(db: Session, hr: AuthorizedHrContext, proof_id: str) -> Pro
     try:
         record = _read_registry_proof(proof_id, hr.issuer_ref)
     except registry_adapter.RegistryUnavailable:
-        raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+        raise AppError(ErrorCode.REGISTRY_UNAVAILABLE, REGISTRY_READ_UNAVAILABLE_MESSAGE) from None
     if not record.exists:
         raise AppError(ErrorCode.PROOF_NOT_FOUND)
     if proof.issue_tx_hash is None or proof.issue_block is None:
@@ -337,7 +383,16 @@ def _read_proof_for_verification(reference_code: str) -> ProofVerificationRead:
         return _lookup_without_proof(ProofLookup.NOT_FOUND)
     try:
         record = _read_registry_proof(proof.proof_id, proof.issuer_ref)
-    except registry_adapter.RegistryUnavailable:
+    except registry_adapter.RegistryUnavailable as exc:
+        # NFR-09.05: penyebab (mis. ReadTimeout vs ConnectionError) dicatat tanpa kode referensi atau proofId.
+        logger.warning(
+            "proof.registry_unavailable",
+            extra={
+                "event": "proof.registry_unavailable",
+                "errorCode": ErrorCode.REGISTRY_UNAVAILABLE.value,
+                "reason": registry_adapter.failure_reason(exc),
+            },
+        )
         return _lookup_without_proof(ProofLookup.UNAVAILABLE, ProofReason.REGISTRY_UNAVAILABLE)
     if not record.exists:
         return _lookup_without_proof(ProofLookup.NOT_FOUND)

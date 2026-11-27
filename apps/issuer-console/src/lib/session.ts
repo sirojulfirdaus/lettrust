@@ -47,8 +47,8 @@ function getStorage(): Storage | null {
   }
 }
 
-// Memberi tahu komponen klien bahwa status sesi telah berubah.
-function notifySessionChange(): void {
+// Memberi tahu komponen klien bahwa status sesi atau profilnya berubah (mis. setelah afiliasi perusahaan baru).
+export function notifySessionChange(): void {
   if (typeof window === "undefined") {
     return;
   }
@@ -110,6 +110,15 @@ export function readSession(nowMs: number = Date.now()): Session | null {
   }
 
   return session;
+}
+
+// Tujuan redirect ke login saat readSession() kosong (FR-01.02 AC-05).
+export type LoginRedirectPath = "/login" | "/login?reason=session_expired";
+
+// Membedakan sesi yang baru kedaluwarsa (ditandai readSession) dari tidak ada sesi sama sekali.
+export function sessionRedirectPath(): LoginRedirectPath {
+  const storage = getStorage();
+  return storage && expiredTokenByStorage.has(storage) ? "/login?reason=session_expired" : "/login";
 }
 
 // Menyimpan sesi hasil login ke sessionStorage.

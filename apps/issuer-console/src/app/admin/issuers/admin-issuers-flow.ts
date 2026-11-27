@@ -6,7 +6,9 @@ import {
   type IssuerDetailResponse,
 } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
-import { readSession } from "@/lib/session";
+import { getIssuerStatusPresentation } from "@/app/hr/hr-status";
+import { formatUtcTimestamp } from "@/lib/timestamp";
+import { readSession, sessionRedirectPath, type LoginRedirectPath } from "@/lib/session";
 
 export type IssuerStatus = components["schemas"]["IssuerStatus"];
 export type IssuerDecision = components["schemas"]["IssuerDecision"];
@@ -17,7 +19,7 @@ export type AuthorizeHrResponse = components["schemas"]["AuthorizeHrResponse"];
 export type IssuerListFilter = "ALL" | IssuerStatus;
 
 export type IssuerListLoadResult =
-  | { kind: "redirect"; to: "/login" }
+  | { kind: "redirect"; to: LoginRedirectPath }
   | { kind: "unauthorized" }
   | { kind: "aborted" }
   | { kind: "forbidden"; message: string }
@@ -25,7 +27,7 @@ export type IssuerListLoadResult =
   | { kind: "ready"; data: IssuerListResponse };
 
 export type IssuerDetailLoadResult =
-  | { kind: "redirect"; to: "/login" }
+  | { kind: "redirect"; to: LoginRedirectPath }
   | { kind: "unauthorized" }
   | { kind: "aborted" }
   | { kind: "forbidden"; message: string }
@@ -34,14 +36,14 @@ export type IssuerDetailLoadResult =
   | { kind: "ready"; data: IssuerDetailResponse };
 
 export type VerificationDecisionSubmitResult =
-  | { kind: "redirect"; to: "/login" }
+  | { kind: "redirect"; to: LoginRedirectPath }
   | { kind: "unauthorized" }
   | { kind: "aborted" }
   | { kind: "error"; code: string | null; status: number | null; message: string }
   | { kind: "ready"; data: VerifyIssuerResponse };
 
 export type HrAuthorizationSubmitResult =
-  | { kind: "redirect"; to: "/login" }
+  | { kind: "redirect"; to: LoginRedirectPath }
   | { kind: "unauthorized" }
   | { kind: "aborted" }
   | { kind: "error"; code: string | null; status: number | null; message: string }
@@ -92,6 +94,36 @@ export function validateAuthorizeHrId(hrId: string): string | null {
   return null;
 }
 
+// Menyusun pesan sukses keputusan verifikasi (PRD §9.5 "keputusan tersimpan") beserta status baru dan waktu peninjauan.
+export function buildVerificationDecisionSuccessMessage(data: VerifyIssuerResponse): string {
+  const statusLabel = getIssuerStatusPresentation(data.issuerStatus).label;
+  return `Keputusan verifikasi tersimpan. Status penerbit: ${statusLabel}. Waktu peninjauan: ${formatUtcTimestamp(data.reviewedAt)}.`;
+}
+
+// Notifikasi keputusan verifikasi pada Detail Penerbit; disimpan sebagai satu state agar sukses dan konflik saling menggantikan.
+export type VerificationDecisionNotice = { kind: "success" | "conflict"; message: string };
+
+// Menyusun notifikasi keputusan dari respons API-02 tersimpan atau konflik 409 ISSUER_DECISION_ALREADY_MADE.
+export function buildVerificationDecisionNotice(
+  event: { kind: "saved"; data: VerifyIssuerResponse } | { kind: "conflict"; message: string },
+): VerificationDecisionNotice {
+  return event.kind === "saved"
+    ? { kind: "success", message: buildVerificationDecisionSuccessMessage(event.data) }
+    : { kind: "conflict", message: event.message };
+}
+
+// Alasan otorisasi HR belum tersedia per status penerbit; null bila penerbit VERIFIED.
+export function getHrAuthorizationUnavailableMessage(status: IssuerStatus): string | null {
+  switch (status) {
+    case "VERIFIED":
+      return null;
+    case "PENDING":
+      return "Penerbit belum terverifikasi sehingga HR belum dapat diotorisasi.";
+    case "REJECTED":
+      return "Verifikasi penerbit ditolak sehingga HR tidak dapat diotorisasi.";
+  }
+}
+
 // Memuat daftar penerbit dari S-04 GET /api/v1/issuers untuk halaman Administrator.
 export async function loadIssuerList(options: {
   status: IssuerListFilter;
@@ -101,7 +133,7 @@ export async function loadIssuerList(options: {
   onUnauthorized?: () => void;
 }): Promise<IssuerListLoadResult> {
   if (!readSession()) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
 
   try {
@@ -151,7 +183,7 @@ export async function loadIssuerDetail(options: {
   onUnauthorized?: () => void;
 }): Promise<IssuerDetailLoadResult> {
   if (!readSession()) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
 
   try {
@@ -211,7 +243,7 @@ export async function submitVerificationDecision(options: {
   onUnauthorized?: () => void;
 }): Promise<VerificationDecisionSubmitResult> {
   if (!readSession()) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
 
   const trimmedNote = options.reviewNote.trim();
@@ -266,7 +298,7 @@ export async function submitHrAuthorization(options: {
   onUnauthorized?: () => void;
 }): Promise<HrAuthorizationSubmitResult> {
   if (!readSession()) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
 
   const payload: components["schemas"]["AuthorizeHrRequest"] = {

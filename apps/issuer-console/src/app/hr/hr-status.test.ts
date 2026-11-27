@@ -8,9 +8,13 @@ import {
   s06ProofList,
   s06ProofListEmpty,
 } from "@/fixtures/api";
+import { formatIssuerTimestamp } from "@/components/issuers/issuer-status-badge";
+import { formatProofTimestamp as formatProofBadgeTimestamp } from "@/components/proofs/proof-status-badge";
 import {
   formatProofTimestamp,
+  getAuthorizationPresentation,
   getHrStatusPresentation,
+  getIssuerStatusPresentation,
   getProofLifecyclePresentation,
 } from "./hr-status";
 
@@ -37,8 +41,8 @@ describe("pemetaan status Beranda HR", () => {
     const presentation = getHrStatusPresentation(s03SessionHrVerifiedNotAuthorized.membership);
     expect(presentation.issuerStatusLabel).toBe("Terverifikasi");
     expect(presentation.issuerTone).toBe("positive");
-    expect(presentation.authorizationLabel).toBe("Menunggu Otorisasi");
-    expect(presentation.authorizationTone).toBe("warning");
+    expect(presentation.authorizationLabel).toBe("Belum Diotorisasi");
+    expect(presentation.authorizationTone).toBe("neutral");
     expect(presentation.canIssueProof).toBe(false);
     expect(presentation.disabledReason).toContain("belum diotorisasi");
   });
@@ -69,5 +73,43 @@ describe("pemetaan status Beranda HR", () => {
     expect(formatted).toContain("2026");
     expect(formatted).toContain("UTC");
     expect(formatProofTimestamp("tidak-valid")).toBe("tidak-valid");
+  });
+
+  it("membedakan NOT_AUTHORIZED yang menunggu (PENDING/VERIFIED) dari penerbit REJECTED", () => {
+    const waiting = { label: "Belum Diotorisasi", tone: "neutral" };
+    const rejected = { label: "Tidak Diotorisasi", tone: "danger" };
+    expect(getAuthorizationPresentation("NOT_AUTHORIZED", "PENDING")).toEqual(waiting);
+    expect(getAuthorizationPresentation("NOT_AUTHORIZED", "VERIFIED")).toEqual(waiting);
+    expect(getAuthorizationPresentation("NOT_AUTHORIZED", "REJECTED")).toEqual(rejected);
+    expect(getAuthorizationPresentation("AUTHORIZED", "VERIFIED")).toEqual({
+      label: "Diotorisasi",
+      tone: "positive",
+    });
+
+    const cases = [
+      { fixture: s03SessionHrPending, expected: waiting },
+      { fixture: s03SessionHrVerifiedNotAuthorized, expected: waiting },
+      { fixture: s03SessionHrRejected, expected: rejected },
+    ];
+    for (const { fixture, expected } of cases) {
+      const presentation = getHrStatusPresentation({
+        ...fixture.membership,
+        authorizationStatus: "NOT_AUTHORIZED",
+      });
+      expect({ label: presentation.authorizationLabel, tone: presentation.authorizationTone }).toEqual(
+        expected,
+      );
+    }
+    expect(getIssuerStatusPresentation("REJECTED")).toEqual({ label: "Ditolak", tone: "danger" });
+  });
+
+  it("memformat waktu penerbit dan bukti dengan formatter UTC yang sama", () => {
+    const iso = "2026-11-24T03:15:00Z";
+    const formatted = formatProofTimestamp(iso);
+    expect(formatted).toMatch(/UTC$/);
+    expect(formatted).toMatch(/03[.:]15/);
+    expect(formatIssuerTimestamp(iso)).toBe(formatted);
+    expect(formatProofBadgeTimestamp(iso)).toBe(formatted);
+    expect(formatIssuerTimestamp(null)).toBe("-");
   });
 });

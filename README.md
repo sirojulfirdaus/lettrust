@@ -19,7 +19,7 @@ python scripts/dev.py doctor          # cek Docker, Compose v2, port, .env
 python scripts/dev.py up --build      # membuat .env (secret lokal acak) lalu menjalankan semua service
 ```
 
-Lalu isi `LLM_API_KEY` di `.env` dengan kunci akun Anda sendiri (Groq free tier) dan jalankan `python scripts/dev.py stop ai-service` + `start ai-service`. Tanpa kunci, AI berstatus `unconfigured`. Jangan pernah commit `.env`.
+Lalu isi `LLM_API_KEY` di `.env` dengan kunci akun Anda sendiri (Groq free tier) lalu jalankan `python scripts/dev.py up` agar container ai-service dibuat ulang dengan nilai baru (`stop`/`start` memakai container lama sehingga perubahan `.env` tidak terbaca). Tanpa kunci, AI berstatus `unconfigured`. Jangan pernah commit `.env`.
 
 ## Service dan Port
 
@@ -64,7 +64,9 @@ Backend mengisi data seed sintetis saat startup jika basis data kosong. Saat bac
 | `python scripts/dev.py chain proof <proofId>` | `getProof` langsung dari contract |
 | `python scripts/dev.py chain events <proofId>` | Event `ProofIssued`/`ProofRevoked` |
 | `python scripts/dev.py openapi` | Ekspor `contracts/openapi.json` + regenerasi `schema.d.ts` kedua app |
-| `python scripts/dev.py test [SVC]` | Unit test di container (`blockchain`, `backend`, `ai-service`, `issuer-console`, `partner-portal`) |
+| `python scripts/dev.py test [SVC]` | Unit test di container (`blockchain`, `backend`, `ai-service`, `issuer-console`, `partner-portal`); image `backend`/`ai-service`/`chain-deployer` dibangun ulang lebih dulu agar memakai kode terbaru |
+| `docker compose run --rm -T -v ./contracts:/contracts:ro -e CONTRACTS_DIR=/contracts backend python -m pytest -q -m real_registry` | Seluruh test `real_registry` backend (conformance, integrasi, timeout registry) terhadap Anvil nyata; stack harus sudah `up` |
+| `docker compose exec -T backend python -m app.cli export-verification-logs --format csv > verification_logs.csv` | Ekspor `verification_logs` (kolom enum/durasi saja, urut `created_at`) untuk bukti pengujian; default JSONL ke stdout, `--out PATH` menulis ke berkas di container; stack harus sudah `up` |
 | `python scripts/dev.py eval <script> ...` | Jalankan `ai-eval/scripts/<script>.py` di image ai-service |
 | `python scripts/dev.py eval generate_fixtures [--check\|--test]` | Buat/periksa FX-01–FX-10 dengan tooling T5-05; lihat [fixtures/README.md](fixtures/README.md) |
 | `python scripts/dev.py lock [backend\|ai-service]` | Kunci dependency Python termasuk transitif (`pip freeze`) ke `services/<svc>/constraints.txt`; tanpa argumen = keduanya |
@@ -90,7 +92,7 @@ Untuk anggota tanpa Docker (SA §15.4). Jalankan dari root repo; sesuaikan URL d
 | Deploy | Foundry | `cd blockchain && forge script script/Deploy.s.sol --broadcast --rpc-url http://127.0.0.1:8545`, lalu tulis `.local/deployments/local.json` (`chainId`, `contractAddress`, `deployer`, `deployedAtBlock`, `abiSha256`) |
 | Backend | Python 3.12 | lihat [services/backend/README.md](services/backend/README.md) |
 | ai-service | Python 3.12, Tesseract dengan data bahasa `ind` dan `eng` | lihat [services/ai-service/README.md](services/ai-service/README.md) |
-| Frontend | Node 24 LTS | `npm ci`, `npm run dev` di `apps/<app>` |
+| Frontend | Node 24 LTS | `npm ci` di `apps/<app>`, lalu `npm run dev` untuk Console (port 3000) dan `npm run dev -- -p 3001` untuk portal |
 
 Tesseract: Debian/Ubuntu `apt install tesseract-ocr tesseract-ocr-ind tesseract-ocr-eng`; macOS `brew install tesseract tesseract-lang`; Windows installer UB-Mannheim dengan memilih bahasa Indonesian. Verifikasi dengan `tesseract --list-langs`.
 
@@ -100,6 +102,11 @@ Tesseract: Debian/Ubuntu `apt install tesseract-ocr tesseract-ocr-ind tesseract-
 - `.gitattributes` memaksa LF untuk skrip dan Dockerfile. Bila clone lama ber-CRLF, jalankan `git add --renormalize .` setelah koordinasi.
 - Bind mount `--dev` dari drive Windows (mis. `D:\`) lambat dan memakai polling (`WATCHFILES_FORCE_POLLING`); untuk performa, clone di filesystem WSL. Frontend sebaiknya native (`npm run dev`) dengan `dev.py up --except issuer-console partner-portal`.
 - Di Git Bash, path container dapat dikonversi otomatis; gunakan PowerShell atau `MSYS_NO_PATHCONV=1` untuk perintah `docker` manual.
+
+## Troubleshooting
+
+- **State chain hilang** (chain mati tidak bersih, volume `chain-data` terhapus, atau `dev.py chain proof` tidak menemukan bukti yang ada di Console): contract di-deploy ulang ke alamat yang sama, sedangkan cermin DB masih memuat bukti lama, sehingga penerbitan ulang dapat ditolak sebagai duplikat dan pelamar melihat `NOT_FOUND`. Jalankan `python scripts/dev.py reset`. Perintah ini menghapus seluruh data lokal (chain, DB, deployment) lalu menjalankan ulang stack dengan seed baru.
+- **AI tetap `unconfigured` setelah mengisi `LLM_API_KEY`**: jalankan `python scripts/dev.py up` agar container ai-service dibuat ulang; `stop`/`start` tidak membaca ulang `.env`.
 
 ## Kontribusi
 

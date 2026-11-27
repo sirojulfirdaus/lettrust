@@ -33,8 +33,8 @@ Status keputusan tidak menggantikan hasil pengujian.
 
 | ID | Open Issue | Keputusan / Validasi Diperlukan | Pemilik | Target | Status |
 | ----- | ----- | ----- | ----- | ----- | ----- |
-| OI-01 | Pemilihan final provider dan model LLM | Membandingkan minimal dua kandidat model (boleh dari provider berbeda yang memenuhi syarat SYSTEM_ARCHITECTURE §7.4.1) pada dev set, lalu membekukan pilihan beserta identitas provider dan model. | AI Engineer | Milestone M2 | Open |
-| OI-02 | Ukuran dan komposisi final dataset evaluasi | Menetapkan jumlah final, pembagian dev/test, dan peninjau label. Target awal 72 dokumen. | AI Engineer | Milestone M2 | Open |
+| OI-01 | Pemilihan final provider dan model LLM | Membandingkan minimal dua kandidat model (boleh dari provider berbeda yang memenuhi syarat SYSTEM_ARCHITECTURE §7.4.1) pada dev set, lalu membekukan pilihan beserta identitas provider dan model. | AI Engineer | Milestone M2 | Closed (keputusan Dws, 26/11): `qwen/qwen3.8-27b` melalui Groq, disetujui 26 November 2026 berdasarkan hasil T5-07 (`ai-eval/results/t5-07-20261126-qwen38-id-en-dev-900`). |
+| OI-02 | Ukuran dan komposisi final dataset evaluasi | Menetapkan jumlah final, pembagian dev/test, dan peninjau label. Target awal 72 dokumen. | AI Engineer | Milestone M2 | Closed (keputusan Dws, 26/11): 72 PDF (24 dev/48 test); test set dibekukan dengan checksum di `ai-eval/results/t5-08-20261126-freeze/testset.freeze.json`. |
 | OI-03 | Nilai batas operasional | Mengonfirmasi batas ukuran berkas (default 5 MB), halaman AI (default 5), panjang teks, dan batas waktu berdasarkan pengukuran. | Technical Lead | Milestone M3 | Partially Resolved |
 | OI-04 | Penerimaan delta D3 oleh dosen | Menyampaikan DLT-01–DLT-16 secara eksplisit pada laporan dan presentasi D3 beserta alasannya. | Project Coordinator | Pengumpulan D3 | Open |
 | OI-05 | Kecukupan kuota free tier | Memantau kuota selama pengembangan, evaluasi, dan demo; menyiapkan kunci cadangan dari akun anggota lain. | AI Engineer | Berkelanjutan | Open |

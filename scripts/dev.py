@@ -64,7 +64,9 @@ def warn(message: str) -> None:
 
 
 # Menjalankan perintah eksternal sebagai daftar argumen (tanpa shell) dari root repo.
-def run(cmd: list[str], *, check: bool = True, capture: bool = False, cwd: Path | None = None) -> subprocess.CompletedProcess:
+def run(
+    cmd: list[str], *, check: bool = True, capture: bool = False, cwd: Path | None = None
+) -> subprocess.CompletedProcess:
     try:
         result = subprocess.run(
             cmd,
@@ -199,7 +201,7 @@ def cmd_doctor(_: argparse.Namespace) -> int:
             info(f"GAGAL Port {port} terpakai oleh proses lain")
             problems += 1
     if not ENV_FILE.exists():
-        info("GAGAL .env tidak ada.")
+        info("GAGAL .env tidak ada. Jalankan `python scripts/dev.py up` untuk membuatnya dari .env.example.")
         problems += 1
     else:
         env = read_env()
@@ -368,7 +370,9 @@ def read_deployment() -> dict:
         capture=True,
     )
     if result.returncode != 0:
-        raise LauncherError("Info deployment belum ada (/shared/deployments/local.json). Jalankan `python scripts/dev.py up`.")
+        raise LauncherError(
+            "Info deployment belum ada (/shared/deployments/local.json). Jalankan `python scripts/dev.py up`."
+        )
     return json.loads(result.stdout)
 
 
@@ -394,7 +398,8 @@ def cmd_chain(args: argparse.Namespace) -> int:
         signature = "getProof(bytes32)(bool,bytes32,bytes32,uint8,uint64,uint64)"
         result = run(exec_cast + ["call", address, signature, proof_id] + rpc, capture=True)
         labels = ("exists", "documentHash", "issuerRef", "status", "issuedAt", "revokedAt")
-        for label, value in zip(labels, result.stdout.split()):
+        # strict=False: cast dapat menambah anotasi (mis. `[1.7e9]`) sehingga jumlah token bisa melebihi label.
+        for label, value in zip(labels, result.stdout.split(), strict=False):
             print(f"{label}: {value}")
         return 0
     from_block = str(deployment.get("deployedAtBlock", 0))
@@ -429,8 +434,25 @@ def cmd_openapi(_: argparse.Namespace) -> int:
             warn(f"apps/{app} belum ada; tipe tidak dibuat.")
             continue
         run(
-            ["docker", "run", "--rm", *user_args, "-e", "npm_config_cache=/tmp/.npm", "-v", f"{ROOT}:/repo", "-w", f"/repo/apps/{app}", NODE_IMAGE,
-             "npx", "--yes", f"openapi-typescript@{OPENAPI_TS_VERSION}", "../../contracts/openapi.json", "-o", "src/lib/api/schema.d.ts"]
+            [
+                "docker",
+                "run",
+                "--rm",
+                *user_args,
+                "-e",
+                "npm_config_cache=/tmp/.npm",
+                "-v",
+                f"{ROOT}:/repo",
+                "-w",
+                f"/repo/apps/{app}",
+                NODE_IMAGE,
+                "npx",
+                "--yes",
+                f"openapi-typescript@{OPENAPI_TS_VERSION}",
+                "../../contracts/openapi.json",
+                "-o",
+                "src/lib/api/schema.d.ts",
+            ]
         )
         info(f"Tipe API dibuat: apps/{app}/src/lib/api/schema.d.ts")
         count = write_fixtures(app)
@@ -448,7 +470,8 @@ def fixture_name(file_name: str) -> str:
     return words[0].lower() + "".join(w[:1].upper() + w[1:] for w in words[1:])
 
 
-# Menulis fixture TypeScript (`satisfies` tipe OpenAPI) untuk app dari contracts/examples/index.json; hasil deterministik.
+# Menulis fixture TypeScript (`satisfies` tipe OpenAPI) untuk app dari contracts/examples/index.json;
+# hasil deterministik.
 def write_fixtures(app: str) -> int:
     examples_dir = ROOT / "contracts" / "examples"
     index = json.loads((examples_dir / "index.json").read_text(encoding="utf-8"))["examples"]
@@ -479,6 +502,12 @@ def write_fixtures(app: str) -> int:
 # Menjalankan test satu service di container yang sesuai; mengembalikan exit code.
 def run_service_tests(service: str) -> int:
     info(f"Menjalankan test: {service}")
+    image_service = "chain-deployer" if service == "blockchain" else service
+    if image_service in ("backend", "ai-service", "chain-deployer"):
+        # Test berjalan dari isi image, bukan bind mount; bangun ulang agar tidak menguji kode usang.
+        build = run(compose_cmd() + ["build", image_service], check=False)
+        if build.returncode != 0:
+            return build.returncode
     if service in ("backend", "ai-service"):
         cmd = compose_cmd() + ["run", "--rm", "--no-deps", "-T", "-e", "APP_ENV=test"]
         # Test kontrak memvalidasi contracts/examples yang berada di luar build context service.
@@ -491,8 +520,21 @@ def run_service_tests(service: str) -> int:
     if service in FRONTEND_APPS:
         app_dir = ROOT / "apps" / service
         # node_modules container dipisah (volume anonim) agar dependency native host tidak tertimpa.
-        cmd = ["docker", "run", "--rm", "-v", f"{app_dir}:/app", "-v", "/app/node_modules", "-w", "/app", NODE_IMAGE,
-               "sh", "-c", "npm ci --no-audit --no-fund --loglevel=error && npm test"]
+        cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{app_dir}:/app",
+            "-v",
+            "/app/node_modules",
+            "-w",
+            "/app",
+            NODE_IMAGE,
+            "sh",
+            "-c",
+            "npm ci --no-audit --no-fund --loglevel=error && npm test",
+        ]
         return run(cmd, check=False).returncode
     raise LauncherError(f"Target test tidak dikenal: {service}")
 
@@ -521,8 +563,18 @@ def cmd_eval(args: argparse.Namespace) -> int:
     if not re.fullmatch(r"[a-z_]+\.py", script) or not (ROOT / "ai-eval" / "scripts" / script).exists():
         raise LauncherError(f"Skrip evaluasi tidak ditemukan: ai-eval/scripts/{script}")
     cmd = compose_cmd() + [
-        "run", "--rm", "--no-deps", "-T", "-v", f"{ROOT / 'ai-eval'}:/ai-eval", "-v", f"{ROOT / 'fixtures'}:/fixtures",
-        "ai-service", "python", f"/ai-eval/scripts/{script}", *args.script_args,
+        "run",
+        "--rm",
+        "--no-deps",
+        "-T",
+        "-v",
+        f"{ROOT / 'ai-eval'}:/ai-eval",
+        "-v",
+        f"{ROOT / 'fixtures'}:/fixtures",
+        "ai-service",
+        "python",
+        f"/ai-eval/scripts/{script}",
+        *args.script_args,
     ]
     return run(cmd, check=False).returncode
 
@@ -542,7 +594,11 @@ def lock_service(service: str) -> int:
     info(f"[{service}] Membangun image sementara dari requirements*.txt (base {base_image}) ...")
     build = subprocess.run(
         ["docker", "build", "-q", "-t", tag, "-f", "-", str(service_dir)],
-        input=lock_dockerfile, text=True, encoding="utf-8", capture_output=True, check=False,
+        input=lock_dockerfile,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
     )
     if build.returncode != 0:
         raise LauncherError(f"Build image lock {service} gagal:\n{build.stderr.strip()}")
@@ -554,7 +610,9 @@ def lock_service(service: str) -> int:
     pins = [line.strip() for line in frozen if line.strip() and not line.startswith("#")]
     pins = [pin for pin in pins if pin.split("==")[0].lower() not in LOCK_EXCLUDED]
     target = service_dir / "constraints.txt"
-    old_pins = {line for line in target.read_text(encoding="utf-8").splitlines() if "==" in line} if target.exists() else set()
+    old_pins = (
+        {line for line in target.read_text(encoding="utf-8").splitlines() if "==" in line} if target.exists() else set()
+    )
     header = (
         f"# Owner: {PYTHON_SERVICES[service]} | Status: COMPLETE | Ref: SA §12.2, AD-19\n"
         f"# Dihasilkan oleh `python scripts/dev.py lock {service}` (pip freeze); jangan diedit manual.\n"
@@ -609,9 +667,13 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("proof_id", metavar="proofId")
     chain_sub.add_parser("address")
     chain.set_defaults(func=cmd_chain)
-    sub.add_parser("openapi", help="Ekspor contracts/openapi.json dan regenerasi tipe frontend").set_defaults(func=cmd_openapi)
+    sub.add_parser("openapi", help="Ekspor contracts/openapi.json dan regenerasi tipe frontend").set_defaults(
+        func=cmd_openapi
+    )
     test = sub.add_parser("test", help="Unit test di container")
-    test.add_argument("service", nargs="?", choices=("blockchain", "chain-deployer", "backend", "ai-service", *FRONTEND_APPS))
+    test.add_argument(
+        "service", nargs="?", choices=("blockchain", "chain-deployer", "backend", "ai-service", *FRONTEND_APPS)
+    )
     test.set_defaults(func=cmd_test)
     ev = sub.add_parser("eval", help="Jalankan skrip ai-eval di image ai-service")
     ev.add_argument("script", help="Nama skrip di ai-eval/scripts, mis. run_eval")
@@ -627,7 +689,9 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        ensure_env()
+        # doctor hanya memeriksa dan tidak boleh membuat .env.
+        if args.func is not cmd_doctor:
+            ensure_env()
         return args.func(args)
     except LauncherError as exc:
         print(f"[dev] ERROR: {exc}", file=sys.stderr)

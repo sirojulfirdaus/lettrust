@@ -1,7 +1,7 @@
 // Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.02, §9.2, §9.10, §9.11; SA §11.2.1, §11.2.2
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
@@ -12,6 +12,11 @@ import {
   registerUnauthorizedHandler,
   type MeResponse,
 } from "@/lib/api/client";
+import {
+  buildProfileFetchKey,
+  shouldFetchProfile,
+  type ProfileFetchRecord,
+} from "@/lib/profile-fetch";
 import { getNavRoutesForUser } from "@/lib/routes";
 import { clearSession, readSession, SESSION_CHANGE_EVENT } from "@/lib/session";
 
@@ -53,32 +58,50 @@ export function ConsoleHeader() {
     });
   }, [pathname, router]);
 
-  useEffect(() => {
-    if (!accessToken) {
-      return;
-    }
-
-    const controller = new AbortController();
-    fetchSessionProfile({ signal: controller.signal })
-      .then((me) => {
-        if (!controller.signal.aborted) {
-          setProfileState({ token: accessToken, profile: me });
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setProfileState(null);
-        }
-      });
-
-    return () => controller.abort();
-  }, [accessToken, pathname]);
+  // Menaikkan revisi profil pada setiap event sesi agar profil dimuat ulang walau token tidak berubah.
+  const [profileRevision, setProfileRevision] = useState(0);
+  useEffect(() => subscribeToSession(() => setProfileRevision((n) => n + 1)), []);
 
   const hasSession = accessToken !== null;
   const profile =
     hasSession && profileState && profileState.token === accessToken
       ? profileState.profile
       : null;
+  const hasProfile = profile !== null;
+  const lastFetchRef = useRef<ProfileFetchRecord | null>(null);
+
+  // Memuat S-03 saat token, path, atau revisi sesi berubah, serta saat profil hilang/gagal; satu permintaan per kunci.
+  useEffect(() => {
+    const key = buildProfileFetchKey(accessToken, pathname, profileRevision);
+    if (!accessToken || key === null || !shouldFetchProfile(key, lastFetchRef.current, hasProfile)) {
+      return;
+    }
+
+    const record: ProfileFetchRecord = { key, status: "loading" };
+    lastFetchRef.current = record;
+    const controller = new AbortController();
+    fetchSessionProfile({ signal: controller.signal })
+      .then((me) => {
+        if (!controller.signal.aborted) {
+          record.status = "loaded";
+          setProfileState({ token: accessToken, profile: me });
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          record.status = "failed";
+          setProfileState(null);
+        }
+      });
+
+    return () => {
+      controller.abort();
+      // Permintaan yang dibatalkan sebelum selesai dianggap gagal agar kunci yang sama boleh dimuat ulang.
+      if (record.status === "loading") {
+        record.status = "failed";
+      }
+    };
+  }, [accessToken, pathname, profileRevision, hasProfile]);
 
   const handleLogout = () => {
     clearSession();

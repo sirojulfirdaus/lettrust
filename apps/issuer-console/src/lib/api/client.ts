@@ -51,7 +51,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNSUPPORTED_MEDIA_TYPE: "Berkas harus berformat PDF.",
   FILE_TOO_LARGE: "Ukuran berkas melebihi batas yang diizinkan.",
   EMPTY_FILE: "Berkas kosong tidak dapat diproses.",
-  MULTIPLE_FILES: "Unggah hanya satu berkas PDF.",
+  MULTIPLE_FILES: "Hanya satu berkas yang dapat diproses per permintaan.",
   RATE_LIMITED: "Terlalu banyak permintaan. Coba lagi beberapa saat lagi.",
   UNAUTHENTICATED: "Sesi Anda telah berakhir. Silakan masuk kembali.",
   FORBIDDEN_OPERATION: "Anda tidak memiliki izin untuk tindakan ini.",

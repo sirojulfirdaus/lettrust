@@ -28,7 +28,9 @@ import {
 } from "@/components/proofs/proof-status-badge";
 import { RevokeDialog } from "@/components/proofs/revoke-dialog";
 import type { ProofStatusResponse, RevokeProofResponse } from "@/lib/api/client";
+import { decodeRouteParam } from "@/lib/routes";
 import {
+  PROOF_SOURCE_LABELS,
   copyTextToClipboard,
   getProofDetailRefreshErrorMessage,
   loadProofDetail,
@@ -44,21 +46,11 @@ type ProofDetailState =
 
 type CopyField = "referenceCode" | "proofId" | "documentHash" | "issueTx" | "revokeTx";
 
-// Memparsing parameter proofId dari URL secara aman.
-function decodeProofId(raw: string | string[] | undefined): string {
-  const value = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
 // Halaman Detail Bukti (API-05) dan tindakan pencabutan bukti ACTIVE (API-06).
 export default function ProofDetailPage() {
   const params = useParams<{ proofId?: string }>();
   const router = useRouter();
-  const proofId = decodeProofId(params?.proofId);
+  const proofId = decodeRouteParam(params?.proofId);
 
   const [reloadCount, setReloadCount] = useState(0);
   const [state, setState] = useState<ProofDetailState>(() =>
@@ -387,7 +379,7 @@ export default function ProofDetailPage() {
                   <ProofStatusBadge status={proof.lifecycleStatus} />
                   <Badge variant="secondary" className="gap-1">
                     <ShieldCheck className="size-3.5" aria-hidden="true" />
-                    <span>Sumber: {proof.source}</span>
+                    <span>Sumber: {PROOF_SOURCE_LABELS[proof.source]}</span>
                   </Badge>
                 </>
               )}
