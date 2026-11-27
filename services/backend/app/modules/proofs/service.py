@@ -40,7 +40,7 @@ _SQLITE_MAX_OFFSET = 2**63 - 1
 # Pesan netral untuk kegagalan registry pada operasi baca (API-05, PRD §9.8); pesan katalog bermakna penulisan gagal.
 REGISTRY_READ_UNAVAILABLE_MESSAGE = "Data bukti dari registry belum dapat dimuat. Coba lagi beberapa saat lagi."
 
-# Backend memakai satu worker (AD-22). Kunci ini menjaga satu percobaan per penerbit dan kunci idempotensi.
+# Backend memakai satu worker (AD-22). Kunci per penerbit menjaga cek duplikat dan penerbitan tetap serial.
 _ISSUE_LOCKS = tuple(Lock() for _ in range(64))
 
 
@@ -62,7 +62,7 @@ def issue_proof(
             details=[ErrorDetail(field="Idempotency-Key", issue="string_too_short")],
         )
     key = uuid4().hex if idempotency_key is None else idempotency_key
-    lock = _ISSUE_LOCKS[hash((hr.issuer_id, key)) % len(_ISSUE_LOCKS)]
+    lock = _ISSUE_LOCKS[hash(hr.issuer_id) % len(_ISSUE_LOCKS)]
     # Lepas koneksi dari pembacaan otorisasi sebelum menunggu kunci penerbitan.
     db.commit()
     with lock:

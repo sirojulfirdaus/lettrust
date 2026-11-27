@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime
-from threading import Event
+from threading import Event, Lock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -449,6 +449,65 @@ def test_duplicate_active_document_rejected_before_registry(client: TestClient, 
     assert_error(issue(client, headers, "offer-2"), 409, "DUPLICATE_ACTIVE_DOCUMENT")
     assert registry.calls == []
     assert len(issuer_proofs(issuer_id)) == 1
+
+
+def test_parallel_duplicate_document_issues_once(
+    client: TestClient,
+    registry: MockRegistryAdapter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Memastikan dua permintaan untuk PDF yang sama hanya mencatat satu bukti."""
+    issuer_id, headers = make_account()
+    first_key = "offer-1"
+    stripe_count = len(service._ISSUE_LOCKS)
+    first_stripe = hash((issuer_id, first_key)) % stripe_count
+    second_key = next(
+        f"offer-{index}"
+        for index in range(2, 2 * stripe_count)
+        if hash((issuer_id, f"offer-{index}")) % stripe_count != first_stripe
+    )
+    first_checked, second_ready, release_first = Event(), Event(), Event()
+    original_reserve = service._reserve_proof
+
+    class ObservedLock:
+        """Memberi tanda saat permintaan kedua menunggu kunci yang sama."""
+
+        def __init__(self) -> None:
+            self.lock = Lock()
+
+        def __enter__(self) -> None:
+            if not self.lock.acquire(blocking=False):
+                second_ready.set()
+                self.lock.acquire()
+
+        def __exit__(self, *_: object) -> None:
+            self.lock.release()
+
+    def reserve(db: Session, hr: AuthorizedHrContext, document_hash: str, key: str) -> Proof:
+        """Menahan permintaan pertama setelah cek duplikat dan sebelum reservasi."""
+        if key == first_key:
+            first_checked.set()
+            assert release_first.wait(5)
+        else:
+            second_ready.set()
+        return original_reserve(db, hr, document_hash, key)
+
+    monkeypatch.setattr(service, "_ISSUE_LOCKS", tuple(ObservedLock() for _ in range(stripe_count)))
+    monkeypatch.setattr(service, "_reserve_proof", reserve)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(issue, client, headers, first_key)
+        try:
+            assert first_checked.wait(5)
+            second = pool.submit(issue, client, headers, second_key)
+            assert second_ready.wait(5)
+        finally:
+            release_first.set()
+        assert first.result(timeout=5).status_code == 201
+        assert_error(second.result(timeout=5), 409, "DUPLICATE_ACTIVE_DOCUMENT")
+
+    assert len(issuer_proofs(issuer_id)) == 1
+    assert [operation for operation, _ in registry.calls] == ["issue_proof"]
 
 
 def test_same_hash_from_other_issuer_is_issued(client: TestClient, registry: MockRegistryAdapter) -> None:
