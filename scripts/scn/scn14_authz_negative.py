@@ -194,11 +194,20 @@ def setup_request(client: httpx.Client, method: str, path: str, status: int, **k
     return json_object(response)
 
 
-def find_or_issue_active(client: httpx.Client, token: str, pdf: bytes) -> JsonObject:
+def setup_idempotency_key(issuer_id: str, digest: str) -> str:
+    """Kunci setup stabil per (penerbit, dokumen) agar run berikutnya memulihkan penerbitan yang receipt-nya timeout."""
+    return "scn14-setup-" + hashlib.sha256(f"{issuer_id}:{digest}".encode()).hexdigest()[:24]
+
+
+def find_or_issue_active(client: httpx.Client, token: str, pdf: bytes, issuer_id: str) -> JsonObject:
     """Memakai bukti ACTIVE FX-01 milik penerbit token ini bila ada; menerbitkan hanya bila belum ada.
 
     Run berulang tidak menerbitkan FX-01 kedua yang akan ditolak DUPLICATE_ACTIVE_DOCUMENT (FR-03.06). Seluruh halaman
     daftar dan detail diperiksa; kegagalan daftar atau detail menghentikan setup tanpa penerbitan baru.
+
+    Penerbitan memakai kunci stabil: bila receipt sebelumnya timeout (mirror PENDING, belum ada di daftar ACTIVE), run
+    berikutnya mengulang dengan kunci yang sama sehingga backend memulihkan bukti yang sama. Bila kunci itu ternyata
+    milik bukti yang sudah dicabut, satu penerbitan baru dengan kunci acak dilakukan.
     """
     digest = hashlib.sha256(pdf).hexdigest()
     offset = 0
@@ -219,8 +228,12 @@ def find_or_issue_active(client: httpx.Client, token: str, pdf: bytes) -> JsonOb
         if not items or offset >= total:
             break
     upload = {"files": {"file": ("FX-01.pdf", pdf, "application/pdf")}}
-    headers = {"Idempotency-Key": f"scn14-{secrets.token_hex(8)}"}
-    return setup_request(client, "POST", PROOFS, 201, token=token, headers=headers, **upload)
+    headers = {"Idempotency-Key": setup_idempotency_key(issuer_id, digest)}
+    issued = setup_request(client, "POST", PROOFS, 201, token=token, headers=headers, **upload)
+    if issued.get("lifecycleStatus") == "REVOKED":
+        headers = {"Idempotency-Key": f"scn14-{secrets.token_hex(8)}"}
+        issued = setup_request(client, "POST", PROOFS, 201, token=token, headers=headers, **upload)
+    return issued
 
 
 def login(client: httpx.Client, email: str, password: str) -> tuple[str, JsonObject]:
@@ -360,7 +373,7 @@ def run_scenario(
     if issuer_a == issuer_b or issuer_a != profiles["c"]["membership"]["issuerId"]:
         raise ScenarioError("Afiliasi seed A/B tidak sesuai prasyarat.")
     upload = {"files": {"file": ("FX-01.pdf", pdf, "application/pdf")}}
-    issued = find_or_issue_active(client, tokens["owner-b"], pdf)
+    issued = find_or_issue_active(client, tokens["owner-b"], pdf, issuer_b)
     proof_id = issued["proofId"]
     transaction = issued["transaction"]
     if not isinstance(proof_id, str) or not re.fullmatch(WORD_PATTERN, proof_id):

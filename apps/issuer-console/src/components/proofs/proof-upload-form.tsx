@@ -26,7 +26,9 @@ import {
   applySubmitOutcome,
   canStartNewAttempt,
   isAttemptInputLocked,
+  attemptErrorMessage,
   mayHaveBeenRecorded,
+  UNCERTAIN_ISSUE_MESSAGE,
   resolveSubmitKey,
   startAttempt,
   type IdempotencyAttempt,
@@ -307,13 +309,7 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
             <AlertCircle className="size-4" aria-hidden="true" />
             <AlertTitle>Penerbitan bukti gagal</AlertTitle>
             <AlertDescription className="space-y-3">
-              <p>{submitError.message}</p>
-              {mayHaveBeenRecorded(submitError) ? (
-                <p>
-                  Bila ragu apakah sudah tersimpan, periksa Daftar Bukti atau coba lagi dengan
-                  permintaan yang sama.
-                </p>
-              ) : null}
+              <p>{attemptErrorMessage(submitError, UNCERTAIN_ISSUE_MESSAGE)}</p>
               <div className="flex flex-wrap gap-2">
                 {submitError.canRetrySameKey ? (
                   <Button

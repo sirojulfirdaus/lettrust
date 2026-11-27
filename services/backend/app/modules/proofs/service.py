@@ -119,8 +119,14 @@ def _reject_active_duplicate(
             raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
         if record.exists and record.status == registry_adapter.OnChainStatus.ACTIVE:
             raise AppError(ErrorCode.DUPLICATE_ACTIVE_DOCUMENT)
-        if not record.exists and row.status == "PENDING":
+        if record.exists or row.status == "FAILED":
+            continue
+        if row.status == "PENDING":
             _fail_dropped_issue(db, row.proof_id, row.issue_tx_hash, hr.issuer_ref)
+        else:
+            # Mirror ACTIVE (pencabutan tertunda) tetapi registry tidak mengenalnya: cermin dan chain tidak
+            # konsisten, jadi penerbitan dihentikan tanpa transaksi; pemulihan dropped hanya untuk baris PENDING.
+            raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
 
 
 def _fail_dropped_issue(db: Session, proof_id: str, tx_hash: str | None, issuer_ref: str) -> None:
@@ -213,12 +219,14 @@ def _confirm_issue(db: Session, hr: AuthorizedHrContext, proof: Proof, *, retry:
             error_code = ErrorCode.REGISTRY_UNAVAILABLE
         else:
             error_code = ErrorCode.REGISTRY_TRANSACTION_FAILED
-            if retry and exc.revert_name == "ProofAlreadyExists":
-                # Transaksi sebelumnya dapat terkonfirmasi di sela lookup dan pengiriman ulang.
+            if retry and exc.revert_name in (None, "ProofAlreadyExists"):
+                # Transaksi sebelumnya dapat terkonfirmasi di sela lookup dan pengiriman ulang. Nama revert bisa hilang
+                # (replay receipt tidak selalu mereproduksi revert), jadi registry selalu diperiksa ulang sebelum 503.
                 tx = _find_confirmed_issue(registry, proof, issuer_ref)
                 if tx is not None:
                     return tx
-                raise AppError(error_code) from None
+                if exc.revert_name == "ProofAlreadyExists":
+                    raise AppError(error_code) from None
         if prior_pending:
             # Gagal sebelum broadcast pada retry tidak membuktikan transaksi percobaan sebelumnya gagal (pola
             # retry_pending pada pencabutan); baris tetap PENDING agar kunci baru tidak menerbitkan duplikat.

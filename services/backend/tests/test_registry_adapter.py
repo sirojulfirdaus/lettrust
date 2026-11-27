@@ -423,8 +423,8 @@ def test_failed_receipt_revert_name_is_decoded(
         write_proof(adapter, method)
     if expected is RegistryTransactionFailed:
         assert error.value.revert_name == error_name
-    # Replay pada state sebelum blok receipt (42 − 1), dan hash broadcast ikut tercatat.
-    rpc.eth.call.assert_called_once_with({"from": "0x" + "66" * 20, "to": CONTRACT_ADDRESS, "data": "0x1234"}, 41)
+    # Replay pada state blok receipt (memuat transaksi pendahulu di blok yang sama), dan hash broadcast tercatat.
+    rpc.eth.call.assert_called_once_with({"from": "0x" + "66" * 20, "to": CONTRACT_ADDRESS, "data": "0x1234"}, 42)
     [failed] = registry_events(caplog, "registry.tx_failed")
     assert (failed["errorCode"], failed["reason"]) == (expected.__name__, error_name)
     assert failed["txHash"] == Web3.to_hex(TX_HASH)

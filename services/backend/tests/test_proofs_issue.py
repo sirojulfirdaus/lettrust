@@ -662,3 +662,30 @@ def test_drop_check_rereads_registry_before_failing(
     recovered = issue(client, headers, "offer-1")
     assert recovered.status_code == 201
     assert recovered.json()["proofId"] == pending.proof_id
+
+
+def test_active_mirror_missing_on_registry_blocks_new_key(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Mirror ACTIVE dengan pencabutan tertunda tetapi registry tidak mengenalnya → 503 tanpa penerbitan baru."""
+    issuer_id, headers = make_account()
+    proof_id = issue(client, headers, "offer-1").json()["proofId"]
+    registry.fail_next("revoke_proof", registry_adapter.RegistryTransactionPending())
+    revoked = client.post(f"{URL}/{proof_id}/revocations", headers=headers, json={"reasonCode": "OFFER_WITHDRAWN"})
+    assert revoked.status_code == 503
+    registry.reset()
+    assert_error(issue(client, headers, "offer-2"), 503, "REGISTRY_TRANSACTION_FAILED")
+    assert issue_operations(registry) == 0
+    assert [(proof.proof_id, proof.status) for proof in issuer_proofs(issuer_id)] == [(proof_id, "ACTIVE")]
+
+
+def test_retry_recovers_when_revert_name_is_lost(client: TestClient, registry: MockRegistryAdapter) -> None:
+    """Retry yang revert tanpa nama (replay receipt kehilangan ProofAlreadyExists) memulihkan receipt pertama."""
+    issuer_id, headers = make_account()
+    registry.fail_next("issue_proof", registry_adapter.RegistryTransactionPending())
+    assert_error(issue(client, headers, "offer-1"), 503, "REGISTRY_TRANSACTION_FAILED")
+    (pending,) = issuer_proofs(issuer_id)
+    # Transaksi pertama ternyata ditambang di blok yang sama; kirim ulang revert tetapi namanya tidak terbaca.
+    registry.fail_next("issue_proof", registry_adapter.RegistryTransactionFailed(), commit=True)
+    response = issue(client, headers, "offer-1")
+    assert response.status_code == 201
+    assert response.json()["proofId"] == pending.proof_id
+    assert [proof.status for proof in issuer_proofs(issuer_id)] == ["ACTIVE"]

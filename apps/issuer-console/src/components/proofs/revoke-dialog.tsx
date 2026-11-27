@@ -29,7 +29,8 @@ import {
 import {
   applySubmitOutcome,
   isAttemptInputLocked,
-  mayHaveBeenRecorded,
+  attemptErrorMessage,
+  UNCERTAIN_REVOKE_MESSAGE,
   startAttempt,
   type IdempotencyAttempt,
 } from "@/app/hr/proofs/idempotency-attempt";
@@ -214,13 +215,7 @@ export function RevokeDialog({
             <AlertCircle className="size-4" aria-hidden="true" />
             <AlertTitle>Pencabutan bukti gagal</AlertTitle>
             <AlertDescription className="space-y-3">
-              <p>{submitError.message}</p>
-              {mayHaveBeenRecorded(submitError) ? (
-                <p>
-                  Bila ragu apakah sudah tersimpan, muat ulang detail bukti atau coba lagi dengan
-                  permintaan yang sama.
-                </p>
-              ) : null}
+              <p>{attemptErrorMessage(submitError, UNCERTAIN_REVOKE_MESSAGE)}</p>
               <div className="flex flex-wrap gap-2">
                 {submitError.canRetrySameKey ? (
                   <Button

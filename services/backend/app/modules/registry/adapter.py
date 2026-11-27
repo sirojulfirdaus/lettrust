@@ -412,17 +412,19 @@ class Web3RegistryAdapter:
                 "Konfirmasi transaksi registry belum lengkap.", tx_hash=Web3.to_hex(tx_hash)
             ) from exc
 
-    # Receipt status 0: memutar ulang panggilan dengan eth_call pada state sebelum blok receipt (blok − 1) untuk
-    # mengambil nama revert, sehingga ProofAlreadyExists/ProofNotActive/IssuerMismatch dipetakan sama seperti revert
-    # saat estimasi gas. Replay yang tidak revert atau gagal RPC tetap kegagalan pasti tanpa nama. Hash transaksi yang
-    # sudah di-broadcast dibawa exception untuk log `registry.tx_failed`.
+    # Receipt status 0: memutar ulang panggilan dengan eth_call pada state blok receipt untuk mengambil nama revert,
+    # sehingga ProofAlreadyExists/ProofNotActive/IssuerMismatch dipetakan sama seperti revert saat estimasi gas. State
+    # blok receipt memuat transaksi lain di blok yang sama yang mendahului transaksi ini (mis. penerbitan proofId sama
+    # yang sukses lebih dulu); state blok − 1 tidak memuatnya sehingga replay di sana dapat sukses dan nama hilang.
+    # Replay yang tidak revert atau gagal RPC tetap kegagalan pasti tanpa nama; pemanggil memeriksa ulang registry.
+    # Hash transaksi yang sudah di-broadcast dibawa exception untuk log `registry.tx_failed`.
     def _reverted_receipt(
         self, web3: Web3, operation: str, transaction: Mapping[str, Any], receipt: TxReceipt, tx_hash: str
     ) -> RegistryError:
         error: RegistryError = RegistryTransactionFailed()
         try:
             call = {key: transaction[key] for key in ("from", "to", "data", "value") if key in transaction}
-            web3.eth.call(call, max(int(receipt["blockNumber"]) - 1, 0))
+            web3.eth.call(call, receipt["blockNumber"])
         except Web3Exception as exc:
             error = _transaction_error(exc, operation) or error
         except _RPC_ERRORS:

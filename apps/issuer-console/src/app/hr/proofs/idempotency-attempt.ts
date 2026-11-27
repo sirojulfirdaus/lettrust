@@ -55,3 +55,18 @@ export function mayHaveBeenRecorded(error: Pick<AttemptError, "status" | "code">
 export function canStartNewAttempt(error: AttemptError): boolean {
   return error.status >= 400 && error.status < 500 && !error.requiresResetKey && !mayHaveBeenRecorded(error);
 }
+
+// Pesan tunggal untuk hasil yang belum pasti: pesan API (mis. "Tidak ada perubahan yang tersimpan") tidak ditampilkan
+// karena bisa bertentangan dengan kemungkinan permintaan sudah tercatat (receipt terlambat, respons terputus).
+export const UNCERTAIN_ISSUE_MESSAGE =
+  "Hasil penerbitan belum dapat dipastikan. Periksa Daftar Bukti atau coba lagi dengan permintaan yang sama.";
+export const UNCERTAIN_REVOKE_MESSAGE =
+  "Hasil pencabutan belum dapat dipastikan. Muat ulang detail bukti atau coba lagi dengan permintaan yang sama.";
+
+// Memilih satu pesan untuk alert kegagalan: netral bila hasil mungkin sudah tercatat, selain itu pesan API apa adanya.
+export function attemptErrorMessage(
+  error: Pick<AttemptError, "status" | "code"> & { message: string },
+  uncertainMessage: string,
+): string {
+  return mayHaveBeenRecorded(error) ? uncertainMessage : error.message;
+}

@@ -2,7 +2,10 @@
 import { describe, expect, it } from "vitest";
 import {
   EMPTY_ATTEMPT,
+  UNCERTAIN_ISSUE_MESSAGE,
+  UNCERTAIN_REVOKE_MESSAGE,
   applySubmitOutcome,
+  attemptErrorMessage,
   canStartNewAttempt,
   isAttemptInputLocked,
   isRegistryWriteFailure,
@@ -90,5 +93,23 @@ describe("logika Idempotency-Key upaya penerbitan/pencabutan", () => {
     ).toBe(false);
     expect(isRegistryWriteFailure("REGISTRY_UNAVAILABLE")).toBe(true);
     expect(isRegistryWriteFailure("DUPLICATE_ACTIVE_DOCUMENT")).toBe(false);
+  });
+
+  it("menampilkan satu pesan netral untuk hasil yang belum pasti, selain itu pesan API", () => {
+    const registryFailure = {
+      status: 503,
+      code: "REGISTRY_TRANSACTION_FAILED",
+      message: "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
+    };
+    expect(attemptErrorMessage(registryFailure, UNCERTAIN_ISSUE_MESSAGE)).toBe(UNCERTAIN_ISSUE_MESSAGE);
+    expect(attemptErrorMessage(registryFailure, UNCERTAIN_REVOKE_MESSAGE)).toBe(UNCERTAIN_REVOKE_MESSAGE);
+    expect(attemptErrorMessage({ status: 0, code: "NETWORK_ERROR", message: "x" }, UNCERTAIN_ISSUE_MESSAGE)).toBe(
+      UNCERTAIN_ISSUE_MESSAGE,
+    );
+    // Pesan netral tidak menyatakan "tidak ada perubahan" sehingga tidak bertentangan dengan kemungkinan tercatat.
+    expect(UNCERTAIN_ISSUE_MESSAGE).not.toMatch(/tidak ada perubahan/i);
+    expect(UNCERTAIN_REVOKE_MESSAGE).not.toMatch(/tidak ada perubahan/i);
+    const definite = { status: 409, code: "DUPLICATE_ACTIVE_DOCUMENT", message: "Berkas yang sama sudah memiliki bukti aktif." };
+    expect(attemptErrorMessage(definite, UNCERTAIN_ISSUE_MESSAGE)).toBe(definite.message);
   });
 });
