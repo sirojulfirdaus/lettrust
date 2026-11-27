@@ -60,7 +60,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/lettrust.db}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET belum diisi; jalankan python scripts/dev.py up}
       JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-480}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-5242880}
       REGISTRY_RPC_URL: ${REGISTRY_RPC_URL:-http://chain:8545}
       REGISTRY_DEPLOYMENT_FILE: ${REGISTRY_DEPLOYMENT_FILE:-/shared/deployments/local.json}

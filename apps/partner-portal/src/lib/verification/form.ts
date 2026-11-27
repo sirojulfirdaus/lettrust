@@ -55,6 +55,9 @@ export function validatePdfFile(file: File, maxBytes: number = DEFAULT_MAX_UPLOA
   return null;
 }
 
+// Pesan persetujuan AI yang belum diberikan; dipakai juga untuk menandai kotak persetujuan tidak valid.
+export const CONSENT_REQUIRED_MESSAGE = "Setujui pemrosesan AI sebelum mengirim surat untuk dianalisis.";
+
 // Memeriksa kelengkapan masukan sebelum dikirim; mengembalikan pesan kesalahan atau null.
 export function validateSubmission(state: VerifyFormState): string | null {
   const normalizedCode = normalizeReferenceCode(state.referenceCode);
@@ -62,7 +65,7 @@ export function validateSubmission(state: VerifyFormState): string | null {
     return "Format kode referensi tidak valid. Periksa kembali kode pada surat Anda.";
   }
   if (shouldIncludeRisk(state) && !state.file) return "Masukkan kode referensi atau unggah berkas PDF untuk dianalisis.";
-  if (shouldIncludeRisk(state) && !state.consent) return "Setujui pemrosesan AI sebelum mengirim surat untuk dianalisis.";
+  if (shouldIncludeRisk(state) && !state.consent) return CONSENT_REQUIRED_MESSAGE;
   return null;
 }
 

@@ -63,7 +63,8 @@
   --status-positive: #15803d;
   --status-warning: #b45309;
   --status-danger: #b91c1c;
-  --status-disruption: #7c3aed;
+  /* Gangguan (UNAVAILABLE) memakai abu-abu, bukan ungu, selaras dengan Partner Portal. */
+  --status-disruption: #475569;
   --status-neutral: #475569;
 }
 

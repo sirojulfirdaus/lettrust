@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, CheckCircle2, Copy, ExternalLink, FilePlus2 } from "lucide-react";
+import { Check, CircleCheck, Copy, ExternalLink, FilePlus2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ type ProofResultCardProps = {
 
 type CopyField = "referenceCode" | "proofId" | "documentHash" | "txHash";
 
-// Menampilkan hasil penerbitan bukti (FR-03.07 & §9.10) lengkap dengan tombol salin dan instruksi pengiriman.
+// Menampilkan hasil penerbitan bukti (FR-03.07 & §9.10): satu alert sukses dan satu kartu berisi kode, instruksi pengiriman, dan detail registry.
 export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps) {
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,9 +50,9 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
 
   return (
     <div className="space-y-5">
-      <Alert className="border-status-positive/30 bg-status-positive/10 text-foreground">
-        <CheckCircle2 className="size-4 text-status-positive" aria-hidden="true" />
-        <AlertTitle className="text-status-positive">Bukti penerbitan berhasil dicatat</AlertTitle>
+      <Alert>
+        <CircleCheck className="size-4 text-status-positive" strokeWidth={2} aria-hidden="true" />
+        <AlertTitle>Bukti penerbitan berhasil dicatat</AlertTitle>
         <AlertDescription className="text-foreground">
           Transaksi penerbitan telah terkonfirmasi di registry blockchain pada blok #
           {proof.transaction.blockNumber}.
@@ -73,41 +73,43 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
         </CardHeader>
 
         <CardContent className="space-y-5">
-          <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">Kode Referensi</p>
-              <p className="font-mono text-xl font-bold tracking-wide break-all text-primary">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Kode Referensi</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="min-w-0 font-mono text-xl font-bold tracking-wide break-all text-primary">
                 {proof.referenceCode}
               </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleCopy("referenceCode", proof.referenceCode)}
+                className="shrink-0 cursor-pointer"
+              >
+                {copiedField === "referenceCode" ? (
+                  <>
+                    <Check className="size-4 text-status-positive" aria-hidden="true" />
+                    Tersalin
+                  </>
+                ) : (
+                  <>
+                    <Copy className="size-4" aria-hidden="true" />
+                    Salin Kode
+                  </>
+                )}
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handleCopy("referenceCode", proof.referenceCode)}
-              className="shrink-0 cursor-pointer"
-            >
-              {copiedField === "referenceCode" ? (
-                <>
-                  <Check className="size-4 text-status-positive" aria-hidden="true" />
-                  Tersalin
-                </>
-              ) : (
-                <>
-                  <Copy className="size-4" aria-hidden="true" />
-                  Salin Kode
-                </>
-              )}
-            </Button>
           </div>
 
-          <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
-            <p className="font-semibold">Instruksi pengiriman ke pelamar</p>
-            <p className="mt-1 text-muted-foreground">
+          <section aria-labelledby="delivery-instructions-title" className="space-y-1 text-sm">
+            <h2 id="delivery-instructions-title" className="font-semibold text-foreground">
+              Instruksi pengiriman ke pelamar
+            </h2>
+            <p className="text-muted-foreground">
               Kirim berkas PDF yang sama persis beserta kode referensi di atas melalui kanal resmi
               perusahaan. Jangan ubah, kompres ulang, atau simpan ulang berkas karena perubahan
               sekecil apa pun akan membuat hash tidak cocok saat diverifikasi.
             </p>
-          </div>
+          </section>
 
           <dl className="grid gap-4 border-t pt-4 sm:grid-cols-2">
             <div className="space-y-1">
@@ -126,7 +128,7 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
 
             <div className="space-y-1 sm:col-span-2">
               <dt className="text-xs font-medium text-muted-foreground">ID Bukti (Proof ID)</dt>
-              <dd className="flex items-start justify-between gap-2">
+              <dd className="text-foreground">
                 <span className="font-mono text-xs break-all text-foreground">{proof.proofId}</span>
                 <Button
                   type="button"
@@ -134,7 +136,7 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
                   size="sm"
                   aria-label="Salin ID Bukti"
                   onClick={() => void handleCopy("proofId", proof.proofId)}
-                  className="h-7 shrink-0 cursor-pointer px-2 text-xs"
+                  className="ml-1 h-7 cursor-pointer px-2 align-middle text-xs"
                 >
                   {copiedField === "proofId" ? (
                     <Check className="size-3.5 text-status-positive" aria-hidden="true" />
@@ -149,7 +151,7 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
               <dt className="text-xs font-medium text-muted-foreground">
                 Hash Dokumen ({proof.hashAlgorithm})
               </dt>
-              <dd className="flex items-start justify-between gap-2">
+              <dd className="text-foreground">
                 <span className="font-mono text-xs break-all text-foreground">
                   {proof.documentHash}
                 </span>
@@ -159,7 +161,7 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
                   size="sm"
                   aria-label="Salin Hash Dokumen"
                   onClick={() => void handleCopy("documentHash", proof.documentHash)}
-                  className="h-7 shrink-0 cursor-pointer px-2 text-xs"
+                  className="ml-1 h-7 cursor-pointer px-2 align-middle text-xs"
                 >
                   {copiedField === "documentHash" ? (
                     <Check className="size-3.5 text-status-positive" aria-hidden="true" />
@@ -172,7 +174,7 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
 
             <div className="space-y-1 sm:col-span-2">
               <dt className="text-xs font-medium text-muted-foreground">Hash Transaksi Registry</dt>
-              <dd className="flex items-start justify-between gap-2">
+              <dd className="text-foreground">
                 <span className="font-mono text-xs break-all text-foreground">
                   {proof.transaction.hash}
                 </span>
@@ -182,7 +184,7 @@ export function ProofResultCard({ proof, onIssueAnother }: ProofResultCardProps)
                   size="sm"
                   aria-label="Salin Hash Transaksi"
                   onClick={() => void handleCopy("txHash", proof.transaction.hash)}
-                  className="h-7 shrink-0 cursor-pointer px-2 text-xs"
+                  className="ml-1 h-7 cursor-pointer px-2 align-middle text-xs"
                 >
                   {copiedField === "txHash" ? (
                     <Check className="size-3.5 text-status-positive" aria-hidden="true" />

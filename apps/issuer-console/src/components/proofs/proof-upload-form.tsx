@@ -60,6 +60,8 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isSubmittingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Galat yang ditahan sampai dialog konfirmasi selesai tertutup agar pesan tidak muncul di balik dialog.
+  const pendingSubmitErrorRef = useRef<SubmitErrorState | null>(null);
 
   useEffect(() => {
     return () => {
@@ -123,7 +125,9 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
   };
 
   // Mengirim berkas PDF ke API-04 menggunakan Idempotency-Key aktif dengan penjaga double-submit.
+  // Jika dikirim dari dialog konfirmasi, pesan galat baru ditampilkan setelah dialog tertutup penuh.
   const executeSubmit = async () => {
+    const submittedFromDialog = confirmOpen;
     if (isSubmittingRef.current || !selectedFile) {
       return;
     }
@@ -165,13 +169,27 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     }
 
     setAttempt(applySubmitOutcome(activeKey, result));
-    setSubmitError({
+    const nextError: SubmitErrorState = {
       status: result.status,
       code: result.code,
       message: result.message,
       canRetrySameKey: result.canRetrySameKey,
       requiresResetKey: result.requiresResetKey,
-    });
+    };
+    if (submittedFromDialog) {
+      pendingSubmitErrorRef.current = nextError;
+      return;
+    }
+    setSubmitError(nextError);
+  };
+
+  // Menampilkan galat penerbitan yang tertahan setelah animasi tutup dialog selesai dan fokus dikembalikan.
+  const handleConfirmDialogClosed = () => {
+    const pendingError = pendingSubmitErrorRef.current;
+    if (pendingError) {
+      pendingSubmitErrorRef.current = null;
+      setSubmitError(pendingError);
+    }
   };
 
   const isFilePickerDisabled = isAttemptInputLocked(attempt, isSubmitting);
@@ -391,7 +409,11 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md" showCloseButton={!isSubmitting}>
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-md"
+          showCloseButton={!isSubmitting}
+          onCloseAutoFocus={handleConfirmDialogClosed}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShieldAlert className="size-5 text-primary" aria-hidden="true" />
