@@ -8,7 +8,7 @@ type GuidanceListProps = { result: VerificationResponse };
 export function GuidanceList({ result }: GuidanceListProps) {
   const guidance = buildGuidance(result);
   return (
-    <section aria-labelledby="guidance-title" className="rounded-xl border bg-card p-5">
+    <section aria-labelledby="guidance-title" className="rounded-lg border bg-card p-5">
       <h2 id="guidance-title" className="text-lg font-semibold">Langkah yang Disarankan</h2>
       <ul className="mt-3 list-disc space-y-2 pl-5">
         {guidance.map((item) => <li key={item.id}>{item.text}</li>)}

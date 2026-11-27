@@ -9,16 +9,17 @@ import {
   AlertTriangle,
   ArrowLeft,
   Check,
-  CheckCircle2,
+  CircleCheck,
   Copy,
+  Database,
   FileSearch,
   Loader2,
   RefreshCw,
   ShieldAlert,
-  ShieldCheck,
+  TriangleAlert,
 } from "lucide-react";
+import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -283,9 +284,9 @@ export default function ProofDetailPage() {
       </div>
 
       {revokeSuccess ? (
-        <Alert className="border-status-positive/30 bg-status-positive/10 text-foreground">
-          <CheckCircle2 className="size-4 text-status-positive" aria-hidden="true" />
-          <AlertTitle className="text-status-positive">Bukti dicabut</AlertTitle>
+        <Alert>
+          <CircleCheck className="size-4 text-status-positive" strokeWidth={2} aria-hidden="true" />
+          <AlertTitle>Bukti dicabut</AlertTitle>
           <AlertDescription className="space-y-1 text-foreground">
             <p>
               Bukti berhasil dicabut dan terkonfirmasi pada blok #{revokeSuccess.blockNumber}.
@@ -367,20 +368,18 @@ export default function ProofDetailPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               {isStaleActiveAfterConflict ? (
-                <Badge
-                  variant="outline"
-                  className="gap-1.5 border-status-warning/40 bg-status-warning/10 px-2.5 py-0.5 text-status-warning"
-                >
-                  <AlertTriangle className="size-3.5" aria-hidden="true" />
-                  <span>Status perlu disinkronkan (sudah dicabut)</span>
-                </Badge>
+                <StatusBadge
+                  label="Status perlu disinkronkan (sudah dicabut)"
+                  tone="warning"
+                  icon={TriangleAlert}
+                />
               ) : (
                 <>
                   <ProofStatusBadge status={proof.lifecycleStatus} />
-                  <Badge variant="secondary" className="gap-1">
-                    <ShieldCheck className="size-3.5" aria-hidden="true" />
-                    <span>Sumber: {PROOF_SOURCE_LABELS[proof.source]}</span>
-                  </Badge>
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Database className="size-3.5" strokeWidth={2} aria-hidden="true" />
+                    Sumber: {PROOF_SOURCE_LABELS[proof.source]}
+                  </span>
                 </>
               )}
             </div>
@@ -397,7 +396,7 @@ export default function ProofDetailPage() {
           <dl className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1 sm:col-span-2">
               <dt className="text-xs font-medium text-muted-foreground">ID Bukti (Proof ID)</dt>
-              <dd className="flex items-start justify-between gap-2">
+              <dd className="text-foreground">
                 <span className="font-mono text-xs break-all text-foreground">{proof.proofId}</span>
                 <Button
                   type="button"
@@ -405,7 +404,7 @@ export default function ProofDetailPage() {
                   size="sm"
                   aria-label="Salin ID Bukti"
                   onClick={() => void handleCopy("proofId", proof.proofId)}
-                  className="h-7 shrink-0 cursor-pointer px-2 text-xs"
+                  className="ml-1 h-7 cursor-pointer px-2 align-middle text-xs"
                 >
                   {copiedField === "proofId" ? (
                     <Check className="size-3.5 text-status-positive" aria-hidden="true" />
@@ -418,7 +417,7 @@ export default function ProofDetailPage() {
 
             <div className="space-y-1 sm:col-span-2">
               <dt className="text-xs font-medium text-muted-foreground">Hash Dokumen (SHA-256)</dt>
-              <dd className="flex items-start justify-between gap-2">
+              <dd className="text-foreground">
                 <span className="font-mono text-xs break-all text-foreground">
                   {proof.documentHash}
                 </span>
@@ -428,7 +427,7 @@ export default function ProofDetailPage() {
                   size="sm"
                   aria-label="Salin Hash Dokumen"
                   onClick={() => void handleCopy("documentHash", proof.documentHash)}
-                  className="h-7 shrink-0 cursor-pointer px-2 text-xs"
+                  className="ml-1 h-7 cursor-pointer px-2 align-middle text-xs"
                 >
                   {copiedField === "documentHash" ? (
                     <Check className="size-3.5 text-status-positive" aria-hidden="true" />

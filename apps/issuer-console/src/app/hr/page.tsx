@@ -4,29 +4,18 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  AlertCircle,
-  Building2,
-  CheckCircle2,
-  Clock,
-  FilePlus2,
-  FileText,
-  Loader2,
-  ShieldAlert,
-  XCircle,
-} from "lucide-react";
+import { AlertCircle, Building2, FilePlus2, FileText, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { HrAuthorizationBadge, IssuerStatusBadge } from "@/components/issuers/issuer-status-badge";
+import { ProofStatusBadge } from "@/components/proofs/proof-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MeResponse, ProofListResponse } from "@/lib/api/client";
 import { loadHrHomeData, loadHrProofSummary } from "./hr-flow";
 import {
   formatProofTimestamp,
-  getProofLifecyclePresentation,
   type HrStatusPresentation,
   type IssuerMembership,
-  type StatusTone,
 } from "./hr-status";
 
 type ProfileState =
@@ -44,39 +33,6 @@ type ProofSummaryState =
   | { status: "loading" }
   | { status: "ready"; data: ProofListResponse }
   | { status: "error"; message: string };
-
-// Mengembalikan kelas warna badge berdasarkan nada status PRD §9.9.3.
-function getToneClassName(tone: StatusTone): string {
-  switch (tone) {
-    case "positive":
-      return "border-status-positive/30 bg-status-positive/10 text-status-positive";
-    case "warning":
-      return "border-status-warning/30 bg-status-warning/10 text-status-warning";
-    case "danger":
-      return "border-status-danger/30 bg-status-danger/10 text-status-danger";
-    case "neutral":
-      return "border-status-neutral/30 bg-status-neutral/10 text-status-neutral";
-  }
-}
-
-// Menampilkan badge status dengan kombinasi warna, ikon, dan teks agar mudah dikenali.
-function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
-  const Icon =
-    tone === "positive"
-      ? CheckCircle2
-      : tone === "warning"
-        ? Clock
-        : tone === "danger"
-          ? XCircle
-          : ShieldAlert;
-
-  return (
-    <Badge variant="outline" className={`gap-1.5 px-2.5 py-0.5 ${getToneClassName(tone)}`}>
-      <Icon className="size-3.5" aria-hidden="true" />
-      <span>{label}</span>
-    </Badge>
-  );
-}
 
 // Halaman Beranda HR yang memuat status penerbit, otorisasi, dan ringkasan bukti dari backend.
 export default function HrHomePage() {
@@ -255,11 +211,14 @@ export default function HrHomePage() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span>Penerbit:</span>
-                <StatusBadge label={status.issuerStatusLabel} tone={status.issuerTone} />
+                <IssuerStatusBadge status={membership.issuerStatus} />
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span>Otorisasi HR:</span>
-                <StatusBadge label={status.authorizationLabel} tone={status.authorizationTone} />
+                <HrAuthorizationBadge
+                  status={membership.authorizationStatus}
+                  issuerStatus={membership.issuerStatus}
+                />
               </div>
             </div>
           </div>
@@ -305,7 +264,7 @@ export default function HrHomePage() {
               </div>
               <div className="flex items-center gap-3">
                 {proofState.status === "ready" ? (
-                  <Badge variant="secondary">Total: {proofState.data.total}</Badge>
+                  <span className="text-xs text-muted-foreground">Total: {proofState.data.total}</span>
                 ) : null}
                 <Button asChild variant="outline" size="sm" className="cursor-pointer">
                   <Link href="/hr/proofs">Lihat Daftar Bukti</Link>
@@ -353,30 +312,27 @@ export default function HrHomePage() {
               </div>
             ) : (
               <div className="divide-y">
-                {proofState.data.items.map((item) => {
-                  const lifecycle = getProofLifecyclePresentation(item.lifecycleStatus);
-                  return (
-                    <div
-                      key={item.proofId}
-                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="min-w-0 space-y-0.5">
-                        <Link
-                          href={`/hr/proofs/${encodeURIComponent(item.proofId)}`}
-                          className="font-mono text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                          {item.referenceCode}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
-                          Diterbitkan: {formatProofTimestamp(item.issuedAt)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <StatusBadge label={lifecycle.label} tone={lifecycle.tone} />
-                      </div>
+                {proofState.data.items.map((item) => (
+                  <div
+                    key={item.proofId}
+                    className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <Link
+                        href={`/hr/proofs/${encodeURIComponent(item.proofId)}`}
+                        className="font-mono text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        {item.referenceCode}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        Diterbitkan: {formatProofTimestamp(item.issuedAt)}
+                      </p>
                     </div>
-                  );
-                })}
+                    <div className="flex items-center gap-2">
+                      <ProofStatusBadge status={item.lifecycleStatus} />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

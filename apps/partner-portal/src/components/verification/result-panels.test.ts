@@ -72,14 +72,33 @@ describe("portal verification fixtures", () => {
     expect(html).toContain(indicatorLabel(fixtures.api07AiOnly.riskAnalysis.indicatorDetails[0].code));
   });
 
-  // FR-02.09 AC-02: bukti REVOKED tetap menampilkan status verifikasi penerbit dan waktu penerbitan.
-  it("merender status penerbit dan waktu penerbitan untuk bukti REVOKED tanpa duplikasi pada ACTIVE", () => {
-    const revoked = renderPanels(fixtures.api07RevokedMismatch as VerificationResponse);
-    expect(revoked).toContain("Status verifikasi penerbit: terverifikasi");
-    expect(revoked).toContain("Waktu penerbitan: 23 November 2026");
+  // FR-02.09 AC-02: bukti REVOKED dan ACTIVE sama-sama menampilkan penerbit, status verifikasi penerbit, dan waktu penerbitan (UTC).
+  it("merender rincian penerbit dan waktu penerbitan UTC untuk bukti REVOKED dan ACTIVE", () => {
+    for (const fixture of [fixtures.api07RevokedMismatch, fixtures.api07CodeOnly]) {
+      const html = renderPanels(fixture as VerificationResponse);
+      expect(html).toMatch(/<dt[^>]*>Penerbit<\/dt><dd[^>]*>PT Sinar Demo Sejahtera<\/dd>/);
+      expect(html).toMatch(/<dt[^>]*>Status verifikasi penerbit<\/dt><dd[^>]*>terverifikasi<\/dd>/);
+      expect(html).toMatch(/<dt[^>]*>Waktu penerbitan<\/dt><dd[^>]*>23 Nov 2026, 04\.12 UTC<\/dd>/);
+      expect(html).toMatch(/<dt[^>]*>Sumber status bukti<\/dt><dd[^>]*>registry<\/dd>/);
+    }
     const active = renderPanels(fixtures.api07CodeOnly as VerificationResponse);
-    expect(active).not.toContain("Waktu penerbitan:");
-    expect(active).toContain("(penerbit terverifikasi) pada 23 November 2026");
+    expect(active).toContain("(penerbit terverifikasi) pada 23 Nov 2026, 04.12 UTC, dan statusnya masih aktif.");
+  });
+
+  // Registry tidak terbaca atau tidak diminta: sumber status bukti tidak boleh diklaim dari registry.
+  it("tidak menampilkan sumber status registry saat lookup UNAVAILABLE atau NOT_REQUESTED", () => {
+    for (const fixture of [fixtures.api07RegistryUnavailable, fixtures.api07DoubleOutage, fixtures.api07AiOnly]) {
+      expect(renderPanels(fixture as VerificationResponse)).not.toContain("Sumber status bukti");
+    }
+  });
+
+  // Ikon status berupa SVG dekoratif; teks status tetap tampil dan karakter ikon lama tidak dipakai lagi.
+  it("merender ikon SVG tersembunyi dari pembaca layar di setiap panel", () => {
+    for (const [name, fixture] of apiFixtures) {
+      const html = renderPanels(fixture as VerificationResponse);
+      expect(html.match(/<svg[^>]*aria-hidden="true"/g)?.length, name).toBe(3);
+      expect(html, name).not.toMatch(/[✓✕⊘⚠▲◆●]/);
+    }
   });
 
   it("memberi pesan statis yang dapat ditindaklanjuti untuk semua fixture error", () => {

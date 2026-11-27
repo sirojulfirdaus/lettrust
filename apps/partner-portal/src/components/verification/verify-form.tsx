@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { Upload } from "lucide-react";
 import type { VerificationResponse } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,9 +57,13 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VerificationResponse | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [codeSubmitted, setCodeSubmitted] = useState(false);
   const { mode, referenceCode, file, includeRisk, consent } = form;
   const normalizedCode = normalizeReferenceCode(referenceCode);
   const riskRequested = shouldIncludeRisk(form);
+  // Kesalahan format kode hanya tampil di bawah field (bukan juga di banner): saat diketik atau setelah dikirim.
+  const codeInvalid = mode === "REFERENCE_CHECK" && !(normalizedCode && isValidReferenceCode(normalizedCode));
+  const showCodeError = codeInvalid && (codeSubmitted || Boolean(normalizedCode));
 
   // Memvalidasi satu PDF di browser terhadap batas unggah server sebelum memulai permintaan.
   function acceptFile(event: ChangeEvent<HTMLInputElement>) {
@@ -73,6 +78,7 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
   function changeMode(nextMode: VerificationMode) {
     setForm(initialFormState(nextMode));
     setFileError(null);
+    setCodeSubmitted(false);
     setError(null);
     setResult(null);
   }
@@ -81,7 +87,11 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
   async function submitVerification(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validationError = validateSubmission(form);
-    setError(validationError);
+    // validateSubmission memeriksa format kode lebih dulu, jadi pesan ini sudah ditampilkan inline oleh showCodeError.
+    setCodeSubmitted(codeInvalid);
+    setError(codeInvalid ? null : validationError);
+    // Fokus ke field kode agar pesan inline (aria-describedby) terbaca pembaca layar.
+    if (codeInvalid) document.getElementById("reference-code")?.focus();
     if (validationError) return;
 
     setIsProcessing(true);
@@ -112,35 +122,44 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
     setForm(initialFormState());
     setError(null);
     setFileError(null);
+    setCodeSubmitted(false);
     setResult(null);
   }
 
   return (
     <div className="space-y-6">
-      <form onSubmit={submitVerification} className="space-y-6 rounded-xl border bg-card p-4 sm:p-6">
+      <form onSubmit={submitVerification} className="space-y-6 rounded-lg border bg-card p-4 sm:p-6">
         <ModeSelector mode={mode} disabled={isProcessing} onChange={changeMode} />
         {mode === "REFERENCE_CHECK" && (
           <div className="space-y-2">
             <label htmlFor="reference-code" className="font-medium">Kode referensi</label>
-            <Input id="reference-code" autoComplete="off" placeholder={REFERENCE_CODE_EXAMPLE} value={referenceCode} onChange={(event) => { const value = event.target.value; setForm((current) => ({ ...current, referenceCode: value })); }} disabled={isProcessing} aria-describedby="reference-help" aria-invalid={Boolean(referenceCode && normalizedCode && !isValidReferenceCode(normalizedCode))} />
+            <Input id="reference-code" autoComplete="off" placeholder={REFERENCE_CODE_EXAMPLE} value={referenceCode} onChange={(event) => { const value = event.target.value; setForm((current) => ({ ...current, referenceCode: value })); }} disabled={isProcessing} aria-describedby={showCodeError ? "reference-help reference-error" : "reference-help"} aria-invalid={showCodeError} />
             <p id="reference-help" className="text-sm text-muted-foreground">Contoh: {REFERENCE_CODE_EXAMPLE}. Spasi dan tanda hubung akan dinormalisasi.</p>
-            {referenceCode && normalizedCode && !isValidReferenceCode(normalizedCode) && <p className="text-sm text-destructive">Format kode belum sesuai.</p>}
+            {showCodeError && <p id="reference-error" className="text-sm text-destructive">{verificationErrorMessage(400, "INVALID_REFERENCE_CODE_FORMAT")}</p>}
           </div>
         )}
         <div className="space-y-2">
           <label htmlFor="offer-letter" className="font-medium">Berkas surat {mode === "AI_ONLY" ? "(wajib PDF)" : `(opsional, PDF maksimal ${maxUploadMb} MB)`}</label>
-          <Input id="offer-letter" type="file" accept="application/pdf,.pdf" onChange={acceptFile} disabled={isProcessing} aria-describedby="file-help" aria-invalid={Boolean(fileError)} />
+          {/* Input berkas asli tetap ada (sr-only) agar data ke BFF tidak berubah; label di bawah berperan sebagai tombol. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <input id="offer-letter" type="file" accept="application/pdf,.pdf" onChange={acceptFile} disabled={isProcessing} aria-describedby="file-help file-name" aria-invalid={Boolean(fileError)} className="peer sr-only" />
+            <label htmlFor="offer-letter" className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium shadow-xs transition-colors hover:bg-muted peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50 peer-disabled:pointer-events-none peer-disabled:opacity-50">
+              <Upload aria-hidden="true" size={16} strokeWidth={2} className="size-4" />
+              Pilih berkas PDF
+            </label>
+            <span id="file-name" className="min-w-0 break-all text-sm text-muted-foreground">{file ? `${file.name} · ${(file.size / (1024 * 1024)).toFixed(2)} MB` : "Belum ada berkas dipilih"}</span>
+            {file && <Button type="button" variant="outline" size="sm" disabled={isProcessing} onClick={() => setForm((current) => withFile(current, null))}>Hapus berkas</Button>}
+          </div>
           <p id="file-help" className="text-sm text-muted-foreground">Berkas dipakai untuk pemeriksaan ini saja.</p>
           {fileError && <p role="alert" className="text-sm text-destructive">{fileError}</p>}
-          {file && <div className="flex flex-wrap items-center gap-3 text-sm"><span>{file.name} · {(file.size / (1024 * 1024)).toFixed(2)} MB</span><Button type="button" variant="outline" size="sm" disabled={isProcessing} onClick={() => setForm((current) => withFile(current, null))}>Hapus berkas</Button></div>}
         </div>
         {mode === "REFERENCE_CHECK" && (
           <label className="flex items-start gap-3 rounded-lg border p-3">
-            <input type="checkbox" checked={includeRisk} disabled={!canToggleRisk(form) || isProcessing} onChange={(event) => { const checked = event.target.checked; setForm((current) => withIncludeRisk(current, checked)); }} />
+            <input type="checkbox" className="mt-1 size-4 shrink-0 accent-primary" checked={includeRisk} disabled={!canToggleRisk(form) || isProcessing} onChange={(event) => { const checked = event.target.checked; setForm((current) => withIncludeRisk(current, checked)); }} />
             <span><span className="block font-medium">Analisis indikasi risiko dengan AI</span><span className="text-sm text-muted-foreground">Unggah PDF untuk mengaktifkan pilihan ini.</span></span>
           </label>
         )}
-        {mode === "AI_ONLY" && <div className="space-y-2 rounded-lg bg-muted p-3 text-sm"><p>Bukti penerbitan dan keutuhan berkas tidak diperiksa tanpa kode referensi.</p><p>Apabila perusahaan menyatakan menggunakan Lettrust, mintalah kode referensi kepada perusahaan.</p></div>}
+        {mode === "AI_ONLY" && <p className="rounded-lg bg-muted p-3 text-sm">Apabila perusahaan menyatakan menggunakan Lettrust, mintalah kode referensi kepada perusahaan.</p>}
         {riskRequested && <ConsentCheckbox checked={consent} disabled={isProcessing} onCheckedChange={(checked) => setForm((current) => ({ ...current, consent: checked }))} />}
         {error && <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>}
         {isProcessing && <ProcessingStatus includeRisk={riskRequested} />}

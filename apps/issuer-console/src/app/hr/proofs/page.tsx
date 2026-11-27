@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ChevronLeft, ChevronRight, FilePlus2, FileText, Loader2, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -136,7 +135,7 @@ export default function ProofListPage() {
                 <div className="flex items-center gap-2">
                   <CardTitle>Riwayat Bukti Penerbitan</CardTitle>
                   {state.status === "ready" ? (
-                    <Badge variant="secondary">Total: {state.data.total}</Badge>
+                    <span className="text-xs text-muted-foreground">Total: {state.data.total}</span>
                   ) : null}
                 </div>
                 <CardDescription>

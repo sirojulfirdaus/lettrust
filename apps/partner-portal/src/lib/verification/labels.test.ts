@@ -1,10 +1,10 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD §9.6, FR-02.09, FR-06.07
 import { describe, expect, it } from "vitest";
 import * as fixtures from "@/fixtures/api";
-import { api07AiNotPerformed, api07AiOnly, api07NotFoundCodeOnly, api07ReferenceMatchAi, api07RegistryUnavailable, api07RevokedMismatch } from "@/fixtures/api";
+import { api07AiNotPerformed, api07AiOnly, api07CodeOnly, api07NotFoundCodeOnly, api07ReferenceMatchAi, api07RegistryUnavailable, api07RevokedMismatch } from "@/fixtures/api";
 import type { VerificationResponse } from "@/lib/api/types";
 import { buildGuidance } from "./guidance";
-import { indicatorLabel, integrityCheckLabel, proofCheckLabel, proofDetailLines, riskAnalysisLabel } from "./labels";
+import { formatTimestamp, indicatorLabel, integrityCheckLabel, proofCheckLabel, proofDetailLines, riskAnalysisLabel } from "./labels";
 
 // Kalimat vonis afirmatif (mis. "surat ini asli"); kalimat bernegasi PRD seperti "tidak berarti surat palsu" dikecualikan.
 const VERDICT = /\b(?:surat|penawaran|hasil|berkas)\s+(?:ini\s+)?(?:asli|palsu|aman|penipuan)\b/i;
@@ -93,15 +93,26 @@ describe("verification labels", () => {
     expect(indicatorLabel("PAYMENT_REQUEST")).toBe("Permintaan pembayaran kepada pelamar");
   });
 
-  // FR-02.09 AC-02: rincian status penerbit dan waktu terbit hanya ditambahkan untuk REVOKED.
-  it("menyusun rincian status penerbit dan waktu penerbitan untuk bukti REVOKED", () => {
-    const revoked = proofDetailLines(api07RevokedMismatch.proofCheck);
-    expect(revoked[0]).toBe("Status verifikasi penerbit: terverifikasi");
-    expect(revoked[1]).toMatch(/^Waktu penerbitan: 23 November 2026/);
-    expect(proofDetailLines({ ...api07RevokedMismatch.proofCheck, issuerVerified: false })[0]).toBe(
-      "Status verifikasi penerbit: belum/tidak berstatus terverifikasi",
+  // FR-02.09 AC-02: rincian penerbit, status verifikasi penerbit, dan waktu terbit (UTC) untuk bukti FOUND (ACTIVE dan REVOKED).
+  it("menyusun rincian penerbit dan waktu penerbitan untuk bukti REVOKED dan ACTIVE", () => {
+    const expected = [
+      { label: "Penerbit", value: "PT Sinar Demo Sejahtera" },
+      { label: "Status verifikasi penerbit", value: "terverifikasi" },
+      { label: "Waktu penerbitan", value: "23 Nov 2026, 04.12 UTC" },
+    ];
+    expect(proofDetailLines(api07RevokedMismatch.proofCheck)).toEqual(expected);
+    expect(proofDetailLines(api07CodeOnly.proofCheck)).toEqual(expected);
+    expect(proofDetailLines({ ...api07RevokedMismatch.proofCheck, issuerVerified: false })[1]).toEqual(
+      { label: "Status verifikasi penerbit", value: "belum/tidak berstatus terverifikasi" },
     );
-    expect(proofDetailLines(api07ReferenceMatchAi.proofCheck)).toEqual([]);
     expect(proofDetailLines(api07NotFoundCodeOnly.proofCheck)).toEqual([]);
+    expect(proofDetailLines(api07RegistryUnavailable.proofCheck)).toEqual([]);
+  });
+
+  // Waktu portal selalu UTC berlabel "UTC", sama dengan format Console.
+  it("memformat waktu dalam UTC dengan akhiran UTC", () => {
+    expect(formatTimestamp("2026-11-23T04:12:09Z")).toBe("23 Nov 2026, 04.12 UTC");
+    expect(proofCheckLabel(api07RevokedMismatch.proofCheck).explanation).toContain("pada 24 Nov 2026, 08.01 UTC.");
+    expect(formatTimestamp("bukan-waktu")).toBe("bukan-waktu");
   });
 });

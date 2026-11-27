@@ -10,11 +10,11 @@ type ConsentCheckboxProps = {
   onCheckedChange: (checked: boolean) => void;
 };
 
-// Meminta persetujuan eksplisit untuk satu kali analisis AI.
+// Meminta persetujuan eksplisit untuk satu kali analisis AI; kotak centang sejajar baris pertama teks.
 export function ConsentCheckbox({ checked, disabled, onCheckedChange }: ConsentCheckboxProps) {
   return (
-    <label className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
-      <Checkbox checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} aria-label={getAiConsentText()} />
+    <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+      <Checkbox className="mt-0.5" checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} aria-label={getAiConsentText()} />
       <span>{getAiConsentText()}</span>
     </label>
   );

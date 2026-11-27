@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:////data/lettrust.db"
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_expires_minutes: int = Field(default=480, ge=1, le=1440)
-    cors_allowed_origins: str = "http://localhost:3000"
+    cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     max_upload_bytes: int = Field(default=5_242_880, ge=1)
 
     registry_rpc_url: str = "http://chain:8545"

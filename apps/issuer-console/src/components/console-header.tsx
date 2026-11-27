@@ -4,8 +4,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { FlaskConical, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   fetchSessionProfile,
@@ -121,7 +120,10 @@ export function ConsoleHeader() {
           >
             Lettrust Console
           </Link>
-          <Badge variant="outline">Data sintetis</Badge>
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <FlaskConical className="size-3.5" strokeWidth={2} aria-hidden="true" />
+            Data sintetis
+          </span>
         </div>
 
         <nav aria-label="Navigasi utama" className="ml-auto flex flex-wrap items-center gap-2 text-sm">

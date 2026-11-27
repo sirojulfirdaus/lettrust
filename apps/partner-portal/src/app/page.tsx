@@ -8,7 +8,7 @@ export default function PortalHomePage() {
   return (
     <div className="space-y-8">
       <section className="space-y-3 py-6 sm:py-10">
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary">Portal Karier Mitra · Simulasi</p>
+        <p className="text-sm text-muted-foreground">Portal Karier Mitra · Simulasi</p>
         <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">Periksa informasi pada surat penawaran kerja</h1>
         <p className="max-w-2xl text-muted-foreground">
           Gunakan kode referensi untuk memeriksa catatan penerbitan dan keutuhan berkas, atau minta analisis indikasi risiko pada isi PDF. Hasil pemeriksaan membantu Anda menentukan langkah selanjutnya dan bukan vonis.
