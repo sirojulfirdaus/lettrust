@@ -1,10 +1,6 @@
 # Lettrust
 
-Lettrust adalah prototipe akademik (II3120 LaSTI, ITB, Kelompok 04, Deliverable 3) berupa layanan verifikasi offer letter dan analisis risiko penipuan rekrutmen yang terintegrasi ke portal karier simulasi melalui REST API. Bukti penerbitan dicatat pada registry smart contract lokal (Anvil), isi surat dianalisis model bahasa pra-latih, dan hasil disajikan sebagai tiga komponen terpisah tanpa vonis gabungan. Acuan: [PRD](docs/prd/), [SYSTEM_ARCHITECTURE](docs/SYSTEM_ARCHITECTURE.md), [AGENTS.md](AGENTS.md). Seluruh data sintetis.
-
-> Mock, fake, contoh kontrak, dan suite conformance untuk pengembangan paralel: [docs/MOCKS.md](docs/MOCKS.md).
-
-> Status: seluruh endpoint SA §10.4 sudah diimplementasikan; tidak ada lagi respons stub 501. Catatan scaffold dan deviasi: [docs/SCAFFOLD_REPORT.md](docs/SCAFFOLD_REPORT.md).
+Lettrust adalah prototipe akademik (II3120 LaSTI, ITB, Kelompok 04, Deliverable 3) berupa layanan verifikasi offer letter dan analisis risiko penipuan rekrutmen yang terintegrasi ke portal karier simulasi melalui REST API. Bukti penerbitan dicatat pada registry smart contract lokal (Anvil), isi surat dianalisis model bahasa pra-latih, dan hasil disajikan sebagai tiga komponen terpisah tanpa vonis gabungan. Acuan: [PRD](docs/prd/), [SYSTEM_ARCHITECTURE](docs/SYSTEM_ARCHITECTURE.md). Seluruh data sintetis.
 
 ## Prasyarat
 
