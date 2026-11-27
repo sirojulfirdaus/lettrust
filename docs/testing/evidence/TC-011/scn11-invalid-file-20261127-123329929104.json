@@ -1,0 +1,186 @@
+{
+  "testCaseId": "TC-011",
+  "scenario": "SCN-11",
+  "startedAtUtc": "2026-11-27T12:33:29.929104+00:00",
+  "finishedAtUtc": "2026-11-27T12:33:30.943631+00:00",
+  "completed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "11a-fx08-bukan-pdf",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_049BA549A53E6765",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": {
+          "name": "FX-08.pdf",
+          "sizeBytes": 39,
+          "sha256": "99ae7c03e3ead16bfef5140f69e3420298cf4ec2c7430f9608427f086771ae70"
+        }
+      },
+      "expected": {
+        "httpStatus": 415,
+        "errorCode": "UNSUPPORTED_MEDIA_TYPE"
+      },
+      "actual": {
+        "httpStatus": 415,
+        "errorCode": "UNSUPPORTED_MEDIA_TYPE"
+      },
+      "matches": true,
+      "info": {},
+      "response": {
+        "requestId": "req_049BA549A53E6765",
+        "error": {
+          "code": "UNSUPPORTED_MEDIA_TYPE",
+          "message": "Berkas harus berformat PDF.",
+          "details": []
+        }
+      }
+    },
+    {
+      "name": "11b-fx09-melebihi-batas",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_55C0FA3E3B155595",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": {
+          "name": "FX-09.pdf",
+          "sizeBytes": 5244158,
+          "sha256": "8fe683583c05d7fbc0016cd68850438d56dfb3f23e5b5adbe42ff2ac86e4e758"
+        }
+      },
+      "expected": {
+        "httpStatus": 413,
+        "errorCode": "FILE_TOO_LARGE"
+      },
+      "actual": {
+        "httpStatus": 413,
+        "errorCode": "FILE_TOO_LARGE"
+      },
+      "matches": true,
+      "info": {},
+      "response": {
+        "requestId": "req_55C0FA3E3B155595",
+        "error": {
+          "code": "FILE_TOO_LARGE",
+          "message": "Ukuran berkas melebihi batas yang diizinkan.",
+          "details": []
+        }
+      }
+    },
+    {
+      "name": "11c-berkas-kosong",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_53751913212562DB",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": {
+          "name": "kosong.pdf",
+          "sizeBytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "expected": {
+        "httpStatus": 400,
+        "errorCode": "EMPTY_FILE"
+      },
+      "actual": {
+        "httpStatus": 400,
+        "errorCode": "EMPTY_FILE"
+      },
+      "matches": true,
+      "info": {},
+      "response": {
+        "requestId": "req_53751913212562DB",
+        "error": {
+          "code": "EMPTY_FILE",
+          "message": "Berkas kosong tidak dapat diproses.",
+          "details": []
+        }
+      }
+    },
+    {
+      "name": "11d-fx10-rusak-dengan-kode-active",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_E161AEDBF96E5A37",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": {
+          "name": "FX-10.pdf",
+          "sizeBytes": 67,
+          "sha256": "484f8609015dd745ad589bc97c863a6c767e60ed7002a14c9c01219cdcd3f14f"
+        }
+      },
+      "expected": {
+        "httpStatus": 200,
+        "lookup": "FOUND",
+        "lifecycleStatus": "ACTIVE",
+        "integrityResult": "MISMATCH",
+        "riskState": "NOT_PERFORMED"
+      },
+      "actual": {
+        "httpStatus": 200,
+        "mode": "REFERENCE_CHECK",
+        "lookup": "FOUND",
+        "proofReason": null,
+        "lifecycleStatus": "ACTIVE",
+        "integrityResult": "MISMATCH",
+        "integrityReason": null,
+        "riskState": "NOT_PERFORMED",
+        "riskReason": "DOCUMENT_CONTENT_UNAVAILABLE",
+        "category": null,
+        "indicatorCodes": []
+      },
+      "matches": true,
+      "info": {
+        "proofId": "0x1f694ef7fdda9523321bfcb9f5b916773529a9173711cd4a2e0d6a789206ed15",
+        "issueTransaction": {
+          "hash": "0x723a3754095852821f7063d9fbab85eba1863d9880a360c5d2d5e1f036bda44f",
+          "blockNumber": 2
+        }
+      },
+      "response": {
+        "verificationId": "VER-RN1NVZTTXY",
+        "mode": "REFERENCE_CHECK",
+        "proofCheck": {
+          "lookup": "FOUND",
+          "reason": null,
+          "issuer": {
+            "issuerId": "ISS-JH9J59EH",
+            "companyName": "PT Sinar Demo Sejahtera"
+          },
+          "issuerVerified": true,
+          "lifecycleStatus": "ACTIVE",
+          "issuedAt": "2026-11-27T12:33:27Z",
+          "revokedAt": null
+        },
+        "integrityCheck": {
+          "result": "MISMATCH",
+          "reason": null,
+          "hashAlgorithm": "SHA-256"
+        },
+        "riskAnalysis": {
+          "state": "NOT_PERFORMED",
+          "reason": "DOCUMENT_CONTENT_UNAVAILABLE",
+          "category": null,
+          "indicators": [],
+          "indicatorDetails": [],
+          "explanation": null,
+          "recommendation": null,
+          "extractionMethod": null,
+          "contentTruncated": null,
+          "pagesAnalyzed": null,
+          "pagesTotal": null
+        }
+      }
+    }
+  ]
+}

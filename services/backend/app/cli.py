@@ -1,11 +1,13 @@
 # Owner: Dws (PIC 1) [init-db, export-openapi]; Zan (PIC 3) [seed]
-# Status: COMPLETE | Ref: SA §9.1, §9.5, §10.1
-"""CLI backend: `python -m app.cli init-db | seed [--if-empty] | export-openapi`."""
+# Status: COMPLETE | Ref: SA §9.1, §9.2, §9.5, §10.1; PRD FR-06.08 AC-03
+"""CLI backend: `python -m app.cli init-db | seed [--if-empty] | export-openapi | export-verification-logs`."""
 
 import argparse
+import csv
 import json
 import logging
 import sys
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -20,6 +22,7 @@ from app.core.security import hash_password, hash_token
 from app.modules.auth.models import User
 from app.modules.issuers.models import Issuer, IssuerMembership
 from app.modules.partners.models import Partner
+from app.modules.verifications.models import VerificationLog
 
 logger = logging.getLogger("app.cli")
 
@@ -160,6 +163,60 @@ def cmd_export_openapi(_: argparse.Namespace) -> int:
     return 0
 
 
+# Kolom verification_logs yang boleh diekspor (SA §9.2): hanya ID, partner, enum hasil, durasi, dan waktu.
+VERIFICATION_LOG_EXPORT_FIELDS = (
+    "id",
+    "partner_id",
+    "mode",
+    "lookup",
+    "lifecycle_status",
+    "integrity_result",
+    "risk_state",
+    "risk_category",
+    "proof_reason",
+    "integrity_reason",
+    "risk_reason",
+    "duration_ms",
+    "created_at",
+)
+
+
+# Mengubah satu baris log menjadi dict allowlist; created_at dinormalkan ke ISO-8601 UTC.
+def _verification_log_record(row: Sequence[object]) -> dict[str, object]:
+    record = dict(zip(VERIFICATION_LOG_EXPORT_FIELDS, row, strict=True))
+    created_at = record["created_at"]
+    if isinstance(created_at, datetime):
+        # SQLite mengembalikan datetime naif; nilai disimpan dalam UTC.
+        record["created_at"] = created_at.replace(tzinfo=created_at.tzinfo or UTC).isoformat()
+    return record
+
+
+# Mengekspor verification_logs (urut created_at) sebagai JSONL atau CSV untuk bukti pengujian (FR-06.08 AC-03).
+def cmd_export_verification_logs(args: argparse.Namespace) -> int:
+    columns = [getattr(VerificationLog, field) for field in VERIFICATION_LOG_EXPORT_FIELDS]
+    try:
+        with get_session_factory()() as db:
+            rows = db.execute(select(*columns).order_by(VerificationLog.created_at, VerificationLog.id)).all()
+    except DBAPIError:
+        logger.error("verification_logs.export_database_error")
+        return 1
+
+    records = [_verification_log_record(row) for row in rows]
+    out = open(args.out, "w", encoding="utf-8", newline="") if args.out else sys.stdout
+    try:
+        if args.format == "csv":
+            writer = csv.DictWriter(out, fieldnames=VERIFICATION_LOG_EXPORT_FIELDS)
+            writer.writeheader()
+            writer.writerows(records)
+        else:
+            out.writelines(json.dumps(record, ensure_ascii=False) + "\n" for record in records)
+    finally:
+        if out is not sys.stdout:
+            out.close()
+    logger.info("verification_logs.exported")
+    return 0
+
+
 # Menyusun parser subperintah CLI.
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
@@ -169,6 +226,10 @@ def build_parser() -> argparse.ArgumentParser:
     seed.add_argument("--if-empty", action="store_true", help="Hanya seed bila basis data kosong")
     seed.set_defaults(func=cmd_seed)
     sub.add_parser("export-openapi", help="Cetak OpenAPI JSON ke stdout").set_defaults(func=cmd_export_openapi)
+    export_logs = sub.add_parser("export-verification-logs", help="Ekspor log verifikasi minimal (JSONL/CSV)")
+    export_logs.add_argument("--format", choices=("jsonl", "csv"), default="jsonl", help="Format keluaran")
+    export_logs.add_argument("--out", help="Path berkas keluaran (default stdout)")
+    export_logs.set_defaults(func=cmd_export_verification_logs)
     return parser
 
 

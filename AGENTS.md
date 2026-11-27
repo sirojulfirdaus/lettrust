@@ -136,7 +136,7 @@ Use the real commands (see README):
 | Whole stack | `python scripts/dev.py up`, `status`, `logs [svc]`, `stop/start <svc>` |
 | Unit tests in containers | `python scripts/dev.py test [svc]` |
 | Contract | `forge test` in `blockchain/` |
-| Backend against real Anvil (stack up) | `docker compose exec backend python -m pytest -m real_registry tests/conformance tests/integration` |
+| Backend against real Anvil (stack up) | `docker compose run --rm -T -v ./contracts:/contracts:ro -e CONTRACTS_DIR=/contracts backend python -m pytest -q -m real_registry` |
 | Contract regeneration (after an instructed schema change) | `python scripts/dev.py openapi` |
 | Frontend logic | `npm test` (Vitest) in the app |
 | API scenarios | scripts in `scripts/scn/` |
@@ -171,3 +171,12 @@ Do not report future or planned work as completed.
 ## 12. Communication
 
 Respond in concise Indonesian unless asked otherwise. Use technical English terms where clearer. Keep important security and implementation details even when brief. Disclose assumptions, failed or skipped checks, and unresolved issues.
+
+## 13. Evaluation Output Contract
+
+- The offline `raw.jsonl` v1 contract is defined in `docs/evaluation/protocol.md` §6 and `ai-eval/scripts/_eval_schema.py` (`EvaluationRecord`). This contract was established in T6-05 at Sat's explicit instruction; it does not change the frozen public OpenAPI contract.
+- B's `run_eval.py` (T5-07/T5-08), Sat's `baseline.py` (T6-05), and Pash's `metrics.py` (T4-07) must use the same record format: `schemaVersion`, `id`, `variant`, `status`, `result`, `extraction`, `error`, `latencyMs`. `result` is the existing API-08 response shape for both variants; failures have `status=UNAVAILABLE`, `result=null`, and a structured error.
+- Join ground truth from the manifest by `id`. Group metrics by `variant` and read indicator codes from `result.indicatorDetails`, not the display strings in `result.indicators`. Never infer predictions from dataset IDs, filenames, reference labels, or indicator annotations.
+- Producers write immutable run directories with `raw.jsonl` and `run_config.json`; consumers reject incomplete runs, unsupported schema versions, duplicate `(variant,id)`, and mismatched manifest checksums. Follow the exact fields and lifecycle in protocol §6 rather than inventing a different format.
+- Do not serialize Settings objects, secrets, full extracted text, or raw provider exceptions. Evidence is saved only in synthetic evaluation artefacts, not stdout/application logs. Baseline remains evaluation-only and is never a runtime fallback.
+- Format changes require coordinated updates to the schema, synthetic contract tests, protocol, and affected producers/consumers. Dataset review, English data, model selection, freeze, metric conventions, and final evaluation remain their respective owners' tasks; defining this format does not complete them.

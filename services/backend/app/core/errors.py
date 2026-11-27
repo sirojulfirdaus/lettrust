@@ -33,7 +33,6 @@ ERROR_HTTP_STATUS: dict[ErrorCode, int] = {
     ErrorCode.HR_NOT_AFFILIATED: 422,
     ErrorCode.RATE_LIMITED: 429,
     ErrorCode.INTERNAL_ERROR: 500,
-    ErrorCode.NOT_IMPLEMENTED: 501,
     ErrorCode.AI_OUTPUT_INVALID: 502,
     ErrorCode.REGISTRY_UNAVAILABLE: 503,
     ErrorCode.REGISTRY_TRANSACTION_FAILED: 503,
@@ -77,7 +76,6 @@ DEFAULT_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.UNSUPPORTED_MEDIA_TYPE: "Berkas harus berformat PDF.",
     ErrorCode.RATE_LIMITED: "Terlalu banyak permintaan. Coba lagi beberapa saat lagi.",
     ErrorCode.INTERNAL_ERROR: "Terjadi kesalahan internal. Coba lagi beberapa saat lagi.",
-    ErrorCode.NOT_IMPLEMENTED: "Fitur ini belum diimplementasikan.",
     ErrorCode.REGISTRY_UNAVAILABLE: "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
     ErrorCode.REGISTRY_TRANSACTION_FAILED: (
         "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi."
@@ -107,15 +105,10 @@ class AppError(Exception):
         return ERROR_HTTP_STATUS[self.code]
 
 
-# Membuat AppError NOT_IMPLEMENTED (501) untuk endpoint dan dependency yang masih stub.
-def not_implemented() -> AppError:
-    return AppError(ErrorCode.NOT_IMPLEMENTED)
-
-
 # Menyusun dokumentasi respons error OpenAPI (model ErrorEnvelope) untuk kode-kode yang mungkin muncul.
 def error_responses(*codes: ErrorCode) -> dict[int | str, dict[str, Any]]:
     grouped: dict[int, list[str]] = {}
-    for code in (*codes, ErrorCode.VALIDATION_ERROR, ErrorCode.INTERNAL_ERROR, ErrorCode.NOT_IMPLEMENTED):
+    for code in (*codes, ErrorCode.VALIDATION_ERROR, ErrorCode.INTERNAL_ERROR):
         grouped.setdefault(ERROR_HTTP_STATUS[code], [])
         if code.value not in grouped[ERROR_HTTP_STATUS[code]]:
             grouped[ERROR_HTTP_STATUS[code]].append(code.value)

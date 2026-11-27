@@ -9,7 +9,7 @@ from app.schemas import ApiModel
 
 
 class ErrorCode(StrEnum):
-    """Kode error yang dapat dikembalikan ai-service (subset SA §10.3 + NOT_IMPLEMENTED sementara)."""
+    """Kode error yang dapat dikembalikan ai-service (subset SA §10.3 + NOT_FOUND/METHOD_NOT_ALLOWED routing)."""
 
     VALIDATION_ERROR = "VALIDATION_ERROR"
     EMPTY_FILE = "EMPTY_FILE"
@@ -25,7 +25,6 @@ class ErrorCode(StrEnum):
     AI_TIMEOUT = "AI_TIMEOUT"
     NOT_FOUND = "NOT_FOUND"
     METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED"
-    NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
 
 
 ERROR_HTTP_STATUS: dict[ErrorCode, int] = {
@@ -38,7 +37,6 @@ ERROR_HTTP_STATUS: dict[ErrorCode, int] = {
     ErrorCode.FILE_TOO_LARGE: 413,
     ErrorCode.UNSUPPORTED_MEDIA_TYPE: 415,
     ErrorCode.INTERNAL_ERROR: 500,
-    ErrorCode.NOT_IMPLEMENTED: 501,
     ErrorCode.AI_OUTPUT_INVALID: 502,
     ErrorCode.AI_PROVIDER_UNCONFIGURED: 503,
     ErrorCode.AI_QUOTA_EXCEEDED: 503,
@@ -61,7 +59,6 @@ DEFAULT_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.AI_TIMEOUT: "Penyedia model AI melebihi batas waktu.",
     ErrorCode.NOT_FOUND: "Sumber daya tidak ditemukan.",
     ErrorCode.METHOD_NOT_ALLOWED: "Metode tidak diizinkan untuk endpoint ini.",
-    ErrorCode.NOT_IMPLEMENTED: "Fitur ini belum diimplementasikan.",
 }
 
 
@@ -96,8 +93,3 @@ class AppError(Exception):
         self.message = message or DEFAULT_MESSAGES[code]
         self.details = details or []
         super().__init__(code.value)
-
-
-# Membuat AppError NOT_IMPLEMENTED (501) untuk endpoint yang masih stub.
-def not_implemented() -> AppError:
-    return AppError(ErrorCode.NOT_IMPLEMENTED)

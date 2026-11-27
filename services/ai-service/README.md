@@ -11,4 +11,4 @@ docker compose run --rm --no-deps -e RUFF_CACHE_DIR=/tmp/ruff ai-service ruff ch
 
 Native (cadangan): Python 3.12 + Tesseract dengan data `ind` dan `eng` (`tesseract --list-langs`), `pip install -r requirements-dev.txt`, `uvicorn app.main:app --port 8001`.
 
-Status: config (guard mock), auth internal, skema, taksonomi, health COMPLETE; ekstraksi, OCR, analisis STUB (501). `LLM_PROVIDER=mock` hanya diterima bila `APP_ENV=test`.
+Status: COMPLETE — config (guard mock), auth internal, skema, taksonomi, health, ekstraksi text layer, OCR (Tesseract 5.5.0 teruji), dan analisis risiko dengan LLM nyata (`qwen/qwen3.8-27b` melalui Groq). `LLM_PROVIDER=mock` hanya diterima bila `APP_ENV=test`.

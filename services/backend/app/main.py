@@ -88,9 +88,15 @@ async def request_context_middleware(request: Request, call_next):
         request_id_var.reset(token)
 
 
-# Handler AppError: kode dan pesan aman dari katalog.
+# Handler AppError: kode dan pesan aman dari katalog. Setiap error dicatat `app.error` (kode dan status saja,
+# requestId dari formatter) agar kategori kegagalan registry/AI dapat dibedakan di log (NFR-09.05).
 async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
-    return error_response(request, exc.code, exc.message, exc.details)
+    response = error_response(request, exc.code, exc.message, exc.details)
+    logger.warning(
+        "app.error",
+        extra={"event": "app.error", "errorCode": exc.code.value, "status": response.status_code},
+    )
+    return response
 
 
 # Handler validasi FastAPI: 422 bawaan diubah menjadi 400 VALIDATION_ERROR dengan rincian per field.
@@ -124,23 +130,34 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
-# Membungkus generator OpenAPI: respons 422 bawaan dihapus karena validasi dipetakan ke 400 VALIDATION_ERROR.
+# Membungkus generator OpenAPI: respons 422 validasi bawaan FastAPI dihapus karena validasi dipetakan ke
+# 400 VALIDATION_ERROR; 422 bisnis yang dideklarasikan lewat error_responses (mis. HR_NOT_AFFILIATED) tetap ada.
 def _install_openapi_without_422(app: FastAPI) -> None:
     original = app.openapi
 
-    # Menghasilkan (dan meng-cache) skema OpenAPI tanpa 422 dan skema validasi bawaan FastAPI.
+    # Menghasilkan (dan meng-cache) skema OpenAPI tanpa 422 bawaan dan skema validasi bawaan FastAPI.
     def openapi() -> dict:
         if app.openapi_schema is None:
             schema = original()
             for operations in schema.get("paths", {}).values():
                 for operation in operations.values():
-                    operation.get("responses", {}).pop("422", None)
+                    responses = operation.get("responses", {})
+                    if _is_default_validation_response(responses.get("422")):
+                        del responses["422"]
             for name in ("HTTPValidationError", "ValidationError"):
                 schema.get("components", {}).get("schemas", {}).pop(name, None)
             app.openapi_schema = schema
         return app.openapi_schema
 
     app.openapi = openapi
+
+
+# Mengenali respons 422 yang ditambahkan FastAPI sendiri: deskripsi "Validation Error" atau skema HTTPValidationError.
+def _is_default_validation_response(response: dict | None) -> bool:
+    if response is None:
+        return False
+    ref = response.get("content", {}).get("application/json", {}).get("schema", {}).get("$ref", "")
+    return response.get("description") == "Validation Error" or ref.endswith("/HTTPValidationError")
 
 
 # Membuat aplikasi FastAPI; konfigurasi divalidasi saat start (gagal cepat bila env tidak lengkap).

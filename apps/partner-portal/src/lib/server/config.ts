@@ -1,12 +1,23 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD FR-02.07, BR-01.14; SA §11.3.2, §14.2
 import "server-only";
+import { DEFAULT_MAX_UPLOAD_BYTES } from "@/lib/verification/form";
 
 // Konfigurasi server portal; token partner tidak pernah dikirim ke browser.
 export type PortalServerConfig = {
   apiBaseUrl: string;
   partnerToken: string;
   upstreamTimeoutMs: number;
+  maxUploadBytes: number;
 };
+
+// Menandai kegagalan konfigurasi portal agar route dapat memberi respons aman.
+export class PortalConfigurationError extends Error {
+  // Menyimpan pesan internal konfigurasi untuk dikenali oleh route server.
+  constructor(message: string) {
+    super(message);
+    this.name = "PortalConfigurationError";
+  }
+}
 
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 120000;
 
@@ -14,19 +25,32 @@ const DEFAULT_UPSTREAM_TIMEOUT_MS = 120000;
 export function getServerConfig(env: Record<string, string | undefined> = process.env): PortalServerConfig {
   const apiBaseUrl = env.LETTRUST_API_BASE_URL?.trim().replace(/\/+$/, "");
   if (!apiBaseUrl || !URL.canParse(apiBaseUrl)) {
-    throw new Error("Konfigurasi portal tidak valid: LETTRUST_API_BASE_URL wajib berupa URL.");
+    throw new PortalConfigurationError("Konfigurasi portal tidak valid: LETTRUST_API_BASE_URL wajib berupa URL.");
   }
 
   const partnerToken = env.LETTRUST_PARTNER_TOKEN?.trim();
   if (!partnerToken) {
-    throw new Error("Konfigurasi portal tidak valid: LETTRUST_PARTNER_TOKEN wajib diisi.");
+    throw new PortalConfigurationError("Konfigurasi portal tidak valid: LETTRUST_PARTNER_TOKEN wajib diisi.");
   }
 
   const timeoutRaw = env.PORTAL_UPSTREAM_TIMEOUT_MS?.trim();
   const upstreamTimeoutMs = timeoutRaw ? Number(timeoutRaw) : DEFAULT_UPSTREAM_TIMEOUT_MS;
   if (!Number.isInteger(upstreamTimeoutMs) || upstreamTimeoutMs <= 0) {
-    throw new Error("Konfigurasi portal tidak valid: PORTAL_UPSTREAM_TIMEOUT_MS wajib bilangan bulat positif (ms).");
+    throw new PortalConfigurationError(
+      "Konfigurasi portal tidak valid: PORTAL_UPSTREAM_TIMEOUT_MS wajib bilangan bulat positif (ms).",
+    );
   }
 
-  return { apiBaseUrl, partnerToken, upstreamTimeoutMs };
+  return { apiBaseUrl, partnerToken, upstreamTimeoutMs, maxUploadBytes: readMaxUploadBytes(env) };
+}
+
+// Membaca batas unggah saja (tanpa token) agar halaman dapat meneruskan angka ini ke formulir browser.
+// Nama env sama dengan backend; default mengikuti konstanta bersama yang juga dipakai formulir.
+export function readMaxUploadBytes(env: Record<string, string | undefined> = process.env): number {
+  const maxUploadRaw = env.MAX_UPLOAD_BYTES?.trim();
+  const maxUploadBytes = maxUploadRaw ? Number(maxUploadRaw) : DEFAULT_MAX_UPLOAD_BYTES;
+  if (!Number.isInteger(maxUploadBytes) || maxUploadBytes <= 0) {
+    throw new PortalConfigurationError("Konfigurasi portal tidak valid: MAX_UPLOAD_BYTES wajib bilangan bulat positif (byte).");
+  }
+  return maxUploadBytes;
 }

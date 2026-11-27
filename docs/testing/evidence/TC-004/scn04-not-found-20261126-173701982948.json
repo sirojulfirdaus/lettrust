@@ -1,0 +1,186 @@
+{
+  "testCaseId": "TC-004",
+  "scenario": "SCN-04",
+  "startedAtUtc": "2026-11-26T17:37:01.982948+00:00",
+  "finishedAtUtc": "2026-11-26T17:37:03.721196+00:00",
+  "completed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "4a-kode-tidak-terdaftar-tanpa-berkas",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_F8F113A843142E5C",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": false,
+        "file": null
+      },
+      "expected": {
+        "httpStatus": 200,
+        "lookup": "NOT_FOUND",
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "PROOF_NOT_FOUND",
+        "riskState": "NOT_REQUESTED",
+        "noFalseLabels": true
+      },
+      "actual": {
+        "httpStatus": 200,
+        "mode": "REFERENCE_CHECK",
+        "lookup": "NOT_FOUND",
+        "proofReason": null,
+        "lifecycleStatus": null,
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "PROOF_NOT_FOUND",
+        "riskState": "NOT_REQUESTED",
+        "riskReason": null,
+        "category": null,
+        "indicatorCodes": [],
+        "noFalseLabels": true
+      },
+      "matches": true,
+      "info": {},
+      "response": {
+        "verificationId": "VER-RDRS3GPZVS",
+        "mode": "REFERENCE_CHECK",
+        "proofCheck": {
+          "lookup": "NOT_FOUND",
+          "reason": null,
+          "issuer": null,
+          "issuerVerified": null,
+          "lifecycleStatus": null,
+          "issuedAt": null,
+          "revokedAt": null
+        },
+        "integrityCheck": {
+          "result": "NOT_CHECKED",
+          "reason": "PROOF_NOT_FOUND",
+          "hashAlgorithm": null
+        },
+        "riskAnalysis": {
+          "state": "NOT_REQUESTED",
+          "reason": null,
+          "category": null,
+          "indicators": [],
+          "indicatorDetails": [],
+          "explanation": null,
+          "recommendation": null,
+          "extractionMethod": null,
+          "contentTruncated": null,
+          "pagesAnalyzed": null,
+          "pagesTotal": null
+        }
+      }
+    },
+    {
+      "name": "4b-kode-tidak-terdaftar-fx03-ai",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_7349D5F6102C0D9C",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": {
+          "name": "FX-03.pdf",
+          "sizeBytes": 22541,
+          "sha256": "14603fb424a7f7d7911c3e5c57499010321555bd32bebd73ba8e3cf97e3dc09c"
+        }
+      },
+      "expected": {
+        "httpStatus": 200,
+        "lookup": "NOT_FOUND",
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "PROOF_NOT_FOUND",
+        "riskState": "COMPLETED",
+        "category": "HIGH",
+        "noFalseLabels": true,
+        "labelIndicatorsPresent": true
+      },
+      "actual": {
+        "httpStatus": 200,
+        "mode": "REFERENCE_CHECK",
+        "lookup": "NOT_FOUND",
+        "proofReason": null,
+        "lifecycleStatus": null,
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "PROOF_NOT_FOUND",
+        "riskState": "COMPLETED",
+        "riskReason": null,
+        "category": "HIGH",
+        "indicatorCodes": [
+          "PAYMENT_REQUEST",
+          "UNOFFICIAL_CONTACT",
+          "URGENCY_PRESSURE"
+        ],
+        "noFalseLabels": true,
+        "labelIndicatorsPresent": true
+      },
+      "matches": true,
+      "info": {
+        "model": "qwen/qwen3.8-27b",
+        "aiServiceSawRequest": true,
+        "labelIndicators": [
+          "PAYMENT_REQUEST",
+          "UNOFFICIAL_CONTACT"
+        ],
+        "extraIndicators": [
+          "URGENCY_PRESSURE"
+        ]
+      },
+      "response": {
+        "verificationId": "VER-AM7KDM0JNS",
+        "mode": "REFERENCE_CHECK",
+        "proofCheck": {
+          "lookup": "NOT_FOUND",
+          "reason": null,
+          "issuer": null,
+          "issuerVerified": null,
+          "lifecycleStatus": null,
+          "issuedAt": null,
+          "revokedAt": null
+        },
+        "integrityCheck": {
+          "result": "NOT_CHECKED",
+          "reason": "PROOF_NOT_FOUND",
+          "hashAlgorithm": null
+        },
+        "riskAnalysis": {
+          "state": "COMPLETED",
+          "reason": null,
+          "category": "HIGH",
+          "indicators": [
+            "Permintaan pembayaran kepada pelamar",
+            "Kontak melalui kanal tidak resmi",
+            "Tekanan waktu atau ancaman"
+          ],
+          "indicatorDetails": [
+            {
+              "code": "PAYMENT_REQUEST",
+              "label": "Permintaan pembayaran kepada pelamar",
+              "severity": "HIGH",
+              "evidence": "[DIHAPUS]"
+            },
+            {
+              "code": "UNOFFICIAL_CONTACT",
+              "label": "Kontak melalui kanal tidak resmi",
+              "severity": "MEDIUM",
+              "evidence": "[DIHAPUS]"
+            },
+            {
+              "code": "URGENCY_PRESSURE",
+              "label": "Tekanan waktu atau ancaman",
+              "severity": "MEDIUM",
+              "evidence": "[DIHAPUS]"
+            }
+          ],
+          "explanation": "Dokumen meminta pelamar membayar biaya administrasi sebelum bekerja dan membatasi komunikasi hanya melalui WhatsApp pribadi. Terdapat juga tenggat waktu konfirmasi yang singkat.",
+          "recommendation": "Jangan melakukan pembayaran apa pun untuk proses rekrutmen. Konfirmasikan penawaran melalui situs atau kontak resmi perusahaan yang Anda cari sendiri.",
+          "extractionMethod": "TEXT_LAYER",
+          "contentTruncated": false,
+          "pagesAnalyzed": 1,
+          "pagesTotal": 1
+        }
+      }
+    }
+  ]
+}

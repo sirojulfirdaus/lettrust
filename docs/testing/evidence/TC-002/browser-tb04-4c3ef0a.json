@@ -1,0 +1,16 @@
+{
+  "commit": "4c3ef0a9bce098fedfad60a16ef90b425855747a",
+  "project": "lettrust-tb04-zan-4c3ef0a",
+  "executedAtUtc": "2026-11-27T12:35:31.979479+00:00",
+  "portal": {
+    "lookup": "FOUND",
+    "status": "ACTIVE",
+    "integrity": "MISMATCH",
+    "guidance": "G-04",
+    "revokedAt": null
+  },
+  "issueTransaction": {
+    "hash": "0x723a3754095852821f7063d9fbab85eba1863d9880a360c5d2d5e1f036bda44f",
+    "blockNumber": 2
+  }
+}

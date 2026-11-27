@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "purpose": "proposed-completion-without-retrying-attempted-documents",
+  "manifestSha256": "e7cb70b0e2a0e99a06be30c064903c2eff5baf79f3c8741357423c8edb7f86fb",
+  "snapshotSha256": "2500f7c7544417aa3800bd5dbe7e86dc7f86971dd7350f00437077b8fa1ecb34",
+  "originalConfigSha256": "6fa64fb8feafb0440490690bacc9bacdf5a0b77a8bd6f57bc39a863ddfaee0dc",
+  "originalRawSha256": "65e00ced540b8b0c0042689b7ff4e5ece42fba98fa7db0a842f630a7b24e1348",
+  "completedBaselineSha256": "102938d8b453e4a1c2eaf1a85b20e71cbca13b701d408bd0e6c415fee8a44edd",
+  "originalRecords": 89,
+  "baselineRecordsCompletedAfterStop": 4,
+  "pendingPipelineIds": [
+    "id-medium-05-text",
+    "id-medium-06-scan",
+    "id-medium-06-text"
+  ],
+  "plannedNewLlmDocuments": 3,
+  "retainedUnavailableIds": [
+    "id-medium-05-scan"
+  ],
+  "model": "qwen/qwen3.8-27b",
+  "parametersChanged": false,
+  "humanDecisionRequired": true
+}

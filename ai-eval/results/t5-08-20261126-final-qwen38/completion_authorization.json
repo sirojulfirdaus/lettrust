@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-11-26T15:55:33.149810+00:00",
+  "decision": "Complete unattempted documents; retry failures until success; human review afterwards",
+  "source": "Explicit user instruction in this session, 2026-11-26",
+  "primaryPolicy": "Keep every original first-pass outcome; separate all retries",
+  "settingsChanged": false,
+  "helperSha256": "d555241922c85db5c9863db33d72f9ffc72952f85d9c52d0a5aa934a4803ae5e"
+}

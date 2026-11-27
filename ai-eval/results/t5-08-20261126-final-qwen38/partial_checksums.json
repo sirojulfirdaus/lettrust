@@ -1,0 +1,10 @@
+{
+  "snapshotSha256": "2500f7c7544417aa3800bd5dbe7e86dc7f86971dd7350f00437077b8fa1ecb34",
+  "files": {
+    "partial_raw.jsonl": "65e00ced540b8b0c0042689b7ff4e5ece42fba98fa7db0a842f630a7b24e1348",
+    "partial_model_outputs.jsonl": "b28d5773bd9d3658eeddb4b4af0983b23786c163284c91974d0368a753e2c2bd",
+    "partial_run_config.json": "6fa64fb8feafb0440490690bacc9bacdf5a0b77a8bd6f57bc39a863ddfaee0dc",
+    "remaining_baseline.jsonl": "102938d8b453e4a1c2eaf1a85b20e71cbca13b701d408bd0e6c415fee8a44edd",
+    "completion_plan.json": "3ae39b7ac579314c167648c1b2cfc589da00759592589ae2f97baa10c3de6bd7"
+  }
+}

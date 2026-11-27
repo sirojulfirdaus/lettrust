@@ -20,7 +20,18 @@ def inspect_abi() -> str:
     build = subprocess.run(compose + ["build", "chain-deployer"], cwd=str(ROOT), check=False)
     if build.returncode != 0:
         raise SystemExit("Build image chain-deployer gagal.")
-    cmd = compose + ["run", "--rm", "--no-deps", "-T", "chain-deployer", "forge", "inspect", "OfferProofRegistry", "abi", "--json"]
+    cmd = compose + [
+        "run",
+        "--rm",
+        "--no-deps",
+        "-T",
+        "chain-deployer",
+        "forge",
+        "inspect",
+        "OfferProofRegistry",
+        "abi",
+        "--json",
+    ]
     result = subprocess.run(cmd, cwd=str(ROOT), check=False, capture_output=True, text=True, encoding="utf-8")
     if result.returncode != 0:
         raise SystemExit(f"forge inspect gagal (exit {result.returncode}):\n{result.stderr.strip()}")

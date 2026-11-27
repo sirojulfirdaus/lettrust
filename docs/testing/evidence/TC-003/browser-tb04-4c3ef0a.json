@@ -1,0 +1,24 @@
+{
+  "commit": "4c3ef0a9bce098fedfad60a16ef90b425855747a",
+  "project": "lettrust-tb04-zan-4c3ef0a",
+  "executedAtUtc": "2026-11-27T12:36:10.605495+00:00",
+  "revokeWithoutReasonDisabled": true,
+  "revoke": 201,
+  "secondRevoke": 409,
+  "secondRevokeError": "PROOF_ALREADY_REVOKED",
+  "issueTransaction": {
+    "hash": "0xd301a4bea7a6dc902f3d99b19cfe7b5cde239d994ba807c730a3a61d4c2f7ddb",
+    "blockNumber": 14
+  },
+  "revokeTransaction": {
+    "hash": "0xb43f1fee2a8097aa8485d9d75a3c98ac471350a109ebf6b7d7e9fb6a6bc9fef3",
+    "blockNumber": 15
+  },
+  "portal": {
+    "lookup": "FOUND",
+    "status": "REVOKED",
+    "integrity": "MATCH",
+    "guidance": "G-03",
+    "revokedAt": "2026-11-27T12:35:39Z"
+  }
+}

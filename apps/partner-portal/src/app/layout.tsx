@@ -19,10 +19,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <header className="border-b bg-card">
           <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-3 px-4 py-3">
-            <Link href="/" className="text-lg font-bold text-primary">
+            <Link href="/" className="text-lg font-bold">
               Portal Karier Mitra
             </Link>
-            <Badge>Simulasi</Badge>
+            <Badge variant="outline">Simulasi</Badge>
             <Badge variant="outline" className="ml-auto">
               Data sintetis
             </Badge>

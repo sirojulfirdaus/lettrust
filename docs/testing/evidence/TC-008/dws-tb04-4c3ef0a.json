@@ -1,0 +1,13 @@
+{
+  "testCaseId": "TC-008",
+  "reportedBy": "DWS",
+  "reportedStatus": "Pass",
+  "sourceDocument": "https://docs.google.com/document/d/148f7CO_TuMiVy269jbM0JgoGC5jLN6AKotWYeOHngoo/edit?tab=t.0",
+  "sourceTableRow": 5,
+  "sourceCommit": "4c3ef0a9bce098fedfad60a16ef90b425855747a",
+  "sourceRunDateWib": "2026-11-27",
+  "sourceImages": 2,
+  "observedSummary": "Portal menampilkan metode teks PDF. Log verifikasi mencatat AI_ONLY, bukti NOT_REQUESTED, keutuhan NOT_CHECKED (NO_REFERENCE_CODE), AI COMPLETED, dan durasi 788 ms untuk satu permintaan.",
+  "verificationNotes": "Model ID belum tercantum.",
+  "loggedAtUtc": "2026-11-27T12:33:49.236Z"
+}

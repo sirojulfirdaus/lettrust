@@ -2,7 +2,7 @@
 
 Owner: Van (PIC 2). Console untuk HR penerbit dan Administrator (PRD FR-01, FR-03, FR-04; SA §11.2).
 
-Status: kerangka (walking skeleton). Seluruh halaman masih placeholder berisi daftar periksa implementasi; `src/lib/api/client.ts` dan `src/lib/session.ts` masih stub yang melempar `NOT_IMPLEMENTED`.
+Status: halaman Console terhubung ke API backend nyata melalui `src/lib/api/client.ts` dan `src/lib/session.ts` (T2-07).
 
 ## Menjalankan secara native
 

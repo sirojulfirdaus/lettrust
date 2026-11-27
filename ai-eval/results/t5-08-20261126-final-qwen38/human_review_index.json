@@ -1,0 +1,487 @@
+{
+  "schemaVersion": 1,
+  "reviewStatus": "PENDING",
+  "purpose": "Human review navigation; no approval inferred",
+  "documents": [
+    {
+      "id": "en-high-02-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 1
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-high-02-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 3
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-high-03-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 5
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-high-03-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 7
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-high-04-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 9
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-high-04-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 11
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-high-06-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 13
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-high-06-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 15
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-low-03-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 17
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-low-03-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 19
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-low-04-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 21
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-low-04-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 23
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-low-05-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 25
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-low-05-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 27
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-low-06-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 29
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-low-06-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 31
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-medium-01-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 33
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-medium-01-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 35
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-medium-03-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 37
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-medium-03-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 39
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-medium-05-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 41
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-medium-05-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 43
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-medium-06-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 45
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "en-medium-06-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 47
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-high-01-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 49
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-high-01-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 51
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-high-02-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 53
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-high-02-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 55
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-high-04-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 57
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-high-04-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 59
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-high-05-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 61
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-high-05-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 63
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-low-01-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 65
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-low-01-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 67
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-low-04-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 69
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-low-04-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 71
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-low-05-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 73
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-low-05-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 75
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-low-06-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 77
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-low-06-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 79
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-medium-01-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 81
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-medium-01-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 83
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-medium-02-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 85
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-medium-02-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 87
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-medium-05-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "UNAVAILABLE",
+      "successfulRecord": {
+        "file": "retry_raw.jsonl",
+        "line": 1
+      },
+      "usedSupplementalRetry": true
+    },
+    {
+      "id": "id-medium-05-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 91
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-medium-06-scan",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 93
+      },
+      "usedSupplementalRetry": false
+    },
+    {
+      "id": "id-medium-06-text",
+      "reviewStatus": "PENDING",
+      "firstPassStatus": "OK",
+      "successfulRecord": {
+        "file": "raw.jsonl",
+        "line": 95
+      },
+      "usedSupplementalRetry": false
+    }
+  ]
+}

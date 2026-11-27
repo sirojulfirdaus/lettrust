@@ -131,7 +131,7 @@ Perubahan berikut **wajib** juga direview Dws: `services/backend/app/core/`, `co
 | ----- | ----- |
 | 1 | Provider LLM ditetapkan B (T5-03) paling lambat Min 22/11 12.00 dan diumumkan di WA beserta nilai `LLM_BASE_URL` dan `LLM_MODEL`. Default konfigurasi adalah Groq. Seluruh anggota memakai provider dan model yang sama. |
 | 2 | Setiap anggota membuat kunci miliknya sendiri pada provider tersebut sebelum TB-02. Kunci tidak dibagikan dan tidak ditulis di WA, PR, atau bukti. |
-| 3 | Bila B mengganti provider atau model (paling lambat T5-07), B mengumumkan nilai baru dan setiap anggota memperbarui `.env` miliknya, lalu menjalankan `python scripts/dev.py stop ai-service` dan `start ai-service`. |
+| 3 | Bila B mengganti provider atau model (paling lambat T5-07), B mengumumkan nilai baru dan setiap anggota memperbarui `.env` miliknya, lalu menjalankan `python scripts/dev.py up` agar container ai-service dibuat ulang dengan nilai baru. |
 | 4 | Run evaluasi final memakai kunci B. |
 | 5 | Demo memakai kunci Dws yang belum dipakai pada hari demo (PRD §12.7.2). |
 | 6 | B memantau kuota (OI-05). Bila kuota menipis sebelum evaluasi final, pemanggilan LLM untuk pengujian manual dihemat. |
@@ -251,7 +251,7 @@ Urutan global (kolom No) dipakai di tracker. Urutan disusun menurut tenggat, lal
 | ----- | ----- |
 | PIC | Semua anggota |
 | Tenggat | Sab 21/11 20.00 · M1 |
-| Langkah | 1) `git switch main`, `git pull`.<br>2) `python scripts/dev.py doctor`, lalu `python scripts/dev.py up --build`.<br>3) Kunci LLM belum wajib: status `aiService: unconfigured` normal sampai B mengumumkan provider (§3.5). Setelah diumumkan, isi `LLM_API_KEY` di `.env` dengan kunci milik sendiri.<br>4) Kirim "siap" di WA beserta OS yang dipakai. Dari laporan ini ditetapkan satu anggota Windows dan satu anggota Linux untuk TB-05. |
+| Langkah | 1) `git switch main`, `git pull`.<br>2) `python scripts/dev.py doctor`, lalu `python scripts/dev.py up --build`.<br>3) Kunci LLM belum wajib: status `aiService: unconfigured` normal sampai B mengumumkan provider (§3.5). Setelah diumumkan, isi `LLM_API_KEY` di `.env` dengan kunci milik sendiri, lalu jalankan `python scripts/dev.py up`.<br>4) Kirim "siap" di WA beserta OS yang dipakai. Dari laporan ini ditetapkan satu anggota Windows dan satu anggota Linux untuk TB-05. |
 | Selesai bila | `python scripts/dev.py status` menunjukkan enam service sehat; `GET http://127.0.0.1:8000/api/v1/health` menunjukkan `aiService` bukan `unavailable`. |
 | Verifikasi | `python scripts/dev.py status`; `python scripts/dev.py test` lulus. |
 
@@ -837,10 +837,11 @@ Halaman dibangun dari fixture kontrak (`apps/issuer-console/src/fixtures/api/`),
 | PIC · Reviewer | B · Pash |
 | Branch | `feat/fixtures` |
 | Tenggat | Sen 23/11 15.00 · M3 |
-| File | `fixtures/` → `README.md`, `FX-01.pdf` … `FX-10.pdf` (baru) |
+| File | `fixtures/` → `README.md`, `FX-01.pdf` … `FX-10.pdf`, `fixture_builder.py`, `test_fixtures.py`, `test_upload_validation.py`<br>`ai-eval/scripts/generate_fixtures.py` → entry point launcher `eval` (penambahan disetujui untuk T5-06) |
 | Ref | PRD §12.4.1; SA §7.9 |
 | Tergantung | T5-05 (tooling) |
 | Selesai bila | Kesepuluh fixture sesuai PRD §12.4.1 (FX-02 = FX-01 dengan isi diubah, FX-08 bukan PDF berekstensi `.pdf`, FX-09 melebihi batas, FX-10 header PDF tetapi rusak), dihasilkan dari tooling yang sama, dan README memuat tujuan serta checksum setiap fixture. |
+| Verifikasi | `python scripts/dev.py eval generate_fixtures`; `python scripts/dev.py eval generate_fixtures --check`; `python scripts/dev.py eval generate_fixtures --test`; `python scripts/dev.py test ai-service`. Test validator backend dan prasyarat image dijelaskan di `fixtures/README.md`. |
 | Serah terima | Semua anggota (TB-02, TB-04) |
 
 ### T5-07 — Pemilihan model (OI-01)
@@ -917,7 +918,7 @@ Halaman dibangun dari fixture kontrak (`apps/issuer-console/src/fixtures/api/`),
 | Ref | SA §6.3, §6.4; AD-22; `docs/MOCKS.md` (pemetaan exception dan asumsi) |
 | Tergantung | T6-01 |
 | Selesai bila | 1) `issue_proof`, `revoke_proof`, `get_proof`, `find_issue_tx`, dan `find_revoke_tx` sesuai §6.4, dengan signer lock dan timeout dari config.<br>2) Pemetaan exception sama dengan `MockRegistryAdapter` (`docs/MOCKS.md`).<br>3) **Suite conformance lulus dengan adapter nyata.**<br>4) `registry/mock.py` tidak diubah. |
-| Verifikasi | `python scripts/dev.py test backend`; dengan stack hidup: `docker compose exec backend python -m pytest -m real_registry tests/conformance` (semua lulus) |
+| Verifikasi | `python scripts/dev.py test backend`; dengan stack hidup: `docker compose run --rm -T -v ./contracts:/contracts:ro -e CONTRACTS_DIR=/contracts backend python -m pytest -q -m real_registry` (semua lulus) |
 | Serah terima | Zan (T3-04, T3-05), Dws |
 
 ### T6-03 — Pencabutan bukti (API-06)
@@ -945,7 +946,7 @@ Halaman dibangun dari fixture kontrak (`apps/issuer-console/src/fixtures/api/`),
 | Ref | SA §18.1 |
 | Tergantung | T3-04, T6-03 |
 | Selesai bila | Penerbitan, pembacaan, pencabutan, dan idempotensi diuji terhadap chain Compose dengan marker `real_registry`; test default tetap hijau. |
-| Verifikasi | `docker compose exec backend python -m pytest -m real_registry tests/conformance tests/integration` |
+| Verifikasi | `docker compose run --rm -T -v ./contracts:/contracts:ro -e CONTRACTS_DIR=/contracts backend python -m pytest -q -m real_registry` |
 
 ### T6-05 — Baseline berbasis aturan
 

@@ -1,0 +1,713 @@
+{
+  "schemaVersion": 1,
+  "split": "test",
+  "manifestSha256": "e7cb70b0e2a0e99a06be30c064903c2eff5baf79f3c8741357423c8edb7f86fb",
+  "recordCount": 96,
+  "variants": {
+    "baseline": {
+      "classification": {
+        "documents": 48,
+        "classified": 48,
+        "unavailableOrNotPerformed": 0,
+        "accuracy": 0.5416666666666666,
+        "macroF1": 0.5182539682539683,
+        "perCategory": {
+          "LOW": {
+            "support": 16,
+            "precision": 0.4375,
+            "recall": 0.875,
+            "f1": 0.5833333333333334
+          },
+          "MEDIUM": {
+            "support": 16,
+            "precision": 1.0,
+            "recall": 0.25,
+            "f1": 0.4
+          },
+          "HIGH": {
+            "support": 16,
+            "precision": 0.6666666666666666,
+            "recall": 0.5,
+            "f1": 0.5714285714285715
+          }
+        },
+        "confusion": {
+          "LOW": {
+            "LOW": 14,
+            "MEDIUM": 0,
+            "HIGH": 2
+          },
+          "MEDIUM": {
+            "LOW": 10,
+            "MEDIUM": 4,
+            "HIGH": 2
+          },
+          "HIGH": {
+            "LOW": 8,
+            "MEDIUM": 0,
+            "HIGH": 8
+          }
+        }
+      },
+      "indicators": {
+        "PAYMENT_REQUEST": {
+          "tp": 4,
+          "fp": 4,
+          "fn": 6,
+          "support": 10,
+          "precision": 0.5,
+          "recall": 0.4
+        },
+        "SENSITIVE_DATA_REQUEST": {
+          "tp": 4,
+          "fp": 0,
+          "fn": 2,
+          "support": 6,
+          "precision": 1.0,
+          "recall": 0.6666666666666666
+        },
+        "UNOFFICIAL_CONTACT": {
+          "tp": 8,
+          "fp": 0,
+          "fn": 4,
+          "support": 12,
+          "precision": 1.0,
+          "recall": 0.6666666666666666
+        },
+        "URGENCY_PRESSURE": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 2,
+          "support": 4,
+          "precision": 1.0,
+          "recall": 0.5
+        },
+        "IDENTITY_INCONSISTENCY": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 10,
+          "support": 10,
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "UNREALISTIC_COMPENSATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "support": 6,
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "VAGUE_JOB_DETAILS": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "support": 6,
+          "precision": 0.0,
+          "recall": 0.0
+        }
+      },
+      "latency": {
+        "count": 48,
+        "medianMs": 552.5,
+        "p95Ms": 3648,
+        "minMs": 26,
+        "maxMs": 3991
+      },
+      "reliability": {
+        "requests": 48,
+        "completed": 48,
+        "unavailableOrNotPerformed": 0,
+        "completionRate": 1.0,
+        "failureReasons": {}
+      },
+      "extractionSuccessByFormat": {
+        "scan": {
+          "documents": 24,
+          "metadataAvailable": 24,
+          "succeeded": 24,
+          "successRate": 1.0,
+          "withoutMetadata": 0
+        },
+        "text": {
+          "documents": 24,
+          "metadataAvailable": 24,
+          "succeeded": 24,
+          "successRate": 1.0,
+          "withoutMetadata": 0
+        }
+      },
+      "evidenceValidation": {
+        "dropped": 0,
+        "candidateIndicators": 22,
+        "dropRate": 0.0
+      },
+      "classificationByLang": {
+        "en": {
+          "documents": 24,
+          "classified": 24,
+          "unavailableOrNotPerformed": 0,
+          "accuracy": 0.5,
+          "macroF1": 0.45714285714285713,
+          "perCategory": {
+            "LOW": {
+              "support": 8,
+              "precision": 0.4,
+              "recall": 1.0,
+              "f1": 0.5714285714285715
+            },
+            "MEDIUM": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 0.25,
+              "f1": 0.4
+            },
+            "HIGH": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 0.25,
+              "f1": 0.4
+            }
+          },
+          "confusion": {
+            "LOW": {
+              "LOW": 8,
+              "MEDIUM": 0,
+              "HIGH": 0
+            },
+            "MEDIUM": {
+              "LOW": 6,
+              "MEDIUM": 2,
+              "HIGH": 0
+            },
+            "HIGH": {
+              "LOW": 6,
+              "MEDIUM": 0,
+              "HIGH": 2
+            }
+          }
+        },
+        "id": {
+          "documents": 24,
+          "classified": 24,
+          "unavailableOrNotPerformed": 0,
+          "accuracy": 0.5833333333333334,
+          "macroF1": 0.5555555555555555,
+          "perCategory": {
+            "LOW": {
+              "support": 8,
+              "precision": 0.5,
+              "recall": 0.75,
+              "f1": 0.6
+            },
+            "MEDIUM": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 0.25,
+              "f1": 0.4
+            },
+            "HIGH": {
+              "support": 8,
+              "precision": 0.6,
+              "recall": 0.75,
+              "f1": 0.6666666666666665
+            }
+          },
+          "confusion": {
+            "LOW": {
+              "LOW": 6,
+              "MEDIUM": 0,
+              "HIGH": 2
+            },
+            "MEDIUM": {
+              "LOW": 4,
+              "MEDIUM": 2,
+              "HIGH": 2
+            },
+            "HIGH": {
+              "LOW": 2,
+              "MEDIUM": 0,
+              "HIGH": 6
+            }
+          }
+        }
+      },
+      "classificationByFormat": {
+        "scan": {
+          "documents": 24,
+          "classified": 24,
+          "unavailableOrNotPerformed": 0,
+          "accuracy": 0.5416666666666666,
+          "macroF1": 0.5182539682539683,
+          "perCategory": {
+            "LOW": {
+              "support": 8,
+              "precision": 0.4375,
+              "recall": 0.875,
+              "f1": 0.5833333333333334
+            },
+            "MEDIUM": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 0.25,
+              "f1": 0.4
+            },
+            "HIGH": {
+              "support": 8,
+              "precision": 0.6666666666666666,
+              "recall": 0.5,
+              "f1": 0.5714285714285715
+            }
+          },
+          "confusion": {
+            "LOW": {
+              "LOW": 7,
+              "MEDIUM": 0,
+              "HIGH": 1
+            },
+            "MEDIUM": {
+              "LOW": 5,
+              "MEDIUM": 2,
+              "HIGH": 1
+            },
+            "HIGH": {
+              "LOW": 4,
+              "MEDIUM": 0,
+              "HIGH": 4
+            }
+          }
+        },
+        "text": {
+          "documents": 24,
+          "classified": 24,
+          "unavailableOrNotPerformed": 0,
+          "accuracy": 0.5416666666666666,
+          "macroF1": 0.5182539682539683,
+          "perCategory": {
+            "LOW": {
+              "support": 8,
+              "precision": 0.4375,
+              "recall": 0.875,
+              "f1": 0.5833333333333334
+            },
+            "MEDIUM": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 0.25,
+              "f1": 0.4
+            },
+            "HIGH": {
+              "support": 8,
+              "precision": 0.6666666666666666,
+              "recall": 0.5,
+              "f1": 0.5714285714285715
+            }
+          },
+          "confusion": {
+            "LOW": {
+              "LOW": 7,
+              "MEDIUM": 0,
+              "HIGH": 1
+            },
+            "MEDIUM": {
+              "LOW": 5,
+              "MEDIUM": 2,
+              "HIGH": 1
+            },
+            "HIGH": {
+              "LOW": 4,
+              "MEDIUM": 0,
+              "HIGH": 4
+            }
+          }
+        }
+      },
+      "failureReasons": {}
+    },
+    "pipeline": {
+      "classification": {
+        "documents": 48,
+        "classified": 47,
+        "unavailableOrNotPerformed": 1,
+        "accuracy": 1.0,
+        "macroF1": 1.0,
+        "perCategory": {
+          "LOW": {
+            "support": 16,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "MEDIUM": {
+            "support": 15,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "HIGH": {
+            "support": 16,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          }
+        },
+        "confusion": {
+          "LOW": {
+            "LOW": 16,
+            "MEDIUM": 0,
+            "HIGH": 0
+          },
+          "MEDIUM": {
+            "LOW": 0,
+            "MEDIUM": 15,
+            "HIGH": 0
+          },
+          "HIGH": {
+            "LOW": 0,
+            "MEDIUM": 0,
+            "HIGH": 16
+          }
+        }
+      },
+      "indicators": {
+        "PAYMENT_REQUEST": {
+          "tp": 10,
+          "fp": 0,
+          "fn": 0,
+          "support": 10,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "SENSITIVE_DATA_REQUEST": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "support": 6,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "UNOFFICIAL_CONTACT": {
+          "tp": 11,
+          "fp": 2,
+          "fn": 1,
+          "support": 12,
+          "precision": 0.8461538461538461,
+          "recall": 0.9166666666666666
+        },
+        "URGENCY_PRESSURE": {
+          "tp": 3,
+          "fp": 8,
+          "fn": 1,
+          "support": 4,
+          "precision": 0.2727272727272727,
+          "recall": 0.75
+        },
+        "IDENTITY_INCONSISTENCY": {
+          "tp": 10,
+          "fp": 0,
+          "fn": 0,
+          "support": 10,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "UNREALISTIC_COMPENSATION": {
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "support": 6,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "VAGUE_JOB_DETAILS": {
+          "tp": 6,
+          "fp": 2,
+          "fn": 0,
+          "support": 6,
+          "precision": 0.75,
+          "recall": 1.0
+        }
+      },
+      "latency": {
+        "count": 48,
+        "medianMs": 1749.5,
+        "p95Ms": 4401,
+        "minMs": 411,
+        "maxMs": 20916
+      },
+      "reliability": {
+        "requests": 48,
+        "completed": 47,
+        "unavailableOrNotPerformed": 1,
+        "completionRate": 0.9791666666666666,
+        "failureReasons": {
+          "AI_PROVIDER_ERROR": 1
+        }
+      },
+      "extractionSuccessByFormat": {
+        "scan": {
+          "documents": 24,
+          "metadataAvailable": 24,
+          "succeeded": 24,
+          "successRate": 1.0,
+          "withoutMetadata": 0
+        },
+        "text": {
+          "documents": 24,
+          "metadataAvailable": 24,
+          "succeeded": 24,
+          "successRate": 1.0,
+          "withoutMetadata": 0
+        }
+      },
+      "evidenceValidation": {
+        "dropped": 0,
+        "candidateIndicators": 64,
+        "dropRate": 0.0
+      },
+      "classificationByLang": {
+        "en": {
+          "documents": 24,
+          "classified": 24,
+          "unavailableOrNotPerformed": 0,
+          "accuracy": 1.0,
+          "macroF1": 1.0,
+          "perCategory": {
+            "LOW": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            },
+            "MEDIUM": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            },
+            "HIGH": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            }
+          },
+          "confusion": {
+            "LOW": {
+              "LOW": 8,
+              "MEDIUM": 0,
+              "HIGH": 0
+            },
+            "MEDIUM": {
+              "LOW": 0,
+              "MEDIUM": 8,
+              "HIGH": 0
+            },
+            "HIGH": {
+              "LOW": 0,
+              "MEDIUM": 0,
+              "HIGH": 8
+            }
+          }
+        },
+        "id": {
+          "documents": 24,
+          "classified": 23,
+          "unavailableOrNotPerformed": 1,
+          "accuracy": 1.0,
+          "macroF1": 1.0,
+          "perCategory": {
+            "LOW": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            },
+            "MEDIUM": {
+              "support": 7,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            },
+            "HIGH": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            }
+          },
+          "confusion": {
+            "LOW": {
+              "LOW": 8,
+              "MEDIUM": 0,
+              "HIGH": 0
+            },
+            "MEDIUM": {
+              "LOW": 0,
+              "MEDIUM": 7,
+              "HIGH": 0
+            },
+            "HIGH": {
+              "LOW": 0,
+              "MEDIUM": 0,
+              "HIGH": 8
+            }
+          }
+        }
+      },
+      "classificationByFormat": {
+        "scan": {
+          "documents": 24,
+          "classified": 23,
+          "unavailableOrNotPerformed": 1,
+          "accuracy": 1.0,
+          "macroF1": 1.0,
+          "perCategory": {
+            "LOW": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            },
+            "MEDIUM": {
+              "support": 7,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            },
+            "HIGH": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            }
+          },
+          "confusion": {
+            "LOW": {
+              "LOW": 8,
+              "MEDIUM": 0,
+              "HIGH": 0
+            },
+            "MEDIUM": {
+              "LOW": 0,
+              "MEDIUM": 7,
+              "HIGH": 0
+            },
+            "HIGH": {
+              "LOW": 0,
+              "MEDIUM": 0,
+              "HIGH": 8
+            }
+          }
+        },
+        "text": {
+          "documents": 24,
+          "classified": 24,
+          "unavailableOrNotPerformed": 0,
+          "accuracy": 1.0,
+          "macroF1": 1.0,
+          "perCategory": {
+            "LOW": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            },
+            "MEDIUM": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            },
+            "HIGH": {
+              "support": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0
+            }
+          },
+          "confusion": {
+            "LOW": {
+              "LOW": 8,
+              "MEDIUM": 0,
+              "HIGH": 0
+            },
+            "MEDIUM": {
+              "LOW": 0,
+              "MEDIUM": 8,
+              "HIGH": 0
+            },
+            "HIGH": {
+              "LOW": 0,
+              "MEDIUM": 0,
+              "HIGH": 8
+            }
+          }
+        }
+      },
+      "failureReasons": {
+        "ANALYSIS:AI_PROVIDER_ERROR": 1
+      }
+    }
+  },
+  "baselineComparison": {
+    "pairedSuccessfulDocuments": 47,
+    "pipelineMinusBaseline": {
+      "accuracy": 0.44680851063829785,
+      "macroF1": 0.46767381416504217,
+      "perCategory": {
+        "LOW": {
+          "precision": 0.5625,
+          "recall": 0.125,
+          "f1": 0.41666666666666663
+        },
+        "MEDIUM": {
+          "precision": 0.0,
+          "recall": 0.7333333333333334,
+          "f1": 0.5789473684210527
+        },
+        "HIGH": {
+          "precision": 0.2727272727272727,
+          "recall": 0.5,
+          "f1": 0.40740740740740744
+        }
+      },
+      "indicators": {
+        "PAYMENT_REQUEST": {
+          "precision": 0.4285714285714286,
+          "recall": 0.6
+        },
+        "SENSITIVE_DATA_REQUEST": {
+          "precision": 0.0,
+          "recall": 0.33333333333333337
+        },
+        "UNOFFICIAL_CONTACT": {
+          "precision": -0.15384615384615385,
+          "recall": 0.36363636363636365
+        },
+        "URGENCY_PRESSURE": {
+          "precision": -0.7272727272727273,
+          "recall": 0.6666666666666667
+        },
+        "IDENTITY_INCONSISTENCY": {
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "UNREALISTIC_COMPENSATION": {
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "VAGUE_JOB_DETAILS": {
+          "precision": 0.75,
+          "recall": 1.0
+        }
+      }
+    }
+  },
+  "definitions": {
+    "categoryDenominator": "Hanya record sukses yang memiliki kategori; kegagalan dilaporkan terpisah.",
+    "indicatorDenominator": "Semua dokumen run; record gagal tidak menghasilkan indikator prediksi.",
+    "extractionSuccessRate": "Jumlah extraction.status=OK dibagi semua dokumen format tersebut.",
+    "p95": "Nearest-rank percentile; latency null tidak disertakan.",
+    "zeroDivision": "Metrik tanpa denominator bernilai 0; recall indikator tanpa support bernilai null."
+  }
+}
