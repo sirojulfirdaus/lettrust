@@ -1,0 +1,9 @@
+{
+  "testCaseId": "TC-017",
+  "scenario": "SCN-17",
+  "startedAtUtc": "2026-11-27T12:37:59.724035+00:00",
+  "finishedAtUtc": "2026-11-27T12:40:15.193733+00:00",
+  "completed": false,
+  "failure": "Komponen database, registry, aiService belum sehat dalam 120 detik.",
+  "steps": []
+}

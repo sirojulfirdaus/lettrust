@@ -1,0 +1,87 @@
+{
+  "testCaseId": "TC-017",
+  "scenario": "SCN-17",
+  "startedAtUtc": "2026-11-27T12:47:09.644488+00:00",
+  "finishedAtUtc": "2026-11-27T12:47:26.084065+00:00",
+  "completed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "17-gangguan-ganda",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_CF8A4B4464BFDF44",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": {
+          "name": "FX-01.pdf",
+          "sizeBytes": 22503,
+          "sha256": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189"
+        }
+      },
+      "expected": {
+        "httpStatus": 200,
+        "lookup": "UNAVAILABLE",
+        "proofReason": "REGISTRY_UNAVAILABLE",
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "REGISTRY_UNAVAILABLE",
+        "riskState": "UNAVAILABLE",
+        "category": null
+      },
+      "actual": {
+        "httpStatus": 200,
+        "mode": "REFERENCE_CHECK",
+        "lookup": "UNAVAILABLE",
+        "proofReason": "REGISTRY_UNAVAILABLE",
+        "lifecycleStatus": null,
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "REGISTRY_UNAVAILABLE",
+        "riskState": "UNAVAILABLE",
+        "riskReason": "AI_SERVICE_UNAVAILABLE",
+        "category": null,
+        "indicatorCodes": []
+      },
+      "matches": true,
+      "info": {
+        "proofId": "0x1f694ef7fdda9523321bfcb9f5b916773529a9173711cd4a2e0d6a789206ed15",
+        "issueTransaction": {
+          "hash": "0x723a3754095852821f7063d9fbab85eba1863d9880a360c5d2d5e1f036bda44f",
+          "blockNumber": 2
+        },
+        "servicesRestored": true
+      },
+      "response": {
+        "verificationId": "VER-SKYG6CSMKE",
+        "mode": "REFERENCE_CHECK",
+        "proofCheck": {
+          "lookup": "UNAVAILABLE",
+          "reason": "REGISTRY_UNAVAILABLE",
+          "issuer": null,
+          "issuerVerified": null,
+          "lifecycleStatus": null,
+          "issuedAt": null,
+          "revokedAt": null
+        },
+        "integrityCheck": {
+          "result": "NOT_CHECKED",
+          "reason": "REGISTRY_UNAVAILABLE",
+          "hashAlgorithm": null
+        },
+        "riskAnalysis": {
+          "state": "UNAVAILABLE",
+          "reason": "AI_SERVICE_UNAVAILABLE",
+          "category": null,
+          "indicators": [],
+          "indicatorDetails": [],
+          "explanation": null,
+          "recommendation": null,
+          "extractionMethod": null,
+          "contentTruncated": null,
+          "pagesAnalyzed": null,
+          "pagesTotal": null
+        }
+      }
+    }
+  ]
+}

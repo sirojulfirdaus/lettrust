@@ -1,0 +1,27 @@
+{
+  "commit": "4c3ef0a9bce098fedfad60a16ef90b425855747a",
+  "project": "lettrust-tb04-zan-4c3ef0a",
+  "executedAtUtc": "2026-11-27T12:36:09.295528+00:00",
+  "registerHr": 201,
+  "registerCompany": 201,
+  "pendingDenial": {
+    "httpStatus": 403,
+    "errorCode": "FORBIDDEN_OPERATION"
+  },
+  "verify": 200,
+  "verifiedDenial": {
+    "httpStatus": 403,
+    "errorCode": "FORBIDDEN_OPERATION"
+  },
+  "authorize": 201,
+  "issue": 201,
+  "issueTransaction": {
+    "hash": "0xd301a4bea7a6dc902f3d99b19cfe7b5cde239d994ba807c730a3a61d4c2f7ddb",
+    "blockNumber": 14
+  },
+  "duplicate": 409,
+  "duplicateError": "DUPLICATE_ACTIVE_DOCUMENT",
+  "blockBeforeDuplicate": 14,
+  "blockAfterDuplicate": 14,
+  "listAndDetailVisible": true
+}

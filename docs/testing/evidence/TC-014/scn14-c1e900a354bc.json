@@ -1,0 +1,273 @@
+{
+  "scenario": "SCN-14",
+  "testCaseId": "TC-014",
+  "runId": "c1e900a354bc",
+  "startedAt": "2026-11-27T12:33:31.184693+00:00",
+  "cases": [
+    {
+      "case": "h-control",
+      "expected": [
+        {
+          "status": 400,
+          "code": "INVALID_INPUT_COMBINATION"
+        }
+      ],
+      "actual": {
+        "status": 400,
+        "code": "INVALID_INPUT_COMBINATION",
+        "requestId": "req_B19C3D9E64738747"
+      },
+      "matches": true
+    },
+    {
+      "case": "a",
+      "expected": [
+        {
+          "status": 403,
+          "code": "FORBIDDEN_OPERATION"
+        }
+      ],
+      "actual": {
+        "status": 403,
+        "code": "FORBIDDEN_OPERATION",
+        "requestId": "req_B2E6E24727843682"
+      },
+      "matches": true
+    },
+    {
+      "case": "b",
+      "expected": [
+        {
+          "status": 403,
+          "code": "FORBIDDEN_OPERATION"
+        }
+      ],
+      "actual": {
+        "status": 403,
+        "code": "FORBIDDEN_OPERATION",
+        "requestId": "req_9EB19550DB12D4FE"
+      },
+      "matches": true
+    },
+    {
+      "case": "c",
+      "expected": [
+        {
+          "status": 403,
+          "code": "FORBIDDEN_OPERATION"
+        }
+      ],
+      "actual": {
+        "status": 403,
+        "code": "FORBIDDEN_OPERATION",
+        "requestId": "req_41D5B3FA39CFA778"
+      },
+      "matches": true
+    },
+    {
+      "case": "d",
+      "expected": [
+        {
+          "status": 404,
+          "code": "PROOF_NOT_FOUND"
+        }
+      ],
+      "actual": {
+        "status": 404,
+        "code": "PROOF_NOT_FOUND",
+        "requestId": "req_27C4E3D424570323",
+        "sameErrorAsUnknownProof": true
+      },
+      "matches": true
+    },
+    {
+      "case": "d-control",
+      "expected": [
+        {
+          "status": 404,
+          "code": "PROOF_NOT_FOUND"
+        }
+      ],
+      "actual": {
+        "status": 404,
+        "code": "PROOF_NOT_FOUND",
+        "requestId": "req_C36EB435BC929715"
+      },
+      "matches": true
+    },
+    {
+      "case": "e",
+      "expected": {
+        "revert": "IssuerMismatch",
+        "method": "eth_call"
+      },
+      "actual": {
+        "revert": "IssuerMismatch",
+        "method": "eth_call"
+      },
+      "matches": true
+    },
+    {
+      "case": "f",
+      "expected": [
+        {
+          "status": 403,
+          "code": "FORBIDDEN_OPERATION"
+        }
+      ],
+      "actual": {
+        "status": 403,
+        "code": "FORBIDDEN_OPERATION",
+        "requestId": "req_DF36272E3FCC4711"
+      },
+      "matches": true
+    },
+    {
+      "case": "g-api02",
+      "expected": [
+        {
+          "status": 403,
+          "code": "FORBIDDEN_OPERATION"
+        }
+      ],
+      "actual": {
+        "status": 403,
+        "code": "FORBIDDEN_OPERATION",
+        "requestId": "req_046F5DCF12D78A2B"
+      },
+      "matches": true
+    },
+    {
+      "case": "g-api03",
+      "expected": [
+        {
+          "status": 403,
+          "code": "FORBIDDEN_OPERATION"
+        }
+      ],
+      "actual": {
+        "status": 403,
+        "code": "FORBIDDEN_OPERATION",
+        "requestId": "req_136FE68123D48043"
+      },
+      "matches": true
+    },
+    {
+      "case": "h",
+      "expected": [
+        {
+          "status": 401,
+          "code": "UNAUTHENTICATED"
+        },
+        {
+          "status": 403,
+          "code": "FORBIDDEN_OPERATION"
+        }
+      ],
+      "actual": {
+        "status": 401,
+        "code": "UNAUTHENTICATED",
+        "requestId": "req_7C7C0B7490D26DDE"
+      },
+      "matches": true
+    },
+    {
+      "case": "i-missing",
+      "expected": [
+        {
+          "status": 401,
+          "code": "UNAUTHENTICATED"
+        }
+      ],
+      "actual": {
+        "status": 401,
+        "code": "UNAUTHENTICATED",
+        "requestId": "req_F711001E4A0F4A99"
+      },
+      "matches": true
+    },
+    {
+      "case": "i-invalid",
+      "expected": [
+        {
+          "status": 401,
+          "code": "UNAUTHENTICATED"
+        }
+      ],
+      "actual": {
+        "status": 401,
+        "code": "UNAUTHENTICATED",
+        "requestId": "req_FE30A2821131DC3C"
+      },
+      "matches": true
+    },
+    {
+      "case": "j-extraction",
+      "expected": [
+        {
+          "status": 401,
+          "code": "UNAUTHENTICATED"
+        }
+      ],
+      "actual": {
+        "status": 401,
+        "code": "UNAUTHENTICATED",
+        "requestId": "req_CA1ECF802FC30A8A"
+      },
+      "matches": true
+    },
+    {
+      "case": "j-api08",
+      "expected": [
+        {
+          "status": 401,
+          "code": "UNAUTHENTICATED"
+        }
+      ],
+      "actual": {
+        "status": 401,
+        "code": "UNAUTHENTICATED",
+        "requestId": "req_23B4A008FBFC9836"
+      },
+      "matches": true
+    },
+    {
+      "case": "k",
+      "expected": [
+        {
+          "status": 409,
+          "code": "ISSUER_DECISION_ALREADY_MADE"
+        }
+      ],
+      "actual": {
+        "status": 409,
+        "code": "ISSUER_DECISION_ALREADY_MADE",
+        "requestId": "req_B843F15718373D15",
+        "firstDecisionUnchanged": true
+      },
+      "matches": true
+    }
+  ],
+  "setup": {
+    "issueTransaction": {
+      "hash": "0x88161853c5f08931a4b24e1fd755256aa5dc9aef47ec49cda69aaabbe8d4d578",
+      "blockNumber": 3
+    }
+  },
+  "registry": {
+    "beforeBlock": 3,
+    "afterBlock": 3,
+    "beforeRegistrarNonce": 3,
+    "afterRegistrarNonce": 3,
+    "beforeProofStatus": "ACTIVE",
+    "afterProofStatus": "ACTIVE",
+    "events": {
+      "ProofIssued": 0,
+      "ProofRevoked": 0
+    },
+    "proofUnchanged": true,
+    "noTransactions": true
+  },
+  "finishedAt": "2026-11-27T12:33:36.180586+00:00",
+  "assertionsMatched": true
+}

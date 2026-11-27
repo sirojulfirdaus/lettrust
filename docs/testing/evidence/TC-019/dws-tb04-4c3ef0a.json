@@ -1,0 +1,12 @@
+{
+  "testCaseId": "TC-019",
+  "reportedBy": "DWS",
+  "reportedStatus": "Pass",
+  "sourceDocument": "https://docs.google.com/document/d/148f7CO_TuMiVy269jbM0JgoGC5jLN6AKotWYeOHngoo/edit?tab=t.0",
+  "sourceTableRow": 9,
+  "sourceCommit": "4c3ef0a9bce098fedfad60a16ef90b425855747a",
+  "sourceRunDateWib": "2026-11-27",
+  "sourceImages": 3,
+  "observedSummary": "DWS mencatat Pass. DevTools menunjukkan POST /api/verify, cek bundle .next/static dilaporkan tanpa temuan token, dan API-07 langsung tanpa token mengembalikan HTTP 401.",
+  "verificationNotes": "Bukti DWS berupa tiga screenshot. Jam eksekusi belum tercantum."
+}

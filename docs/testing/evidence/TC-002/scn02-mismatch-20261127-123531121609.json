@@ -1,0 +1,63 @@
+{
+  "testCaseId": "TC-002",
+  "scenario": "SCN-02",
+  "executedAtUtc": "2026-11-27T12:35:31.121204+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/verifications",
+    "referenceCode": "[DIHAPUS]",
+    "includeRisk": false,
+    "file": {
+      "name": "FX-02.pdf",
+      "sizeBytes": 22504,
+      "sha256": "7651966664122619d95a57f51637c5d1b59ec19a92bfb2e7604b63920c5e2864"
+    }
+  },
+  "expected": {
+    "httpStatus": 200,
+    "proofLookup": "FOUND",
+    "lifecycleStatus": "ACTIVE",
+    "integrityResult": "MISMATCH"
+  },
+  "actual": {
+    "httpStatus": 200,
+    "proofLookup": "FOUND",
+    "lifecycleStatus": "ACTIVE",
+    "integrityResult": "MISMATCH",
+    "verificationId": "VER-B8VXNGASSW"
+  },
+  "response": {
+    "verificationId": "VER-B8VXNGASSW",
+    "mode": "REFERENCE_CHECK",
+    "proofCheck": {
+      "lookup": "FOUND",
+      "reason": null,
+      "issuer": {
+        "issuerId": "ISS-JH9J59EH",
+        "companyName": "PT Sinar Demo Sejahtera"
+      },
+      "issuerVerified": true,
+      "lifecycleStatus": "ACTIVE",
+      "issuedAt": "2026-11-27T12:33:27Z",
+      "revokedAt": null
+    },
+    "integrityCheck": {
+      "result": "MISMATCH",
+      "reason": null,
+      "hashAlgorithm": "SHA-256"
+    },
+    "riskAnalysis": {
+      "state": "NOT_REQUESTED",
+      "reason": null,
+      "category": null,
+      "indicators": [],
+      "indicatorDetails": [],
+      "explanation": null,
+      "recommendation": null,
+      "extractionMethod": null,
+      "contentTruncated": null,
+      "pagesAnalyzed": null,
+      "pagesTotal": null
+    }
+  }
+}

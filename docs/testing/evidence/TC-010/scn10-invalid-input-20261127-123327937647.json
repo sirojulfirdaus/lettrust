@@ -1,0 +1,184 @@
+{
+  "testCaseId": "TC-010",
+  "scenario": "SCN-10",
+  "startedAtUtc": "2026-11-27T12:33:27.937647+00:00",
+  "finishedAtUtc": "2026-11-27T12:33:29.662064+00:00",
+  "completed": true,
+  "failure": null,
+  "steps": [
+    {
+      "name": "10a-tanpa-kode-tanpa-berkas",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_9A86CA922AA22DAF",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": null,
+        "file": null
+      },
+      "expected": {
+        "httpStatus": 400,
+        "errorCode": "INVALID_INPUT_COMBINATION",
+        "aiServiceCalled": false
+      },
+      "actual": {
+        "httpStatus": 400,
+        "errorCode": "INVALID_INPUT_COMBINATION",
+        "aiServiceCalled": false
+      },
+      "matches": true,
+      "info": {
+        "registry": "Pemanggilan registry tidak teramati dari API; dicakup test unit backend."
+      },
+      "response": {
+        "requestId": "req_9A86CA922AA22DAF",
+        "error": {
+          "code": "INVALID_INPUT_COMBINATION",
+          "message": "Masukkan kode referensi atau unggah berkas PDF untuk dianalisis.",
+          "details": []
+        }
+      }
+    },
+    {
+      "name": "10b-berkas-tanpa-include-risk",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_9DAC64C26C85B8B7",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": false,
+        "file": {
+          "name": "FX-01.pdf",
+          "sizeBytes": 22503,
+          "sha256": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189"
+        }
+      },
+      "expected": {
+        "httpStatus": 400,
+        "errorCode": "AI_ONLY_REQUIRES_INCLUDE_RISK",
+        "aiServiceCalled": false
+      },
+      "actual": {
+        "httpStatus": 400,
+        "errorCode": "AI_ONLY_REQUIRES_INCLUDE_RISK",
+        "aiServiceCalled": false
+      },
+      "matches": true,
+      "info": {
+        "registry": "Pemanggilan registry tidak teramati dari API; dicakup test unit backend."
+      },
+      "response": {
+        "requestId": "req_9DAC64C26C85B8B7",
+        "error": {
+          "code": "AI_ONLY_REQUIRES_INCLUDE_RISK",
+          "message": "Tanpa kode referensi, pemeriksaan hanya dapat dilakukan dengan analisis AI. Setujui pemrosesan AI untuk melanjutkan.",
+          "details": []
+        }
+      }
+    },
+    {
+      "name": "10c-kode-salah-format",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_34FA3B7B3BC10E4A",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": {
+          "name": "FX-01.pdf",
+          "sizeBytes": 22503,
+          "sha256": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189"
+        }
+      },
+      "expected": {
+        "httpStatus": 400,
+        "errorCode": "INVALID_REFERENCE_CODE_FORMAT",
+        "aiServiceCalled": false
+      },
+      "actual": {
+        "httpStatus": 400,
+        "errorCode": "INVALID_REFERENCE_CODE_FORMAT",
+        "aiServiceCalled": false
+      },
+      "matches": true,
+      "info": {
+        "registry": "Pemanggilan registry tidak teramati dari API; dicakup test unit backend."
+      },
+      "response": {
+        "requestId": "req_34FA3B7B3BC10E4A",
+        "error": {
+          "code": "INVALID_REFERENCE_CODE_FORMAT",
+          "message": "Format kode referensi tidak valid. Periksa kembali kode pada surat Anda.",
+          "details": []
+        }
+      }
+    },
+    {
+      "name": "10-kontrol-log-ai-service",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "requestId": "req_F288F9267AE187FB",
+        "referenceCode": "[DIHAPUS]",
+        "includeRisk": true,
+        "file": {
+          "name": "FX-07.pdf",
+          "sizeBytes": 1267,
+          "sha256": "bd878ffe6d98dd013842d97fde3be3dee5f77f154e9972ad6101d0da9d29826f"
+        }
+      },
+      "expected": {
+        "httpStatus": 200,
+        "riskState": "NOT_PERFORMED",
+        "aiServiceCalled": true
+      },
+      "actual": {
+        "httpStatus": 200,
+        "mode": "AI_ONLY",
+        "lookup": "NOT_REQUESTED",
+        "proofReason": "NO_REFERENCE_CODE",
+        "lifecycleStatus": null,
+        "integrityResult": "NOT_CHECKED",
+        "integrityReason": "NO_REFERENCE_CODE",
+        "riskState": "NOT_PERFORMED",
+        "riskReason": "DOCUMENT_CONTENT_UNAVAILABLE",
+        "category": null,
+        "indicatorCodes": [],
+        "aiServiceCalled": true
+      },
+      "matches": true,
+      "info": {},
+      "response": {
+        "verificationId": "VER-YGD17V596C",
+        "mode": "AI_ONLY",
+        "proofCheck": {
+          "lookup": "NOT_REQUESTED",
+          "reason": "NO_REFERENCE_CODE",
+          "issuer": null,
+          "issuerVerified": null,
+          "lifecycleStatus": null,
+          "issuedAt": null,
+          "revokedAt": null
+        },
+        "integrityCheck": {
+          "result": "NOT_CHECKED",
+          "reason": "NO_REFERENCE_CODE",
+          "hashAlgorithm": null
+        },
+        "riskAnalysis": {
+          "state": "NOT_PERFORMED",
+          "reason": "DOCUMENT_CONTENT_UNAVAILABLE",
+          "category": null,
+          "indicators": [],
+          "indicatorDetails": [],
+          "explanation": null,
+          "recommendation": null,
+          "extractionMethod": null,
+          "contentTruncated": null,
+          "pagesAnalyzed": null,
+          "pagesTotal": null
+        }
+      }
+    }
+  ]
+}

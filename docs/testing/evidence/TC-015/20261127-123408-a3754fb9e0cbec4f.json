@@ -1,0 +1,735 @@
+{
+  "scenario": "SCN-15",
+  "testCaseId": "TC-015",
+  "runId": "a3754fb9e0cbec4f",
+  "startedAt": "2026-11-27T12:33:52.792956+00:00",
+  "composeProject": "lettrust-tb04-zan-4c3ef0a",
+  "checks": [
+    {
+      "name": "setup-admin",
+      "expected": {
+        "status": 200,
+        "code": null
+      },
+      "actual": {
+        "status": 200,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "setup-register",
+      "expected": {
+        "status": 201,
+        "code": null
+      },
+      "actual": {
+        "status": 201,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "setup-login",
+      "expected": {
+        "status": 200,
+        "code": null
+      },
+      "actual": {
+        "status": 200,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "setup-issuer",
+      "expected": {
+        "status": 201,
+        "code": null
+      },
+      "actual": {
+        "status": 201,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "setup-verify",
+      "expected": {
+        "status": 200,
+        "code": null
+      },
+      "actual": {
+        "status": 200,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "issuer-verified",
+      "expected": "VERIFIED",
+      "actual": "VERIFIED",
+      "matches": true
+    },
+    {
+      "name": "setup-authorize",
+      "expected": {
+        "status": 201,
+        "code": null
+      },
+      "actual": {
+        "status": 201,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "hr-authorized",
+      "expected": "AUTHORIZED",
+      "actual": "AUTHORIZED",
+      "matches": true
+    },
+    {
+      "name": "issue",
+      "expected": {
+        "status": 201,
+        "code": null
+      },
+      "actual": {
+        "status": 201,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "issued-active",
+      "expected": "ACTIVE",
+      "actual": "ACTIVE",
+      "matches": true
+    },
+    {
+      "name": "issued-document-hash",
+      "expected": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+      "actual": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-receipt",
+      "expected": 1,
+      "actual": 1,
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-hash",
+      "expected": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+      "actual": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-block",
+      "expected": 4,
+      "actual": 4,
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-contract",
+      "expected": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+      "actual": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-count",
+      "expected": 1,
+      "actual": 1,
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-transaction",
+      "expected": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+      "actual": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-event-block",
+      "expected": 4,
+      "actual": 4,
+      "matches": true
+    },
+    {
+      "name": "issued-on-chain",
+      "expected": "ACTIVE",
+      "actual": "ACTIVE",
+      "matches": true
+    },
+    {
+      "name": "15a-replay",
+      "expected": {
+        "status": 201,
+        "code": null
+      },
+      "actual": {
+        "status": 201,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "15a-same-proof",
+      "expected": {
+        "proofId": "0x9ebf8711c1222183566b8f5549d8f7c699af7bf2e56485b3981c8145a79a1d22",
+        "referenceCode": "[DIHAPUS]",
+        "issuerId": "ISS-G2XRH7PK",
+        "hashAlgorithm": "SHA-256",
+        "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+        "lifecycleStatus": "ACTIVE",
+        "issuedAt": "2026-11-27T12:33:54Z",
+        "transaction": {
+          "hash": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+          "blockNumber": 4
+        }
+      },
+      "actual": {
+        "proofId": "0x9ebf8711c1222183566b8f5549d8f7c699af7bf2e56485b3981c8145a79a1d22",
+        "referenceCode": "[DIHAPUS]",
+        "issuerId": "ISS-G2XRH7PK",
+        "hashAlgorithm": "SHA-256",
+        "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+        "lifecycleStatus": "ACTIVE",
+        "issuedAt": "2026-11-27T12:33:54Z",
+        "transaction": {
+          "hash": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+          "blockNumber": 4
+        }
+      },
+      "matches": true
+    },
+    {
+      "name": "15a-no-new-transaction",
+      "expected": {
+        "block": 4,
+        "registrarNonce": 4,
+        "exists": true,
+        "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+        "issuerRef": "bf6efb2f97d36801f51226f6114a874188dfc8ae87324fe275193e426ae3cb7d",
+        "lifecycleStatus": "ACTIVE",
+        "issuedAt": 1795782834,
+        "revokedAt": 0
+      },
+      "actual": {
+        "block": 4,
+        "registrarNonce": 4,
+        "exists": true,
+        "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+        "issuerRef": "bf6efb2f97d36801f51226f6114a874188dfc8ae87324fe275193e426ae3cb7d",
+        "lifecycleStatus": "ACTIVE",
+        "issuedAt": 1795782834,
+        "revokedAt": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "15a-one-issue-event",
+      "expected": 1,
+      "actual": 1,
+      "matches": true
+    },
+    {
+      "name": "15b-key-conflict",
+      "expected": {
+        "status": 409,
+        "code": "IDEMPOTENCY_KEY_CONFLICT"
+      },
+      "actual": {
+        "status": 409,
+        "code": "IDEMPOTENCY_KEY_CONFLICT"
+      },
+      "matches": true
+    },
+    {
+      "name": "15b-no-mutation",
+      "expected": {
+        "block": 4,
+        "registrarNonce": 4,
+        "exists": true,
+        "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+        "issuerRef": "bf6efb2f97d36801f51226f6114a874188dfc8ae87324fe275193e426ae3cb7d",
+        "lifecycleStatus": "ACTIVE",
+        "issuedAt": 1795782834,
+        "revokedAt": 0
+      },
+      "actual": {
+        "block": 4,
+        "registrarNonce": 4,
+        "exists": true,
+        "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+        "issuerRef": "bf6efb2f97d36801f51226f6114a874188dfc8ae87324fe275193e426ae3cb7d",
+        "lifecycleStatus": "ACTIVE",
+        "issuedAt": 1795782834,
+        "revokedAt": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "15c-chain-unavailable",
+      "expected": {
+        "status": 503,
+        "code": "REGISTRY_UNAVAILABLE"
+      },
+      "actual": {
+        "status": 503,
+        "code": "REGISTRY_UNAVAILABLE"
+      },
+      "matches": true
+    },
+    {
+      "name": "15c-no-final-proof",
+      "expected": false,
+      "actual": false,
+      "matches": true
+    },
+    {
+      "name": "15c-no-broadcast-during-outage",
+      "expected": {
+        "block": 4,
+        "registrarNonce": 4,
+        "exists": true,
+        "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+        "issuerRef": "bf6efb2f97d36801f51226f6114a874188dfc8ae87324fe275193e426ae3cb7d",
+        "lifecycleStatus": "ACTIVE",
+        "issuedAt": 1795782834,
+        "revokedAt": 0
+      },
+      "actual": {
+        "block": 4,
+        "registrarNonce": 4,
+        "exists": true,
+        "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+        "issuerRef": "bf6efb2f97d36801f51226f6114a874188dfc8ae87324fe275193e426ae3cb7d",
+        "lifecycleStatus": "ACTIVE",
+        "issuedAt": 1795782834,
+        "revokedAt": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "15c-no-public-pending-proof",
+      "expected": {
+        "status": 200,
+        "code": null
+      },
+      "actual": {
+        "status": 200,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "15c-only-original-public-proof",
+      "expected": [
+        "0x9ebf8711c1222183566b8f5549d8f7c699af7bf2e56485b3981c8145a79a1d22"
+      ],
+      "actual": [
+        "0x9ebf8711c1222183566b8f5549d8f7c699af7bf2e56485b3981c8145a79a1d22"
+      ],
+      "matches": true
+    },
+    {
+      "name": "issue",
+      "expected": {
+        "status": 201,
+        "code": null
+      },
+      "actual": {
+        "status": 201,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "issued-active",
+      "expected": "ACTIVE",
+      "actual": "ACTIVE",
+      "matches": true
+    },
+    {
+      "name": "issued-document-hash",
+      "expected": "7651966664122619d95a57f51637c5d1b59ec19a92bfb2e7604b63920c5e2864",
+      "actual": "7651966664122619d95a57f51637c5d1b59ec19a92bfb2e7604b63920c5e2864",
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-receipt",
+      "expected": 1,
+      "actual": 1,
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-hash",
+      "expected": "0x251c83cd1c49f3f274728671e399332b9ccdb34350a5284681c517ddfd9fbf6c",
+      "actual": "0x251c83cd1c49f3f274728671e399332b9ccdb34350a5284681c517ddfd9fbf6c",
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-block",
+      "expected": 5,
+      "actual": 5,
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-contract",
+      "expected": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+      "actual": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-count",
+      "expected": 1,
+      "actual": 1,
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-transaction",
+      "expected": "0x251c83cd1c49f3f274728671e399332b9ccdb34350a5284681c517ddfd9fbf6c",
+      "actual": "0x251c83cd1c49f3f274728671e399332b9ccdb34350a5284681c517ddfd9fbf6c",
+      "matches": true
+    },
+    {
+      "name": "ProofIssued-event-block",
+      "expected": 5,
+      "actual": 5,
+      "matches": true
+    },
+    {
+      "name": "issued-on-chain",
+      "expected": "ACTIVE",
+      "actual": "ACTIVE",
+      "matches": true
+    },
+    {
+      "name": "15c-distinct-proof",
+      "expected": true,
+      "actual": true,
+      "matches": true
+    },
+    {
+      "name": "verify-offer",
+      "expected": {
+        "status": 200,
+        "code": null
+      },
+      "actual": {
+        "status": 200,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "lookup-found",
+      "expected": "FOUND",
+      "actual": "FOUND",
+      "matches": true
+    },
+    {
+      "name": "lookup-status",
+      "expected": "ACTIVE",
+      "actual": "ACTIVE",
+      "matches": true
+    },
+    {
+      "name": "integrity-match",
+      "expected": "MATCH",
+      "actual": "MATCH",
+      "matches": true
+    },
+    {
+      "name": "ai-not-requested",
+      "expected": "NOT_REQUESTED",
+      "actual": "NOT_REQUESTED",
+      "matches": true
+    },
+    {
+      "name": "verify-offer",
+      "expected": {
+        "status": 200,
+        "code": null
+      },
+      "actual": {
+        "status": 200,
+        "code": null
+      },
+      "matches": true
+    },
+    {
+      "name": "lookup-found",
+      "expected": "FOUND",
+      "actual": "FOUND",
+      "matches": true
+    },
+    {
+      "name": "lookup-status",
+      "expected": "ACTIVE",
+      "actual": "ACTIVE",
+      "matches": true
+    },
+    {
+      "name": "integrity-match",
+      "expected": "MATCH",
+      "actual": "MATCH",
+      "matches": true
+    },
+    {
+      "name": "ai-not-requested",
+      "expected": "NOT_REQUESTED",
+      "actual": "NOT_REQUESTED",
+      "matches": true
+    }
+  ],
+  "requests": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/proofs",
+        "requestId": "req_AA29791D80EB86FB",
+        "hasIdempotencyKey": true,
+        "fixtureSha256": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189"
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "proofId": "0x9ebf8711c1222183566b8f5549d8f7c699af7bf2e56485b3981c8145a79a1d22",
+          "referenceCode": "[DIHAPUS]",
+          "issuerId": "ISS-G2XRH7PK",
+          "hashAlgorithm": "SHA-256",
+          "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+          "lifecycleStatus": "ACTIVE",
+          "issuedAt": "2026-11-27T12:33:54Z",
+          "transaction": {
+            "hash": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+            "blockNumber": 4
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/proofs",
+        "requestId": "req_FB83357C65937D82",
+        "hasIdempotencyKey": true,
+        "fixtureSha256": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189"
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "proofId": "0x9ebf8711c1222183566b8f5549d8f7c699af7bf2e56485b3981c8145a79a1d22",
+          "referenceCode": "[DIHAPUS]",
+          "issuerId": "ISS-G2XRH7PK",
+          "hashAlgorithm": "SHA-256",
+          "documentHash": "2f9611217dca97ae139e23080e6067d7df0e52da67a1e412e4598f699e367189",
+          "lifecycleStatus": "ACTIVE",
+          "issuedAt": "2026-11-27T12:33:54Z",
+          "transaction": {
+            "hash": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+            "blockNumber": 4
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/proofs",
+        "requestId": "req_50BE99F7184735CB",
+        "hasIdempotencyKey": true,
+        "fixtureSha256": "7651966664122619d95a57f51637c5d1b59ec19a92bfb2e7604b63920c5e2864"
+      },
+      "response": {
+        "status": 409,
+        "body": {
+          "requestId": "req_50BE99F7184735CB",
+          "error": {
+            "code": "IDEMPOTENCY_KEY_CONFLICT",
+            "message": "Permintaan bertentangan dengan permintaan sebelumnya. Mulai ulang proses penerbitan.",
+            "details": []
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/proofs",
+        "requestId": "req_28D4788A8D226696",
+        "hasIdempotencyKey": true,
+        "fixtureSha256": "7651966664122619d95a57f51637c5d1b59ec19a92bfb2e7604b63920c5e2864"
+      },
+      "response": {
+        "status": 503,
+        "body": {
+          "requestId": "req_28D4788A8D226696",
+          "error": {
+            "code": "REGISTRY_UNAVAILABLE",
+            "message": "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
+            "details": []
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/proofs",
+        "requestId": "req_3C0A76C6CBACE5F9",
+        "hasIdempotencyKey": false,
+        "fixtureSha256": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "proofId": "0x9ebf8711c1222183566b8f5549d8f7c699af7bf2e56485b3981c8145a79a1d22",
+              "referenceCode": "[DIHAPUS]",
+              "lifecycleStatus": "ACTIVE",
+              "issuedAt": "2026-11-27T12:33:54Z",
+              "revokedAt": null
+            }
+          ],
+          "total": 1
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/proofs",
+        "requestId": "req_F4353F2969CB0035",
+        "hasIdempotencyKey": true,
+        "fixtureSha256": "7651966664122619d95a57f51637c5d1b59ec19a92bfb2e7604b63920c5e2864"
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "proofId": "0x95392cbf2189683e201d67bc24968cd0f537dcef7d244b834537766decd76dfd",
+          "referenceCode": "[DIHAPUS]",
+          "issuerId": "ISS-G2XRH7PK",
+          "hashAlgorithm": "SHA-256",
+          "documentHash": "7651966664122619d95a57f51637c5d1b59ec19a92bfb2e7604b63920c5e2864",
+          "lifecycleStatus": "ACTIVE",
+          "issuedAt": "2026-11-27T12:33:55Z",
+          "transaction": {
+            "hash": "0x251c83cd1c49f3f274728671e399332b9ccdb34350a5284681c517ddfd9fbf6c",
+            "blockNumber": 5
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "includeRisk": false
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "verificationId": "VER-J47KJ4835S",
+          "mode": "REFERENCE_CHECK",
+          "proofCheck": {
+            "lookup": "FOUND",
+            "reason": null,
+            "issuer": {
+              "issuerId": "ISS-G2XRH7PK",
+              "companyName": "PT Uji Registry Sintetis"
+            },
+            "issuerVerified": true,
+            "lifecycleStatus": "ACTIVE",
+            "issuedAt": "2026-11-27T12:33:54Z",
+            "revokedAt": null
+          },
+          "integrityCheck": {
+            "result": "MATCH",
+            "reason": null,
+            "hashAlgorithm": "SHA-256"
+          },
+          "riskAnalysis": {
+            "state": "NOT_REQUESTED",
+            "reason": null,
+            "category": null,
+            "indicators": [],
+            "indicatorDetails": [],
+            "explanation": null,
+            "recommendation": null,
+            "extractionMethod": null,
+            "contentTruncated": null,
+            "pagesAnalyzed": null,
+            "pagesTotal": null
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/verifications",
+        "includeRisk": false
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "verificationId": "VER-0RNJFZG11D",
+          "mode": "REFERENCE_CHECK",
+          "proofCheck": {
+            "lookup": "FOUND",
+            "reason": null,
+            "issuer": {
+              "issuerId": "ISS-G2XRH7PK",
+              "companyName": "PT Uji Registry Sintetis"
+            },
+            "issuerVerified": true,
+            "lifecycleStatus": "ACTIVE",
+            "issuedAt": "2026-11-27T12:33:55Z",
+            "revokedAt": null
+          },
+          "integrityCheck": {
+            "result": "MATCH",
+            "reason": null,
+            "hashAlgorithm": "SHA-256"
+          },
+          "riskAnalysis": {
+            "state": "NOT_REQUESTED",
+            "reason": null,
+            "category": null,
+            "indicators": [],
+            "indicatorDetails": [],
+            "explanation": null,
+            "recommendation": null,
+            "extractionMethod": null,
+            "contentTruncated": null,
+            "pagesAnalyzed": null,
+            "pagesTotal": null
+          }
+        }
+      }
+    }
+  ],
+  "transactions": [
+    {
+      "proofId": "0x9ebf8711c1222183566b8f5549d8f7c699af7bf2e56485b3981c8145a79a1d22",
+      "event": "ProofIssued",
+      "hash": "0xbd097f635c4436c318aab98ecce9a4970b383c022e32ee8f9b1659f380ae7b10",
+      "blockNumber": 4
+    },
+    {
+      "proofId": "0x95392cbf2189683e201d67bc24968cd0f537dcef7d244b834537766decd76dfd",
+      "event": "ProofIssued",
+      "hash": "0x251c83cd1c49f3f274728671e399332b9ccdb34350a5284681c517ddfd9fbf6c",
+      "blockNumber": 5
+    }
+  ],
+  "completed": true,
+  "registryAddress": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+  "chainId": 31337,
+  "issuerId": "ISS-G2XRH7PK",
+  "finishedAt": "2026-11-27T12:34:08.470883+00:00"
+}

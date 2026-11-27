@@ -1,0 +1,12 @@
+{
+  "testCaseId": "TC-024",
+  "reportedBy": "DWS",
+  "reportedStatus": "Pass",
+  "sourceDocument": "https://docs.google.com/document/d/148f7CO_TuMiVy269jbM0JgoGC5jLN6AKotWYeOHngoo/edit?tab=t.0",
+  "sourceTableRow": 4,
+  "sourceCommit": "4c3ef0a9bce098fedfad60a16ef90b425855747a",
+  "sourceRunDateWib": "2026-11-27",
+  "sourceImages": 1,
+  "observedSummary": "Saat chain dihentikan, portal menampilkan kegagalan pemeriksaan bukti dan keutuhan, panduan percobaan ulang, serta hasil AI risiko rendah dari teks PDF.",
+  "verificationNotes": "Model ID, jam eksekusi, referensi transaksi, dan bukti health setelah restart belum tercantum."
+}
