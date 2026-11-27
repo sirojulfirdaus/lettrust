@@ -15,6 +15,7 @@ import {
   afterSubmit,
   buildVerifyRequest,
   canToggleRisk,
+  CONSENT_REQUIRED_MESSAGE,
   DEFAULT_MAX_UPLOAD_BYTES,
   initialFormState,
   shouldIncludeRisk,
@@ -33,7 +34,7 @@ type ApiErrorEnvelope = { error?: { code?: string; message?: string; details?: E
 // Penolakan persetujuan AI dari BFF dikenali lewat details[].field "aiConsent".
 export function verificationErrorMessage(status: number, code?: string, details?: ErrorFieldDetail[]): string {
   if (code === "VALIDATION_ERROR" && details?.some((detail) => detail.field === "aiConsent")) {
-    return "Setujui pemrosesan AI sebelum mengirim surat untuk dianalisis.";
+    return CONSENT_REQUIRED_MESSAGE;
   }
   if (code === "INVALID_REFERENCE_CODE_FORMAT") return "Format kode referensi tidak valid. Periksa kembali kode pada surat Anda.";
   if (code === "INVALID_INPUT_COMBINATION") return "Masukkan kode referensi atau unggah berkas PDF untuk dianalisis.";
@@ -135,14 +136,15 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
             <label htmlFor="reference-code" className="font-medium">Kode referensi</label>
             <Input id="reference-code" autoComplete="off" placeholder={REFERENCE_CODE_EXAMPLE} value={referenceCode} onChange={(event) => { const value = event.target.value; setForm((current) => ({ ...current, referenceCode: value })); }} disabled={isProcessing} aria-describedby={showCodeError ? "reference-help reference-error" : "reference-help"} aria-invalid={showCodeError} />
             <p id="reference-help" className="text-sm text-muted-foreground">Contoh: {REFERENCE_CODE_EXAMPLE}. Spasi dan tanda hubung akan dinormalisasi.</p>
-            {showCodeError && <p id="reference-error" className="text-sm text-destructive">{verificationErrorMessage(400, "INVALID_REFERENCE_CODE_FORMAT")}</p>}
+            {/* Live region selalu ada (kosong tanpa error) agar perubahan isinya diumumkan pembaca layar; tanpa isi disembunyikan visual. */}
+            <p id="reference-error" aria-live="polite" aria-atomic="true" className="text-sm text-destructive empty:sr-only">{showCodeError ? verificationErrorMessage(400, "INVALID_REFERENCE_CODE_FORMAT") : ""}</p>
           </div>
         )}
         <div className="space-y-2">
           <label htmlFor="offer-letter" className="font-medium">Berkas surat {mode === "AI_ONLY" ? "(wajib PDF)" : `(opsional, PDF maksimal ${maxUploadMb} MB)`}</label>
           {/* Input berkas asli tetap ada (sr-only) agar data ke BFF tidak berubah; label di bawah berperan sebagai tombol. */}
           <div className="flex flex-wrap items-center gap-3">
-            <input id="offer-letter" type="file" accept="application/pdf,.pdf" onChange={acceptFile} disabled={isProcessing} aria-describedby="file-help file-name" aria-invalid={Boolean(fileError)} className="peer sr-only" />
+            <input id="offer-letter" type="file" accept="application/pdf,.pdf" onChange={acceptFile} disabled={isProcessing} aria-describedby={fileError ? "file-help file-name file-error" : "file-help file-name"} aria-invalid={Boolean(fileError)} className="peer sr-only" />
             <label htmlFor="offer-letter" className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium shadow-xs transition-colors hover:bg-muted peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50 peer-disabled:pointer-events-none peer-disabled:opacity-50">
               <Upload aria-hidden="true" size={16} strokeWidth={2} className="size-4" />
               Pilih berkas PDF
@@ -151,7 +153,7 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
             {file && <Button type="button" variant="outline" size="sm" disabled={isProcessing} onClick={() => setForm((current) => withFile(current, null))}>Hapus berkas</Button>}
           </div>
           <p id="file-help" className="text-sm text-muted-foreground">Berkas dipakai untuk pemeriksaan ini saja.</p>
-          {fileError && <p role="alert" className="text-sm text-destructive">{fileError}</p>}
+          <p id="file-error" aria-live="polite" aria-atomic="true" className="text-sm text-destructive empty:sr-only">{fileError ?? ""}</p>
         </div>
         {mode === "REFERENCE_CHECK" && (
           <label className="flex items-start gap-3 rounded-lg border p-3">
@@ -160,8 +162,9 @@ export function VerifyForm({ maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES }: { maxU
           </label>
         )}
         {mode === "AI_ONLY" && <p className="rounded-lg bg-muted p-3 text-sm">Apabila perusahaan menyatakan menggunakan Lettrust, mintalah kode referensi kepada perusahaan.</p>}
-        {riskRequested && <ConsentCheckbox checked={consent} disabled={isProcessing} onCheckedChange={(checked) => setForm((current) => ({ ...current, consent: checked }))} />}
-        {error && <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>}
+        {riskRequested && <ConsentCheckbox checked={consent} disabled={isProcessing} invalid={error === CONSENT_REQUIRED_MESSAGE} describedBy={error === CONSENT_REQUIRED_MESSAGE ? "form-error" : undefined} onCheckedChange={(checked) => setForm((current) => ({ ...current, consent: checked }))} />}
+        {/* Banner error selalu ada di DOM sebagai live region; tampil visual hanya bila ada pesan. */}
+        <div id="form-error" role="alert" aria-atomic="true" className={error ? "rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive" : "sr-only"}>{error ?? ""}</div>
         {isProcessing && <ProcessingStatus includeRisk={riskRequested} />}
         <Button type="submit" size="lg" disabled={isProcessing}>{isProcessing ? "Sedang memeriksa…" : "Periksa Surat"}</Button>
       </form>
