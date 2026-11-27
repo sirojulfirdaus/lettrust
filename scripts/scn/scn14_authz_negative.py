@@ -194,9 +194,14 @@ def setup_request(client: httpx.Client, method: str, path: str, status: int, **k
     return json_object(response)
 
 
-def setup_idempotency_key(issuer_id: str, digest: str) -> str:
-    """Kunci setup stabil per (penerbit, dokumen) agar run berikutnya memulihkan penerbitan yang receipt-nya timeout."""
-    return "scn14-setup-" + hashlib.sha256(f"{issuer_id}:{digest}".encode()).hexdigest()[:24]
+# Batas generasi kunci pengganti; setiap generasi hanya dipakai lagi bila bukti generasi sebelumnya sudah dicabut.
+MAX_SETUP_GENERATIONS = 20
+
+
+def setup_idempotency_key(issuer_id: str, digest: str, generation: int = 0) -> str:
+    """Kunci setup stabil per (penerbit, dokumen, generasi) agar run berikutnya memulihkan penerbitan yang timeout."""
+    suffix = "" if generation == 0 else f":{generation}"
+    return "scn14-setup-" + hashlib.sha256(f"{issuer_id}:{digest}{suffix}".encode()).hexdigest()[:24]
 
 
 def find_or_issue_active(client: httpx.Client, token: str, pdf: bytes, issuer_id: str) -> JsonObject:
@@ -207,7 +212,8 @@ def find_or_issue_active(client: httpx.Client, token: str, pdf: bytes, issuer_id
 
     Penerbitan memakai kunci stabil: bila receipt sebelumnya timeout (mirror PENDING, belum ada di daftar ACTIVE), run
     berikutnya mengulang dengan kunci yang sama sehingga backend memulihkan bukti yang sama. Bila kunci itu ternyata
-    milik bukti yang sudah dicabut, satu penerbitan baru dengan kunci acak dilakukan.
+    milik bukti yang sudah dicabut (status terkini dibaca lewat API-05), generasi kunci berikutnya yang juga stabil
+    dipakai sehingga penerbitan pengganti tetap dapat dipulihkan setelah timeout.
     """
     digest = hashlib.sha256(pdf).hexdigest()
     offset = 0
@@ -228,12 +234,15 @@ def find_or_issue_active(client: httpx.Client, token: str, pdf: bytes, issuer_id
         if not items or offset >= total:
             break
     upload = {"files": {"file": ("FX-01.pdf", pdf, "application/pdf")}}
-    headers = {"Idempotency-Key": setup_idempotency_key(issuer_id, digest)}
-    issued = setup_request(client, "POST", PROOFS, 201, token=token, headers=headers, **upload)
-    if issued.get("lifecycleStatus") == "REVOKED":
-        headers = {"Idempotency-Key": f"scn14-{secrets.token_hex(8)}"}
+    for generation in range(MAX_SETUP_GENERATIONS):
+        headers = {"Idempotency-Key": setup_idempotency_key(issuer_id, digest, generation)}
         issued = setup_request(client, "POST", PROOFS, 201, token=token, headers=headers, **upload)
-    return issued
+        # Replay API-04 mengembalikan hasil penerbitan historis (ACTIVE) walau bukti sudah dicabut; status terkini
+        # dibaca dari registry lewat API-05.
+        current = setup_request(client, "GET", f"{PROOFS}/{issued['proofId']}", 200, token=token)
+        if current.get("lifecycleStatus") == "ACTIVE":
+            return {**current, "transaction": current["issueTransaction"]}
+    raise ScenarioError("Seluruh generasi kunci setup FX-01 sudah dipakai bukti yang dicabut; setup dihentikan.")
 
 
 def login(client: httpx.Client, email: str, password: str) -> tuple[str, JsonObject]:
