@@ -30,6 +30,8 @@ import { buildApiUrl } from "@/lib/api/client";
 import { clearSession, createSession, saveSession } from "@/lib/session";
 import {
   MAX_PROOF_FILE_BYTES,
+  PROOF_SOURCE_LABELS,
+  canRequestRevocation,
   copyTextToClipboard,
   formatFileSize,
   generateIdempotencyKey,
@@ -91,7 +93,7 @@ describe("validasi berkas PDF dan helper penerbitan/pencabutan bukti", () => {
     expect(validateProofPdfFile([pdfA, pdfB])).toEqual({
       valid: false,
       code: "MULTIPLE_FILES",
-      message: "Unggah hanya satu berkas PDF.",
+      message: "Hanya satu berkas yang dapat diproses per permintaan.",
     });
 
     const txtFile = createSyntheticFile("offer.txt", 128, "text/plain");
@@ -123,7 +125,7 @@ describe("validasi berkas PDF dan helper penerbitan/pencabutan bukti", () => {
     expect(validateProofPdfFile([tooLargePdf])).toEqual({
       valid: false,
       code: "FILE_TOO_LARGE",
-      message: "Ukuran berkas melebihi batas maksimum 5 MB.",
+      message: "Ukuran berkas melebihi batas yang diizinkan.",
     });
   });
 
@@ -141,6 +143,16 @@ describe("validasi berkas PDF dan helper penerbitan/pencabutan bukti", () => {
     expect(isValidRevocationReasonCode("DOCUMENT_REPLACED")).toBe(true);
     expect(isValidRevocationReasonCode("OTHER")).toBe(true);
     expect(isValidRevocationReasonCode("UNKNOWN_REASON")).toBe(false);
+
+    // FR-04.01 AC-02: tanpa default, tombol Cabut Bukti nonaktif sampai alasan sah dipilih.
+    expect(canRequestRevocation(null, false)).toBe(false);
+    expect(canRequestRevocation("UNKNOWN_REASON", false)).toBe(false);
+    expect(canRequestRevocation("OFFER_WITHDRAWN", true)).toBe(false);
+    expect(canRequestRevocation("OFFER_WITHDRAWN", false)).toBe(true);
+
+    expect(`Sumber: ${PROOF_SOURCE_LABELS[api05ProofStatusActive.source]}`).toBe(
+      "Sumber: registry blockchain",
+    );
 
     expect(formatFileSize(512)).toBe("512 B");
     expect(formatFileSize(2048)).toBe("2.0 KB");
@@ -195,6 +207,27 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
 
     saveSession(createSession("jwt-hr-auth", 3600));
     expect(await loadHrProofsGuard()).toEqual({ kind: "ready", profile: s03SessionHrAuthorized });
+  });
+
+  it("mengarahkan ke login dengan penanda sesi berakhir hanya bila sesi kedaluwarsa", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await loadProofList({})).toEqual({ kind: "redirect", to: "/login" });
+
+    saveSession(createSession("jwt-hr-lama", -1));
+    expect(await loadProofList({})).toEqual({
+      kind: "redirect",
+      to: "/login?reason=session_expired",
+    });
+    expect(await loadProofDetail({ proofId: "0xabc" })).toEqual({
+      kind: "redirect",
+      to: "/login?reason=session_expired",
+    });
+    expect(await loadHrProofsGuard()).toEqual({
+      kind: "redirect",
+      to: "/login?reason=session_expired",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("memuat daftar bukti S-06 dengan filter status, paginasi, empty state, dan 403", async () => {
@@ -257,7 +290,7 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
       kind: "error",
       code: "REGISTRY_UNAVAILABLE",
       message:
-        "Detail bukti dari registry belum dapat dimuat saat ini. Silakan coba lagi beberapa saat lagi.",
+        "Data bukti dari registry belum dapat dimuat. Coba lagi beberapa saat lagi.",
     });
     if (registryDownResult.kind === "error") {
       expect(registryDownResult.message).not.toContain("Pencatatan ke registry gagal");
@@ -275,7 +308,7 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
       .mockResolvedValueOnce(jsonResponse(errorDuplicateActiveDocument, 409))
       .mockResolvedValueOnce(jsonResponse(errorIdempotencyKeyConflict, 409))
       .mockResolvedValueOnce(jsonResponse(errorRegistryUnavailable, 503))
-      .mockResolvedValueOnce(jsonResponse(errorRegistryTransactionFailed, 502))
+      .mockResolvedValueOnce(jsonResponse(errorRegistryTransactionFailed, 503))
       .mockResolvedValueOnce(jsonResponse(errorUnsupportedMediaType, 415))
       .mockResolvedValueOnce(jsonResponse(errorFileTooLarge, 413))
       .mockResolvedValueOnce(jsonResponse(errorEmptyFile, 400))
@@ -323,7 +356,7 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
 
     expect(await submitIssueProof({ file, idempotencyKey: idemKey })).toEqual({
       kind: "error",
-      status: 502,
+      status: 503,
       code: "REGISTRY_TRANSACTION_FAILED",
       message: "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
       canRetrySameKey: true,
@@ -355,7 +388,7 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
       kind: "error",
       status: 400,
       code: "MULTIPLE_FILES",
-      message: "Unggah hanya satu berkas PDF.",
+      message: "Hanya satu berkas yang dapat diproses per permintaan.",
     });
 
     expect(await submitIssueProof({ file, idempotencyKey: idemKey })).toMatchObject({
@@ -375,7 +408,7 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
       .fn()
       .mockResolvedValueOnce(jsonResponse(api06RevokeResponse, 200))
       .mockResolvedValueOnce(jsonResponse(errorProofAlreadyRevoked, 409))
-      .mockResolvedValueOnce(jsonResponse(errorRegistryTransactionFailed, 502))
+      .mockResolvedValueOnce(jsonResponse(errorRegistryTransactionFailed, 503))
       .mockResolvedValueOnce(jsonResponse(errorIdempotencyKeyConflict, 409));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -403,7 +436,7 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
       await submitRevokeProof({ proofId, reasonCode: "OFFER_WITHDRAWN", idempotencyKey: idemKey }),
     ).toEqual({
       kind: "error",
-      status: 502,
+      status: 503,
       code: "REGISTRY_TRANSACTION_FAILED",
       message: "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
       canRetrySameKey: true,
@@ -534,7 +567,7 @@ describe("alur API halaman bukti HR (S-06, API-04, API-05, API-06)", () => {
         message: "Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi.",
       }),
     ).toBe(
-      "Detail bukti dari registry belum dapat dimuat saat ini. Silakan coba lagi beberapa saat lagi.",
+      "Data bukti dari registry belum dapat dimuat. Coba lagi beberapa saat lagi.",
     );
 
     expect(

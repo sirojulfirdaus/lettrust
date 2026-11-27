@@ -136,7 +136,7 @@ Use the real commands (see README):
 | Whole stack | `python scripts/dev.py up`, `status`, `logs [svc]`, `stop/start <svc>` |
 | Unit tests in containers | `python scripts/dev.py test [svc]` |
 | Contract | `forge test` in `blockchain/` |
-| Backend against real Anvil (stack up) | `docker compose exec backend python -m pytest -m real_registry tests/conformance tests/integration` |
+| Backend against real Anvil (stack up) | `docker compose run --rm -T -v ./contracts:/contracts:ro -e CONTRACTS_DIR=/contracts backend python -m pytest -q -m real_registry` |
 | Contract regeneration (after an instructed schema change) | `python scripts/dev.py openapi` |
 | Frontend logic | `npm test` (Vitest) in the app |
 | API scenarios | scripts in `scripts/scn/` |

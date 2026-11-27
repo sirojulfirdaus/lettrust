@@ -5,7 +5,7 @@ import {
   fetchSessionProfile,
   type RegisterIssuerResponse,
 } from "@/lib/api/client";
-import { readSession } from "@/lib/session";
+import { notifySessionChange, readSession, sessionRedirectPath, type LoginRedirectPath } from "@/lib/session";
 import {
   mapValidationDetailsToFieldErrors,
   normalizeCompanyPayload,
@@ -22,7 +22,7 @@ export type SubmitErrorState = {
 
 // Hasil pemeriksaan guard sesi sebelum menampilkan formulir onboarding perusahaan.
 export type OnboardingGuardResult =
-  | { kind: "redirect"; to: "/login" | "/admin/issuers" | "/hr" }
+  | { kind: "redirect"; to: LoginRedirectPath | "/admin/issuers" | "/hr" }
   | { kind: "ready"; displayName: string }
   | { kind: "unauthorized" }
   | { kind: "aborted" }
@@ -43,7 +43,7 @@ export async function loadOnboardingGuard(options?: {
 }): Promise<OnboardingGuardResult> {
   const session = readSession();
   if (!session) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
 
   try {
@@ -104,6 +104,8 @@ export async function submitCompanyRegistration(
     if (isStaleOrAborted()) {
       return { kind: "aborted" };
     }
+    // Header hanya memuat ulang profil saat ada event sesi; afiliasi baru mengubah navigasi tanpa mengganti token.
+    notifySessionChange();
     return { kind: "success", data, redirectTo: "/hr" };
   } catch (error: unknown) {
     if (isStaleOrAborted()) {

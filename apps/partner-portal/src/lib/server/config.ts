@@ -1,11 +1,13 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD FR-02.07, BR-01.14; SA §11.3.2, §14.2
 import "server-only";
+import { DEFAULT_MAX_UPLOAD_BYTES } from "@/lib/verification/form";
 
 // Konfigurasi server portal; token partner tidak pernah dikirim ke browser.
 export type PortalServerConfig = {
   apiBaseUrl: string;
   partnerToken: string;
   upstreamTimeoutMs: number;
+  maxUploadBytes: number;
 };
 
 // Menandai kegagalan konfigurasi portal agar route dapat memberi respons aman.
@@ -39,5 +41,16 @@ export function getServerConfig(env: Record<string, string | undefined> = proces
     );
   }
 
-  return { apiBaseUrl, partnerToken, upstreamTimeoutMs };
+  return { apiBaseUrl, partnerToken, upstreamTimeoutMs, maxUploadBytes: readMaxUploadBytes(env) };
+}
+
+// Membaca batas unggah saja (tanpa token) agar halaman dapat meneruskan angka ini ke formulir browser.
+// Nama env sama dengan backend; default mengikuti konstanta bersama yang juga dipakai formulir.
+export function readMaxUploadBytes(env: Record<string, string | undefined> = process.env): number {
+  const maxUploadRaw = env.MAX_UPLOAD_BYTES?.trim();
+  const maxUploadBytes = maxUploadRaw ? Number(maxUploadRaw) : DEFAULT_MAX_UPLOAD_BYTES;
+  if (!Number.isInteger(maxUploadBytes) || maxUploadBytes <= 0) {
+    throw new PortalConfigurationError("Konfigurasi portal tidak valid: MAX_UPLOAD_BYTES wajib bilangan bulat positif (byte).");
+  }
+  return maxUploadBytes;
 }

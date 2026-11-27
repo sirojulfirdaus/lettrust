@@ -2,3 +2,6 @@ out/
 cache/
 broadcast/
 README.md
+# Rahasia dan state lokal tidak boleh masuk build context.
+.env*
+.local/

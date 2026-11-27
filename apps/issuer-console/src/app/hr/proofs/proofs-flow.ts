@@ -13,13 +13,18 @@ import {
   type RevokeProofResponse,
 } from "@/lib/api/client";
 import { canIssueProofs } from "@/lib/routes";
-import { readSession } from "@/lib/session";
+import { readSession, sessionRedirectPath, type LoginRedirectPath } from "@/lib/session";
 
 // Batas ukuran berkas PDF default sesuai SA §14 (MAX_UPLOAD_BYTES = 5 MB).
 export const MAX_PROOF_FILE_BYTES = 5 * 1024 * 1024;
 
 // Ukuran halaman default untuk tabel daftar bukti S-06.
 export const PROOF_LIST_PAGE_SIZE = 20;
+
+// Label sumber status bukti yang dapat dibaca manusia (PRD §9.10: status dibaca dari registry).
+export const PROOF_SOURCE_LABELS: Record<ProofStatusResponse["source"], string> = {
+  REGISTRY: "registry blockchain",
+};
 
 // Daftar nilai reasonCode yang sah menurut kontrak API-06.
 export const REVOCATION_REASON_CODES: readonly RevocationReasonCode[] = [
@@ -40,7 +45,7 @@ export type PdfFileValidationResult =
     };
 
 export type HrProofsGuardResult =
-  | { kind: "redirect"; to: "/login" | "/admin/issuers" | "/onboarding/company" }
+  | { kind: "redirect"; to: LoginRedirectPath | "/admin/issuers" | "/onboarding/company" }
   | { kind: "forbidden"; profile: MeResponse; message: string }
   | { kind: "ready"; profile: MeResponse }
   | { kind: "unauthorized" }
@@ -48,7 +53,7 @@ export type HrProofsGuardResult =
   | { kind: "error"; message: string };
 
 export type ProofListLoadResult =
-  | { kind: "redirect"; to: "/login" }
+  | { kind: "redirect"; to: LoginRedirectPath }
   | { kind: "ready"; data: ProofListResponse }
   | { kind: "forbidden"; message: string }
   | { kind: "unauthorized" }
@@ -56,7 +61,7 @@ export type ProofListLoadResult =
   | { kind: "error"; message: string };
 
 export type ProofDetailLoadResult =
-  | { kind: "redirect"; to: "/login" }
+  | { kind: "redirect"; to: LoginRedirectPath }
   | { kind: "ready"; data: ProofStatusResponse }
   | { kind: "not_found"; message: string }
   | { kind: "forbidden"; message: string }
@@ -122,7 +127,7 @@ export function validateProofPdfFile(
     return {
       valid: false,
       code: "MULTIPLE_FILES",
-      message: "Unggah hanya satu berkas PDF.",
+      message: "Hanya satu berkas yang dapat diproses per permintaan.",
     };
   }
 
@@ -155,7 +160,7 @@ export function validateProofPdfFile(
     return {
       valid: false,
       code: "FILE_TOO_LARGE",
-      message: "Ukuran berkas melebihi batas maksimum 5 MB.",
+      message: "Ukuran berkas melebihi batas yang diizinkan.",
     };
   }
 
@@ -165,6 +170,11 @@ export function validateProofPdfFile(
 // Memastikan nilai reasonCode termasuk dalam daftar kode alasan pencabutan yang diizinkan.
 export function isValidRevocationReasonCode(value: string): value is RevocationReasonCode {
   return (REVOCATION_REASON_CODES as readonly string[]).includes(value);
+}
+
+// "Cabut Bukti" aktif hanya bila HR sudah memilih reasonCode yang sah (FR-04.01 AC-02) dan tidak ada proses berjalan.
+export function canRequestRevocation(reasonCode: string | null, isBusy: boolean): boolean {
+  return !isBusy && reasonCode !== null && isValidRevocationReasonCode(reasonCode);
 }
 
 // Memformat ukuran berkas dalam byte agar mudah dibaca pengguna.
@@ -198,7 +208,7 @@ export async function loadHrProofsGuard(options?: {
 }): Promise<HrProofsGuardResult> {
   const session = readSession();
   if (!session) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
   const submittedToken = session.accessToken;
 
@@ -253,7 +263,7 @@ export async function loadProofList(options: {
 }): Promise<ProofListLoadResult> {
   const session = readSession();
   if (!session) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
   const submittedToken = session.accessToken;
 
@@ -301,7 +311,7 @@ export async function loadProofDetail(options: {
 }): Promise<ProofDetailLoadResult> {
   const session = readSession();
   if (!session) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
   const submittedToken = session.accessToken;
 
@@ -366,7 +376,7 @@ export function getProofDetailReadErrorMessage(
   error: Pick<Extract<ProofDetailLoadResult, { kind: "error" }>, "code" | "message">,
 ): string {
   if (error.code === "REGISTRY_UNAVAILABLE" || error.code === "REGISTRY_TRANSACTION_FAILED") {
-    return "Detail bukti dari registry belum dapat dimuat saat ini. Silakan coba lagi beberapa saat lagi.";
+    return "Data bukti dari registry belum dapat dimuat. Coba lagi beberapa saat lagi.";
   }
   return error.message;
 }

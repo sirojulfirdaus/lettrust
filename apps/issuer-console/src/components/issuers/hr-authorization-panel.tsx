@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  getHrAuthorizationUnavailableMessage,
   submitHrAuthorization,
   validateAuthorizeHrId,
   type IssuerStatus,
@@ -48,6 +49,7 @@ export function HrAuthorizationPanel({
   const submitGuardRef = useRef(false);
 
   const canAuthorize = issuerStatus === "VERIFIED";
+  const unavailableMessage = getHrAuthorizationUnavailableMessage(issuerStatus);
 
   const executeAuthorization = async (targetHrId: string, clearManualInput: boolean) => {
     if (submitGuardRef.current) {
@@ -118,13 +120,13 @@ export function HrAuthorizationPanel({
       </CardHeader>
 
       <CardContent className="space-y-5 pt-6">
-        {!canAuthorize ? (
+        {unavailableMessage ? (
           <Alert>
             <AlertCircle className="size-4" aria-hidden="true" />
-            <AlertTitle>Otorisasi HR belum tersedia</AlertTitle>
-            <AlertDescription>
-              Penerbit belum terverifikasi sehingga HR belum dapat diotorisasi.
-            </AlertDescription>
+            <AlertTitle>
+              {issuerStatus === "REJECTED" ? "Otorisasi HR tidak tersedia" : "Otorisasi HR belum tersedia"}
+            </AlertTitle>
+            <AlertDescription>{unavailableMessage}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -170,7 +172,10 @@ export function HrAuthorizationPanel({
                     <TableCell className="text-muted-foreground">{member.email ?? "-"}</TableCell>
                     <TableCell className="font-mono text-xs">{member.hrId}</TableCell>
                     <TableCell>
-                      <HrAuthorizationBadge status={member.authorizationStatus} />
+                      <HrAuthorizationBadge
+                        status={member.authorizationStatus}
+                        issuerStatus={issuerStatus}
+                      />
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {formatIssuerTimestamp(member.authorizedAt)}

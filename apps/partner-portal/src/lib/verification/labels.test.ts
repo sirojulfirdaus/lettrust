@@ -1,7 +1,23 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD §9.6, FR-02.09, FR-06.07
 import { describe, expect, it } from "vitest";
+import * as fixtures from "@/fixtures/api";
 import { api07AiNotPerformed, api07AiOnly, api07NotFoundCodeOnly, api07ReferenceMatchAi, api07RegistryUnavailable, api07RevokedMismatch } from "@/fixtures/api";
-import { indicatorLabel, integrityCheckLabel, proofCheckLabel, riskAnalysisLabel } from "./labels";
+import type { VerificationResponse } from "@/lib/api/types";
+import { buildGuidance } from "./guidance";
+import { indicatorLabel, integrityCheckLabel, proofCheckLabel, proofDetailLines, riskAnalysisLabel } from "./labels";
+
+// Kalimat vonis afirmatif (mis. "surat ini asli"); kalimat bernegasi PRD seperti "tidak berarti surat palsu" dikecualikan.
+const VERDICT = /\b(?:surat|penawaran|hasil|berkas)\s+(?:ini\s+)?(?:asli|palsu|aman|penipuan)\b/i;
+const NEGATION = /\b(?:tidak|bukan)\b/i;
+
+// Mengembalikan kalimat yang memuat vonis tanpa negasi.
+function verdictSentences(texts: string[]): string[] {
+  return texts
+    .flatMap((text) => text.split(/(?<=[.!?])\s+/))
+    .filter((sentence) => VERDICT.test(sentence) && !NEGATION.test(sentence));
+}
+
+const API07_FIXTURES = Object.entries(fixtures).filter(([name]) => name.startsWith("api07")) as [string, VerificationResponse][];
 
 describe("verification labels", () => {
   // Memastikan fixture API-07 normal menghasilkan label untuk tiga panel.
@@ -45,6 +61,29 @@ describe("verification labels", () => {
     expect(proofCheckLabel(api07NotFoundCodeOnly.proofCheck).explanation).toContain("Ini tidak berarti surat palsu:");
     expect(riskAnalysisLabel(api07AiOnly.riskAnalysis).explanation).toContain("pola yang sering muncul pada penipuan rekrutmen");
     expect(riskAnalysisLabel(api07ReferenceMatchAi.riskAnalysis).explanation).toContain("Risiko rendah tidak menjamin surat aman.");
+    expect(integrityCheckLabel(api07ReferenceMatchAi.integrityCheck).explanation).toBe(
+      "Berkas Anda sama persis dengan berkas yang dicatat penerbit. Ini tidak menilai apakah isi surat aman.",
+    );
+  });
+
+  // Memastikan tidak ada vonis gabungan pada label, panduan, dan teks risiko di seluruh fixture API-07.
+  it("tidak memuat kalimat vonis pada semua fixture API-07", () => {
+    expect(API07_FIXTURES.length).toBeGreaterThanOrEqual(13);
+    expect(verdictSentences(["Surat ini asli."])).toHaveLength(1);
+    for (const [name, response] of API07_FIXTURES) {
+      const labels = [
+        proofCheckLabel(response.proofCheck),
+        integrityCheckLabel(response.integrityCheck),
+        riskAnalysisLabel(response.riskAnalysis),
+      ];
+      const texts = [
+        ...labels.flatMap(({ title, explanation }) => [title, explanation]),
+        ...buildGuidance(response).map(({ text }) => text),
+        response.riskAnalysis.explanation ?? "",
+        response.riskAnalysis.recommendation ?? "",
+      ];
+      expect(verdictSentences(texts), name).toEqual([]);
+    }
   });
 
   // Memastikan enum baru ditangani netral dan taksonomi indikator diterjemahkan.
@@ -52,5 +91,17 @@ describe("verification labels", () => {
     expect(proofCheckLabel({ ...api07ReferenceMatchAi.proofCheck, lookup: "FUTURE" } as never).title).toBe("Status tidak dikenal");
     expect(indicatorLabel("FUTURE_CODE")).toBe("Indikator tidak dikenal");
     expect(indicatorLabel("PAYMENT_REQUEST")).toBe("Permintaan pembayaran kepada pelamar");
+  });
+
+  // FR-02.09 AC-02: rincian status penerbit dan waktu terbit hanya ditambahkan untuk REVOKED.
+  it("menyusun rincian status penerbit dan waktu penerbitan untuk bukti REVOKED", () => {
+    const revoked = proofDetailLines(api07RevokedMismatch.proofCheck);
+    expect(revoked[0]).toBe("Status verifikasi penerbit: terverifikasi");
+    expect(revoked[1]).toMatch(/^Waktu penerbitan: 23 November 2026/);
+    expect(proofDetailLines({ ...api07RevokedMismatch.proofCheck, issuerVerified: false })[0]).toBe(
+      "Status verifikasi penerbit: belum/tidak berstatus terverifikasi",
+    );
+    expect(proofDetailLines(api07ReferenceMatchAi.proofCheck)).toEqual([]);
+    expect(proofDetailLines(api07NotFoundCodeOnly.proofCheck)).toEqual([]);
   });
 });

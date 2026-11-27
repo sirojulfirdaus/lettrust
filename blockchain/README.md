@@ -4,8 +4,8 @@ Owner: Sat (PIC 6) · Ref: SA §6
 
 | Path | Status | Isi |
 | ----- | ----- | ----- |
-| `src/OfferProofRegistry.sol` | STUB | Antarmuka SA §6.2.1 lengkap; `issueProof`/`revokeProof`/`getProof` revert `NotImplemented()` |
-| `test/OfferProofRegistry.t.sol` | STUB | Test `registrar == deployer`; daftar 10 test wajib SA §6.2.3 sebagai TODO |
+| `src/OfferProofRegistry.sol` | COMPLETE | Implementasi SA §6.2.1: `issueProof`/`revokeProof`/`getProof`, akses `onlyRegistrar`, tanpa reaktivasi bukti REVOKED |
+| `test/OfferProofRegistry.t.sol` | COMPLETE | 12 test: seluruh test wajib SA §6.2.3 dan test penolakan reaktivasi |
 | `script/Deploy.s.sol` | COMPLETE | Deploy dengan `REGISTRY_SIGNER_PRIVATE_KEY` |
 | `scripts/deploy-if-needed.sh` | COMPLETE | Deploy hanya bila `/shared/deployments/local.json` belum ada atau alamatnya tanpa kode |
 | `lib/forge-std` | vendored | forge-std v1.17.0 (`forge install --no-git`) |

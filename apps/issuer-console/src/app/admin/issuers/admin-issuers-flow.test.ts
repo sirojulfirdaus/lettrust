@@ -22,6 +22,9 @@ import {
 import { buildApiUrl } from "@/lib/api/client";
 import { createSession, saveSession } from "@/lib/session";
 import {
+  buildVerificationDecisionNotice,
+  buildVerificationDecisionSuccessMessage,
+  getHrAuthorizationUnavailableMessage,
   loadIssuerDetail,
   loadIssuerList,
   submitHrAuthorization,
@@ -69,6 +72,53 @@ describe("alur admin penerbit (S-04, S-05, API-02, API-03)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it("menyusun pesan keputusan tersimpan dengan status baru dan waktu peninjauan UTC", () => {
+    const message = buildVerificationDecisionSuccessMessage({
+      ...api02VerifyIssuerResponse,
+      reviewedAt: "2026-11-24T03:15:00Z",
+    });
+    expect(message).toMatch(/^Keputusan verifikasi tersimpan\. Status penerbit: Terverifikasi\./);
+    expect(message).toMatch(/2026,? 03[.:]15 UTC\.$/);
+    expect(
+      buildVerificationDecisionSuccessMessage({ ...api02VerifyIssuerResponse, issuerStatus: "REJECTED" }),
+    ).toContain("Status penerbit: Ditolak.");
+  });
+
+  it("menyusun satu notifikasi keputusan sehingga sukses dan konflik saling menggantikan", () => {
+    const success = buildVerificationDecisionNotice({ kind: "saved", data: api02VerifyIssuerResponse });
+    expect(success).toEqual({
+      kind: "success",
+      message: buildVerificationDecisionSuccessMessage(api02VerifyIssuerResponse),
+    });
+    const conflict = buildVerificationDecisionNotice({
+      kind: "conflict",
+      message: errorIssuerDecisionAlreadyMade.error.message,
+    });
+    expect(conflict).toEqual({ kind: "conflict", message: errorIssuerDecisionAlreadyMade.error.message });
+  });
+
+  it("membedakan alasan otorisasi HR tidak tersedia untuk penerbit PENDING dan REJECTED", () => {
+    expect(getHrAuthorizationUnavailableMessage("VERIFIED")).toBeNull();
+    expect(getHrAuthorizationUnavailableMessage("PENDING")).toBe(
+      "Penerbit belum terverifikasi sehingga HR belum dapat diotorisasi.",
+    );
+    const rejected = getHrAuthorizationUnavailableMessage("REJECTED");
+    expect(rejected).toContain("ditolak");
+    expect(rejected).not.toContain("belum terverifikasi");
+  });
+
+  it("mengarahkan ke login dengan penanda sesi berakhir bila sesi kedaluwarsa sebelum memuat", async () => {
+    saveSession(createSession("jwt-admin-lama", -1));
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await loadIssuerList({ status: "ALL", limit: 20, offset: 0 })).toEqual({
+      kind: "redirect",
+      to: "/login?reason=session_expired",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("memvalidasi panjang Unicode evidenceRef (3-120) dan reviewNote (<= 500) serta hrId", () => {

@@ -340,3 +340,66 @@ def test_real_success_uses_event_without_block_lookup(
     record = real_registry.get_proof(proof_id)
     assert result.block_timestamp == (record.issued_at if method == "issue_proof" else record.revoked_at)
     assert blocked_queries == []
+
+
+# D-24: penerbitan dianggap hilang hanya bila hash (jika ada) pasti gagal/hilang DAN issueProof proofId tidak ada di
+# antrean pending/queued; transaksi lain di antrean (operasi atau proofId berbeda) tidak menghalangi.
+@pytest.mark.parametrize(
+    ("receipt_status", "pool_input", "dropped"),
+    [
+        (1, None, False),
+        (None, "issue", False),
+        (None, "revoke", True),
+        (None, None, True),
+        (0, None, True),
+    ],
+)
+def test_issue_drop_requires_hash_and_pool_evidence(
+    adapter: Web3RegistryAdapter,
+    monkeypatch: pytest.MonkeyPatch,
+    receipt_status: int | None,
+    pool_input: str | None,
+    dropped: bool,
+) -> None:
+    web3 = adapter._web3()
+    proof_id = "0x" + "55" * 32
+    pool: dict[str, dict] = {"pending": {}, "queued": {}}
+    if pool_input is not None:
+        signature = "issueProof(bytes32,bytes32,bytes32)" if pool_input == "issue" else "revokeProof(bytes32,bytes32)"
+        selector = Web3.to_hex(Web3.keccak(text=signature)[:4])
+        pool["queued"] = {"0x" + "77" * 20: {"3": {"to": "0x" + "44" * 20, "input": selector + proof_id[2:]}}}
+    pool_queries: list[str] = []
+
+    # Receipt sintetis: None berarti belum ada receipt.
+    def receipt(_value: str) -> dict[str, int]:
+        if receipt_status is None:
+            raise TransactionNotFound("Receipt sintetis belum ditemukan")
+        return {"status": receipt_status}
+
+    # Transaksi tidak dikenal node (hilang dari antrean).
+    def transaction(_value: str) -> None:
+        raise TransactionNotFound("Transaksi sintetis tidak ditemukan")
+
+    # Mencatat pemeriksaan antrean lalu mengembalikan isi antrean sintetis.
+    def make_request(method: str, _params: list) -> dict:
+        pool_queries.append(method)
+        return {"result": pool}
+
+    monkeypatch.setattr(web3.eth, "get_transaction_receipt", receipt)
+    monkeypatch.setattr(web3.eth, "get_transaction", transaction)
+    monkeypatch.setattr(web3.provider, "make_request", make_request)
+    monkeypatch.setattr(adapter, "_web3", lambda: web3)
+    assert adapter.is_issue_failed_or_dropped("0x" + "ab" * 32, proof_id) is dropped
+    assert pool_queries == ([] if receipt_status == 1 else ["txpool_content"])
+    if receipt_status is None and pool_input != "issue":
+        # Tanpa hash (data lama), keputusan hanya dari antrean.
+        assert adapter.is_issue_failed_or_dropped(None, proof_id) is True
+
+
+# Antrean yang tidak dapat dibaca tidak pernah dianggap bukti transaksi penerbitan hilang.
+def test_issue_drop_pool_outage_stays_uncertain(adapter: Web3RegistryAdapter, monkeypatch: pytest.MonkeyPatch) -> None:
+    web3 = adapter._web3()
+    monkeypatch.setattr(web3.provider, "make_request", lambda *_args: {"error": {"code": -32601}})
+    monkeypatch.setattr(adapter, "_web3", lambda: web3)
+    with pytest.raises(RegistryUnavailable):
+        adapter.is_issue_failed_or_dropped(None, "0x" + "55" * 32)

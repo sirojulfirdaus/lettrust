@@ -13,6 +13,7 @@ from app.core.db import get_session_factory
 from app.core.ids import compute_issuer_ref
 from app.modules.auth.schemas import AuthorizationStatus
 from app.modules.proofs.models import Proof
+from app.modules.proofs.service import REGISTRY_READ_UNAVAILABLE_MESSAGE
 from app.modules.registry.adapter import ProofRecord
 from app.modules.registry.mock import MockRegistryAdapter
 
@@ -173,6 +174,9 @@ def test_detail_unavailable_instead_of_using_mirror(
     response = client.get(f"{URL}/{proof_id}", headers=headers)
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "REGISTRY_UNAVAILABLE"
+    # Operasi baca memakai pesan netral PRD §9.8, bukan pesan "Pencatatan ke registry gagal" milik operasi tulis.
+    assert response.json()["error"]["message"] == REGISTRY_READ_UNAVAILABLE_MESSAGE
+    assert "Pencatatan" not in response.json()["error"]["message"]
 
 
 def test_detail_reads_revocation_metadata_committed_during_rpc(

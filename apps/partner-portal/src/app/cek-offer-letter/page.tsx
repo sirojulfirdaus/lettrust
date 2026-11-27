@@ -1,9 +1,14 @@
 // Owner: Pash (PIC 4) | Status: COMPLETE | Ref: PRD FR-02.01–FR-02.11, §9.4–§9.8; SA §11.3
 import { Badge } from "@/components/ui/badge";
 import { VerifyForm } from "@/components/verification/verify-form";
+import { readMaxUploadBytes } from "@/lib/server/config";
 
-// Menyediakan halaman pemeriksaan tanpa login dan tanpa mengirim token ke browser.
+// Dirender per permintaan agar MAX_UPLOAD_BYTES dibaca saat runtime, bukan saat next build.
+export const dynamic = "force-dynamic";
+
+// Menyediakan halaman pemeriksaan tanpa login; hanya angka batas unggah yang dikirim ke browser, bukan token.
 export default function CheckOfferLetterPage() {
+  const maxUploadBytes = readMaxUploadBytes();
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -16,7 +21,7 @@ export default function CheckOfferLetterPage() {
       <p className="max-w-3xl text-muted-foreground">
         Periksa bukti penerbitan, keutuhan berkas, dan indikasi risiko pada isi surat secara terpisah. Hasil ini bersifat informatif dan bukan vonis; konfirmasikan penawaran melalui kanal resmi perusahaan.
       </p>
-      <VerifyForm />
+      <VerifyForm maxUploadBytes={maxUploadBytes} />
     </div>
   );
 }

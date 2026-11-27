@@ -27,6 +27,8 @@ ABI_PATH = Path(__file__).resolve().parent / "abi" / "OfferProofRegistry.json"
 # Lock tingkat proses: membungkus build, sign, send, dan tunggu receipt agar nonce tidak bentrok (AD-22).
 SIGNER_LOCK = threading.Lock()
 _RPC_ERRORS = (OSError, ValueError, TypeError, KeyError, Web3Exception)
+_ISSUE_SIGNATURE = "issueProof(bytes32,bytes32,bytes32)"
+_REVOKE_SIGNATURE = "revokeProof(bytes32,bytes32)"
 
 
 class OnChainStatus(IntEnum):
@@ -78,9 +80,13 @@ class RegistryTransactionFailed(RegistryError):
 class ProofNotActiveOnChain(RegistryError):
     """Revert ProofNotActive → PROOF_ALREADY_REVOKED (409)."""
 
+    revert_name = "ProofNotActive"
+
 
 class IssuerMismatchOnChain(RegistryError):
     """Revert IssuerMismatch → PROOF_NOT_FOUND (404)."""
+
+    revert_name = "IssuerMismatch"
 
 
 class RegistryTransactionPending(RegistryError):
@@ -113,6 +119,12 @@ class RegistryAdapter(Protocol):
     # Memeriksa koneksi RPC dan keberadaan kode contract.
     def health(self) -> bool: ...
 
+    # True hanya bila transaksi pencabutan pasti gagal/hilang; data lama tanpa hash diperiksa lewat antrean node.
+    def is_transaction_failed_or_dropped(self, tx_hash: str | None, proof_id: str | None = None) -> bool: ...
+
+    # True hanya bila transaksi penerbitan pasti gagal/hilang dan tidak ada issueProof untuk proofId di antrean node.
+    def is_issue_failed_or_dropped(self, tx_hash: str | None, proof_id: str) -> bool: ...
+
 
 # Memuat ABI OfferProofRegistry yang diekspor scripts/export_abi.py.
 @lru_cache
@@ -143,6 +155,16 @@ def _revert_name(error: Web3Exception) -> str | None:
             if name is not None:
                 return name
     return None
+
+
+# Nama penyebab kegagalan untuk log: nama revert, tipe exception asal (mis. ReadTimeout vs ConnectionError), atau
+# tipe exception domain; tidak pernah memuat pesan exception yang dapat berisi data.
+def failure_reason(error: BaseException) -> str:
+    revert_name = getattr(error, "revert_name", None)
+    if revert_name:
+        return revert_name
+    cause = error.__cause__ or error.__context__
+    return type(cause).__name__ if cause is not None else type(error).__name__
 
 
 # Memetakan revert transaksi sesuai Protocol; operasi issue tidak menghasilkan exception khusus revoke.
@@ -254,27 +276,44 @@ class Web3RegistryAdapter:
             try:
                 web3 = self._web3()
                 if tx_hash is None:
-                    return proof_id is not None and self._revoke_absent_from_pool(web3, proof_id)
-                try:
-                    receipt = web3.eth.get_transaction_receipt(tx_hash)
-                except TransactionNotFound:
-                    try:
-                        web3.eth.get_transaction(tx_hash)
-                    except TransactionNotFound:
-                        return True
-                    return False
-                return receipt["status"] == 0
+                    return proof_id is not None and self._absent_from_pool(web3, proof_id, _REVOKE_SIGNATURE)
+                return self._hash_failed_or_dropped(web3, tx_hash)
             except _RPC_ERRORS as exc:
                 raise RegistryUnavailable("Status transaksi registry belum dapat dipastikan.") from exc
 
-    # Menolak pemulihan data lama bila revoke masih pending/queued atau isi antrean tidak dapat dipastikan.
-    def _revoke_absent_from_pool(self, web3: Web3, proof_id: str) -> bool:
+    # Versi penerbitan (D-24): hash gagal/hilang saja tidak cukup karena retry dengan kunci yang sama dapat mengirim
+    # transaksi kedua untuk proofId yang sama; keduanya harus tidak ada di antrean node. Pemanggil memastikan bukti
+    # belum ada di registry sebelum memakai hasil True.
+    def is_issue_failed_or_dropped(self, tx_hash: str | None, proof_id: str) -> bool:
+        with SIGNER_LOCK:
+            try:
+                web3 = self._web3()
+                if tx_hash is not None and not self._hash_failed_or_dropped(web3, tx_hash):
+                    return False
+                return self._absent_from_pool(web3, proof_id, _ISSUE_SIGNATURE)
+            except _RPC_ERRORS as exc:
+                raise RegistryUnavailable("Status transaksi registry belum dapat dipastikan.") from exc
+
+    # Receipt status 0 = gagal pasti; tanpa receipt, hilang hanya bila node juga tidak mengenal transaksinya.
+    def _hash_failed_or_dropped(self, web3: Web3, tx_hash: str) -> bool:
+        try:
+            receipt = web3.eth.get_transaction_receipt(tx_hash)
+        except TransactionNotFound:
+            try:
+                web3.eth.get_transaction(tx_hash)
+            except TransactionNotFound:
+                return True
+            return False
+        return receipt["status"] == 0
+
+    # Menolak pemulihan bila transaksi operasi untuk proofId masih pending/queued atau isi antrean tidak pasti.
+    def _absent_from_pool(self, web3: Web3, proof_id: str, signature: str) -> bool:
         response = web3.provider.make_request("txpool_content", [])
         pool = response.get("result")
         address = self.resolve_contract_address()
         if "error" in response or not isinstance(pool, Mapping) or address is None:
             raise RegistryUnavailable("Antrean transaksi registry tidak dapat diperiksa.")
-        prefix = Web3.to_hex(Web3.keccak(text="revokeProof(bytes32,bytes32)")[:4])
+        prefix = Web3.to_hex(Web3.keccak(text=signature)[:4])
         call_prefix = prefix + proof_id_to_bytes32(proof_id).hex()
         for group in ("pending", "queued"):
             senders = pool.get(group)
@@ -298,53 +337,100 @@ class Web3RegistryAdapter:
                         return False
         return True
 
-    # Mengunci seluruh alur nonce hingga receipt agar transaksi registrar tidak saling bertabrakan.
+    # Mengunci seluruh alur nonce hingga receipt agar transaksi registrar tidak saling bertabrakan. Kegagalan dicatat
+    # `registry.tx_failed` dengan kategori (errorCode) dan penyebab (reason) agar dapat dibedakan di log (NFR-09.05).
     def _transact(self, operation: str, args: tuple[bytes, ...]) -> TxResult:
         with SIGNER_LOCK:
             try:
-                web3 = self._web3()
-                contract = self._contract(web3)
-                signer = web3.eth.account.from_key(self._settings.registry_signer_private_key.get_secret_value())
-                transaction = getattr(contract.functions, operation)(*args).build_transaction(
-                    {
-                        "from": signer.address,
-                        "nonce": web3.eth.get_transaction_count(signer.address, "pending"),
-                        "chainId": web3.eth.chain_id,
-                    }
+                return self._send_and_confirm(operation, args)
+            except RegistryError as exc:
+                logger.warning(
+                    "registry.tx_failed",
+                    extra={
+                        "event": "registry.tx_failed",
+                        "operation": operation,
+                        "errorCode": type(exc).__name__,
+                        "reason": failure_reason(exc),
+                        "txHash": getattr(exc, "tx_hash", None),
+                    },
                 )
-                signed = signer.sign_transaction(transaction)
-            except _RPC_ERRORS as exc:
-                error = _transaction_error(exc, operation) if isinstance(exc, Web3Exception) else None
-                if error is not None:
-                    raise error from exc
-                raise RegistryUnavailable("Transaksi registry tidak dapat diproses melalui RPC.") from exc
-
-            tx_hash = Web3.keccak(signed.raw_transaction)
-            try:
-                tx_hash = web3.eth.send_raw_transaction(signed.raw_transaction)
-            except _RPC_ERRORS as exc:
-                error = _transaction_error(exc, operation) if isinstance(exc, Web3Exception) else None
-                if error is not None:
-                    raise error from exc
-                # Node mungkin sudah menerima transaksi meskipun balasan broadcast tidak sampai.
-                raise RegistryTransactionPending(
-                    "Pengiriman transaksi registry belum dapat dikonfirmasi.", tx_hash=Web3.to_hex(tx_hash)
-                ) from exc
-
-            try:
-                receipt = self._wait_for_receipt(tx_hash)
-                if receipt["status"] == 0:
-                    raise RegistryTransactionFailed()
-                if receipt["status"] != 1:
-                    raise RegistryTransactionPending("Status receipt registry belum dapat dipastikan.")
-                return self._confirmed_result(contract, operation, args, tx_hash, receipt)
-            except RegistryTransactionPending as exc:
-                exc.tx_hash = Web3.to_hex(tx_hash)
                 raise
-            except _RPC_ERRORS as exc:
-                raise RegistryTransactionPending(
-                    "Konfirmasi transaksi registry belum lengkap.", tx_hash=Web3.to_hex(tx_hash)
-                ) from exc
+
+    # Membangun, menandatangani, mengirim, dan menunggu receipt; hanya dipanggil di bawah SIGNER_LOCK.
+    def _send_and_confirm(self, operation: str, args: tuple[bytes, ...]) -> TxResult:
+        try:
+            web3 = self._web3()
+            contract = self._contract(web3)
+            signer = web3.eth.account.from_key(self._settings.registry_signer_private_key.get_secret_value())
+            transaction = getattr(contract.functions, operation)(*args).build_transaction(
+                {
+                    "from": signer.address,
+                    "nonce": web3.eth.get_transaction_count(signer.address, "pending"),
+                    "chainId": web3.eth.chain_id,
+                }
+            )
+            signed = signer.sign_transaction(transaction)
+        except _RPC_ERRORS as exc:
+            error = _transaction_error(exc, operation) if isinstance(exc, Web3Exception) else None
+            if error is not None:
+                raise error from exc
+            raise RegistryUnavailable("Transaksi registry tidak dapat diproses melalui RPC.") from exc
+
+        tx_hash = Web3.keccak(signed.raw_transaction)
+        try:
+            tx_hash = web3.eth.send_raw_transaction(signed.raw_transaction)
+        except _RPC_ERRORS as exc:
+            error = _transaction_error(exc, operation) if isinstance(exc, Web3Exception) else None
+            if error is not None:
+                raise error from exc
+            # Node mungkin sudah menerima transaksi meskipun balasan broadcast tidak sampai.
+            raise RegistryTransactionPending(
+                "Pengiriman transaksi registry belum dapat dikonfirmasi.", tx_hash=Web3.to_hex(tx_hash)
+            ) from exc
+        logger.info(
+            "registry.tx_sent",
+            extra={"event": "registry.tx_sent", "operation": operation, "txHash": Web3.to_hex(tx_hash)},
+        )
+
+        try:
+            receipt = self._wait_for_receipt(tx_hash)
+            if receipt["status"] == 0:
+                raise self._reverted_receipt(web3, operation, transaction, receipt, Web3.to_hex(tx_hash))
+            if receipt["status"] != 1:
+                raise RegistryTransactionPending("Status receipt registry belum dapat dipastikan.")
+            result = self._confirmed_result(contract, operation, args, tx_hash, receipt)
+            logger.info(
+                "registry.tx_confirmed",
+                extra={"event": "registry.tx_confirmed", "operation": operation, "txHash": result.tx_hash},
+            )
+            return result
+        except RegistryTransactionPending as exc:
+            exc.tx_hash = Web3.to_hex(tx_hash)
+            raise
+        except _RPC_ERRORS as exc:
+            raise RegistryTransactionPending(
+                "Konfirmasi transaksi registry belum lengkap.", tx_hash=Web3.to_hex(tx_hash)
+            ) from exc
+
+    # Receipt status 0: memutar ulang panggilan dengan eth_call pada state blok receipt untuk mengambil nama revert,
+    # sehingga ProofAlreadyExists/ProofNotActive/IssuerMismatch dipetakan sama seperti revert saat estimasi gas. State
+    # blok receipt memuat transaksi lain di blok yang sama yang mendahului transaksi ini (mis. penerbitan proofId sama
+    # yang sukses lebih dulu); state blok − 1 tidak memuatnya sehingga replay di sana dapat sukses dan nama hilang.
+    # Replay yang tidak revert atau gagal RPC tetap kegagalan pasti tanpa nama; pemanggil memeriksa ulang registry.
+    # Hash transaksi yang sudah di-broadcast dibawa exception untuk log `registry.tx_failed`.
+    def _reverted_receipt(
+        self, web3: Web3, operation: str, transaction: Mapping[str, Any], receipt: TxReceipt, tx_hash: str
+    ) -> RegistryError:
+        error: RegistryError = RegistryTransactionFailed()
+        try:
+            call = {key: transaction[key] for key in ("from", "to", "data", "value") if key in transaction}
+            web3.eth.call(call, receipt["blockNumber"])
+        except Web3Exception as exc:
+            error = _transaction_error(exc, operation) or error
+        except _RPC_ERRORS:
+            pass
+        error.tx_hash = tx_hash
+        return error
 
     # Membatasi setiap polling dan jedanya dengan sisa anggaran; gangguan setelah broadcast tetap Pending.
     def _wait_for_receipt(self, tx_hash: bytes) -> TxReceipt:

@@ -88,9 +88,15 @@ async def request_context_middleware(request: Request, call_next):
         request_id_var.reset(token)
 
 
-# Handler AppError: kode dan pesan aman dari katalog.
+# Handler AppError: kode dan pesan aman dari katalog. Setiap error dicatat `app.error` (kode dan status saja,
+# requestId dari formatter) agar kategori kegagalan registry/AI dapat dibedakan di log (NFR-09.05).
 async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
-    return error_response(request, exc.code, exc.message, exc.details)
+    response = error_response(request, exc.code, exc.message, exc.details)
+    logger.warning(
+        "app.error",
+        extra={"event": "app.error", "errorCode": exc.code.value, "status": response.status_code},
+    )
+    return response
 
 
 # Handler validasi FastAPI: 422 bawaan diubah menjadi 400 VALIDATION_ERROR dengan rincian per field.

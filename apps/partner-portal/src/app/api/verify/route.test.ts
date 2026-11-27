@@ -32,6 +32,7 @@ describe("POST /api/verify", () => {
     const request = makeRequest([
       ["referenceCode", "LTR-7K3M-9QX2-H4TD"],
       ["includeRisk", "true"],
+      ["aiConsent", "true"],
       ["file", new File(["%PDF-test"], "offer.pdf", { type: "application/pdf" })],
       ["ignored", "jangan diteruskan"],
     ]);
@@ -93,13 +94,132 @@ describe("POST /api/verify", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const acceptedFile = new File([new Uint8Array(5 * 1024 * 1024)], "five-mib.pdf", { type: "application/pdf" });
-    const accepted = await POST(makeRequest([["file", acceptedFile], ["includeRisk", "true"]]));
+    const accepted = await POST(makeRequest([["file", acceptedFile], ["includeRisk", "true"], ["aiConsent", "true"]]));
     expect(accepted.status).toBe(200);
 
     const tooLargeFile = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "too-large.pdf", { type: "application/pdf" });
-    const rejected = await POST(makeRequest([["file", tooLargeFile], ["includeRisk", "true"]]));
+    const rejected = await POST(makeRequest([["file", tooLargeFile], ["includeRisk", "true"], ["aiConsent", "true"]]));
     expect(rejected.status).toBe(413);
     expect((await rejected.json()).error.code).toBe("FILE_TOO_LARGE");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Body yang jelas melebihi batas + margin multipart ditolak tanpa membaca formData.
+  it("menolak 413 berdasarkan content-length sebelum membaca body", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const formData = vi.fn();
+    const oversized = {
+      headers: new Headers({
+        "content-type": "multipart/form-data; boundary=x",
+        "content-length": String(5 * 1024 * 1024 + 64 * 1024 + 1),
+      }),
+      formData,
+    } as unknown as Request;
+
+    const response = await POST(oversized);
+
+    expect(response.status).toBe(413);
+    expect((await response.json()).error.code).toBe("FILE_TOO_LARGE");
+    expect(formData).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // Batas ukuran dibaca dari MAX_UPLOAD_BYTES, sama dengan nama env backend.
+  it("memakai MAX_UPLOAD_BYTES dari konfigurasi server", async () => {
+    vi.stubEnv("MAX_UPLOAD_BYTES", "10");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File([new Uint8Array(11)], "offer.pdf", { type: "application/pdf" });
+
+    const response = await POST(makeRequest([["referenceCode", "LTR-7K3M-9QX2-H4TD"], ["file", file]]));
+
+    expect(response.status).toBe(413);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // Analisis AI tanpa persetujuan ditolak di server walaupun browser melewati validasi form.
+  it("menolak includeRisk=true tanpa aiConsent=true dan tidak meneruskan aiConsent", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File(["%PDF-test"], "offer.pdf", { type: "application/pdf" });
+
+    for (const consent of [[], [["aiConsent", "false"]]] as Array<Array<[string, string]>>) {
+      const response = await POST(makeRequest([["includeRisk", "true"], ...consent, ["file", file]]));
+      const body = await response.json();
+      expect(response.status).toBe(400);
+      expect(body.error).toMatchObject({ code: "VALIDATION_ERROR", message: "Setujui pemrosesan AI sebelum mengirim surat untuk dianalisis." });
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const accepted = await POST(makeRequest([["referenceCode", "LTR-7K3M-9QX2-H4TD"], ["includeRisk", "false"]]));
+    expect(accepted.status).toBe(200);
+    const forwarded = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData;
+    expect(forwarded.has("aiConsent")).toBe(false);
+  });
+
+  // Field boolean dan referenceCode harus satu nilai persis; penolakan terjadi sebelum panggilan upstream.
+  it("menolak nilai boolean tidak kanonis dan field ganda tanpa memanggil upstream", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File(["%PDF-test"], "offer.pdf", { type: "application/pdf" });
+    const cases: Array<[Array<[string, string]>, string, string]> = [
+      [[["includeRisk", "1"], ["aiConsent", "true"]], "includeRisk", "bool_parsing"],
+      [[["includeRisk", "True"], ["aiConsent", "true"]], "includeRisk", "bool_parsing"],
+      [[["includeRisk", "true"], ["includeRisk", "false"], ["aiConsent", "true"]], "includeRisk", "multiple_values"],
+      [[["includeRisk", "true"], ["aiConsent", "yes"]], "aiConsent", "bool_parsing"],
+      [[["includeRisk", "true"], ["aiConsent", "true"], ["aiConsent", "true"]], "aiConsent", "multiple_values"],
+      [[["referenceCode", "LTR-7K3M-9QX2-H4TD"], ["referenceCode", "LTR-AAAA-BBBB-CCCC"]], "referenceCode", "multiple_values"],
+    ];
+
+    for (const [fields, field, issue] of cases) {
+      const response = await POST(makeRequest([...fields, ["file", file]]));
+      const body = await response.json();
+      expect(response.status).toBe(400);
+      expect(body.error).toMatchObject({ code: "VALIDATION_ERROR", details: [{ field, issue }] });
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // Penolakan persetujuan dapat dibedakan klien lewat details[].field "aiConsent".
+  it("menandai penolakan persetujuan dengan detail field aiConsent", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(makeRequest([["includeRisk", "true"], ["file", new File(["%PDF"], "a.pdf")]]));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.details).toEqual([{ field: "aiConsent", issue: "consent_required" }]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // Backend hanya menerima satu includeRisk kanonis; aiConsent tidak pernah diteruskan.
+  it("meneruskan tepat satu includeRisk kanonis dan mempertahankan semantik saat absen", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File(["%PDF-test"], "offer.pdf", { type: "application/pdf" });
+
+    await POST(makeRequest([["includeRisk", "true"], ["aiConsent", "true"], ["file", file]]));
+    await POST(makeRequest([["referenceCode", "LTR-7K3M-9QX2-H4TD"]]));
+
+    const withRisk = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData;
+    expect(withRisk.getAll("includeRisk")).toEqual(["true"]);
+    expect(withRisk.has("aiConsent")).toBe(false);
+    const withoutRisk = (fetchMock.mock.calls[1] as [string, RequestInit])[1].body as FormData;
+    expect(withoutRisk.has("includeRisk")).toBe(false);
+    expect(withoutRisk.getAll("referenceCode")).toEqual(["LTR-7K3M-9QX2-H4TD"]);
+  });
+
+  // Berkas ganda tetap diteruskan apa adanya agar backend menjawab MULTIPLE_FILES.
+  it("tetap meneruskan berkas ganda ke backend", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 400 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File(["%PDF-test"], "offer.pdf", { type: "application/pdf" });
+
+    await POST(makeRequest([["includeRisk", "true"], ["aiConsent", "true"], ["file", file], ["file", file]]));
+
+    const forwarded = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData;
+    expect(forwarded.getAll("file")).toHaveLength(2);
   });
 });

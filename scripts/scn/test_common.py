@@ -4,8 +4,9 @@
 import json
 from pathlib import Path
 
-import common
 import pytest
+
+import common
 from scn02_mismatch import evidence_filename
 
 

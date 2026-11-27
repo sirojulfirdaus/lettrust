@@ -1,5 +1,6 @@
-# Rahasia dan state lokal (SA §13.3)
-.env
+# Rahasia dan state lokal (SA §13.3); contoh yang ter-track dikecualikan.
+.env*
+!.env.example
 .local/
 *.db
 *.db-shm

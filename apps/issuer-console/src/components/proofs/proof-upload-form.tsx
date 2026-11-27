@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { AlertCircle, FileCheck2, FileUp, Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,10 +18,21 @@ import {
 import type { IssueProofResponse } from "@/lib/api/client";
 import {
   formatFileSize,
-  generateIdempotencyKey,
   submitIssueProof,
   validateProofPdfFile,
 } from "@/app/hr/proofs/proofs-flow";
+import {
+  EMPTY_ATTEMPT,
+  applySubmitOutcome,
+  canStartNewAttempt,
+  isAttemptInputLocked,
+  attemptErrorMessage,
+  mayHaveBeenRecorded,
+  UNCERTAIN_ISSUE_MESSAGE,
+  resolveSubmitKey,
+  startAttempt,
+  type IdempotencyAttempt,
+} from "@/app/hr/proofs/idempotency-attempt";
 
 type ProofUploadFormProps = {
   onIssued: (proof: IssueProofResponse) => void;
@@ -28,6 +40,7 @@ type ProofUploadFormProps = {
 };
 
 type SubmitErrorState = {
+  status: number;
   code: string;
   message: string;
   canRetrySameKey: boolean;
@@ -37,8 +50,7 @@ type SubmitErrorState = {
 // Formulir unggah PDF final untuk penerbitan bukti (API-04) dengan konfirmasi dan Idempotency-Key per berkas.
 export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [idempotencyKey, setIdempotencyKey] = useState<string>("");
-  const [isAttemptLocked, setIsAttemptLocked] = useState(false);
+  const [attempt, setAttempt] = useState<IdempotencyAttempt>(EMPTY_ATTEMPT);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<SubmitErrorState | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -57,29 +69,29 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
 
   // Memvalidasi berkas yang dipilih dan membuat Idempotency-Key baru saat tidak ada upaya tertunda.
   const handleFilesSelected = (files: FileList | File[] | null) => {
-    if (isSubmittingRef.current || isAttemptLocked) {
+    if (isSubmittingRef.current || attempt.locked) {
       return;
     }
     setSubmitError(null);
     const validation = validateProofPdfFile(files);
     if (!validation.valid) {
       setSelectedFile(null);
-      setIdempotencyKey("");
+      setAttempt(EMPTY_ATTEMPT);
       setValidationError(validation.message);
       return;
     }
     setValidationError(null);
     setSelectedFile(validation.file);
-    setIdempotencyKey(generateIdempotencyKey());
+    setAttempt(startAttempt());
   };
 
   // Mengosongkan berkas terpilih agar pengguna dapat memilih berkas PDF lain saat tidak terkunci.
   const handleClearFile = () => {
-    if (isSubmittingRef.current || isAttemptLocked) {
+    if (isSubmittingRef.current || attempt.locked) {
       return;
     }
     setSelectedFile(null);
-    setIdempotencyKey("");
+    setAttempt(EMPTY_ATTEMPT);
     setValidationError(null);
     setSubmitError(null);
     if (fileInputRef.current) {
@@ -89,12 +101,11 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
 
   // Membuang upaya tertunda secara eksplisit, mereset Idempotency-Key, dan membuka kembali pemilih berkas.
   const handleStartNewAttempt = () => {
-    if (isSubmittingRef.current) {
+    if (isSubmittingRef.current || (submitError !== null && !canStartNewAttempt(submitError))) {
       return;
     }
-    setIsAttemptLocked(false);
     setSelectedFile(null);
-    setIdempotencyKey("");
+    setAttempt(EMPTY_ATTEMPT);
     setValidationError(null);
     setSubmitError(null);
     if (fileInputRef.current) {
@@ -107,8 +118,7 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     if (isSubmittingRef.current || !selectedFile) {
       return;
     }
-    setIsAttemptLocked(false);
-    setIdempotencyKey(generateIdempotencyKey());
+    setAttempt(startAttempt());
     setSubmitError(null);
   };
 
@@ -117,10 +127,7 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     if (isSubmittingRef.current || !selectedFile) {
       return;
     }
-    const activeKey = idempotencyKey || generateIdempotencyKey();
-    if (!idempotencyKey) {
-      setIdempotencyKey(activeKey);
-    }
+    const activeKey = resolveSubmitKey(attempt);
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -152,13 +159,14 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     setConfirmOpen(false);
 
     if (result.kind === "success") {
-      setIsAttemptLocked(false);
+      setAttempt(applySubmitOutcome(activeKey, null));
       onIssued(result.data);
       return;
     }
 
-    setIsAttemptLocked(result.canRetrySameKey);
+    setAttempt(applySubmitOutcome(activeKey, result));
     setSubmitError({
+      status: result.status,
       code: result.code,
       message: result.message,
       canRetrySameKey: result.canRetrySameKey,
@@ -166,7 +174,8 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
     });
   };
 
-  const isFilePickerDisabled = isSubmitting || isAttemptLocked;
+  const isFilePickerDisabled = isAttemptInputLocked(attempt, isSubmitting);
+  const allowNewAttempt = submitError === null || canStartNewAttempt(submitError);
 
   return (
     <Card>
@@ -228,7 +237,7 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Ukuran: {formatFileSize(selectedFile.size)}{" "}
-                  {isAttemptLocked
+                  {attempt.locked
                     ? "(dikunci sementara untuk menjaga kunci idempotensi percobaan ulang)"
                     : "(PDF siap diverifikasi sebelum penerbitan)"}
                 </p>
@@ -267,11 +276,17 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
               ) : null}
             </div>
 
-            {isAttemptLocked ? (
+            {attempt.locked ? (
               <p className="text-xs text-muted-foreground">
-                Kunci idempotensi upaya sebelumnya dipertahankan agar percobaan ulang tetap aman.
-                Gunakan &ldquo;Coba lagi&rdquo; atau klik &ldquo;Mulai ulang upaya baru&rdquo; untuk
-                mengganti berkas.
+                Kunci idempotensi upaya sebelumnya dipertahankan agar percobaan ulang tetap aman.{" "}
+                {allowNewAttempt ? (
+                  <>
+                    Gunakan &ldquo;Coba lagi&rdquo; atau klik &ldquo;Mulai ulang upaya baru&rdquo;
+                    untuk mengganti berkas.
+                  </>
+                ) : (
+                  <>Gunakan &ldquo;Coba lagi&rdquo; untuk mengulang permintaan yang sama.</>
+                )}
               </p>
             ) : null}
           </div>
@@ -294,32 +309,37 @@ export function ProofUploadForm({ onIssued, onUnauthorized }: ProofUploadFormPro
             <AlertCircle className="size-4" aria-hidden="true" />
             <AlertTitle>Penerbitan bukti gagal</AlertTitle>
             <AlertDescription className="space-y-3">
-              <p>{submitError.message}</p>
+              <p>{attemptErrorMessage(submitError, UNCERTAIN_ISSUE_MESSAGE)}</p>
               <div className="flex flex-wrap gap-2">
                 {submitError.canRetrySameKey ? (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={isSubmitting || !selectedFile}
-                      onClick={() => void executeSubmit()}
-                      className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
-                    >
-                      <RefreshCw className="size-3.5" aria-hidden="true" />
-                      Coba lagi
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={isSubmitting}
-                      onClick={handleStartNewAttempt}
-                      className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
-                    >
-                      Mulai ulang upaya baru
-                    </Button>
-                  </>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={isSubmitting || !selectedFile}
+                    onClick={() => void executeSubmit()}
+                    className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                  >
+                    <RefreshCw className="size-3.5" aria-hidden="true" />
+                    Coba lagi
+                  </Button>
+                ) : null}
+                {mayHaveBeenRecorded(submitError) ? (
+                  <Button asChild size="sm" variant="ghost">
+                    <Link href="/hr/proofs">Periksa Daftar Bukti</Link>
+                  </Button>
+                ) : null}
+                {canStartNewAttempt(submitError) ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={isSubmitting}
+                    onClick={handleStartNewAttempt}
+                    className={isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                  >
+                    Mulai ulang upaya baru
+                  </Button>
                 ) : null}
                 {submitError.requiresResetKey ? (
                   <Button

@@ -1,6 +1,8 @@
 // Owner: Van (PIC 2) | Status: COMPLETE | Ref: PRD FR-01.04, §9.3.1, §9.5, §9.9.3; SA §10.5 (S-03), §10.6 (S-06)
 import type { MeResponse, ProofListResponse } from "@/lib/api/client";
 
+export { formatUtcTimestamp as formatProofTimestamp } from "@/lib/timestamp";
+
 // Data afiliasi perusahaan milik pengguna HR dari S-03 GET /api/v1/auth/me.
 export type IssuerMembership = NonNullable<MeResponse["membership"]>;
 
@@ -23,16 +25,54 @@ export type HrStatusPresentation = {
   reviewNote: string | null;
 };
 
+// Label dan nada tunggal status verifikasi penerbit untuk Beranda HR, badge Admin, dan pesan keputusan.
+export function getIssuerStatusPresentation(status: IssuerMembership["issuerStatus"]): {
+  label: string;
+  tone: StatusTone;
+} {
+  switch (status) {
+    case "VERIFIED":
+      return { label: "Terverifikasi", tone: "positive" };
+    case "PENDING":
+      return { label: "Menunggu Verifikasi", tone: "warning" };
+    case "REJECTED":
+      return { label: "Ditolak", tone: "danger" };
+  }
+}
+
+// Label dan nada status otorisasi HR; HR pada penerbit REJECTED tidak akan diotorisasi sehingga tidak ditampilkan sebagai menunggu.
+export function getAuthorizationPresentation(
+  status: IssuerMembership["authorizationStatus"],
+  issuerStatus: IssuerMembership["issuerStatus"],
+): {
+  label: string;
+  tone: StatusTone;
+} {
+  if (status === "AUTHORIZED") {
+    return { label: "Diotorisasi", tone: "positive" };
+  }
+  return issuerStatus === "REJECTED"
+    ? { label: "Tidak Diotorisasi", tone: "danger" }
+    : { label: "Belum Diotorisasi", tone: "neutral" };
+}
+
 // Memetakan status penerbit dan otorisasi HR ke label, nada visual, serta hak penerbitan.
 export function getHrStatusPresentation(membership: IssuerMembership): HrStatusPresentation {
+  const issuer = getIssuerStatusPresentation(membership.issuerStatus);
+  const authorization = getAuthorizationPresentation(
+    membership.authorizationStatus,
+    membership.issuerStatus,
+  );
+  const labels = {
+    issuerStatusLabel: issuer.label,
+    issuerTone: issuer.tone,
+    authorizationLabel: authorization.label,
+    authorizationTone: authorization.tone,
+  };
+
   if (membership.issuerStatus === "PENDING") {
     return {
-      issuerStatusLabel: "Menunggu Verifikasi",
-      issuerTone: "warning",
-      authorizationLabel:
-        membership.authorizationStatus === "AUTHORIZED" ? "Diotorisasi" : "Belum Diotorisasi",
-      authorizationTone:
-        membership.authorizationStatus === "AUTHORIZED" ? "positive" : "neutral",
+      ...labels,
       summaryTitle: "Perusahaan sedang menunggu verifikasi",
       summaryDescription:
         "Pendaftaran perusahaan Anda sedang ditinjau oleh Administrator. Fitur penerbitan bukti baru dapat digunakan setelah perusahaan terverifikasi dan akun HR Anda diotorisasi.",
@@ -46,10 +86,7 @@ export function getHrStatusPresentation(membership: IssuerMembership): HrStatusP
   if (membership.issuerStatus === "REJECTED") {
     const trimmedNote = membership.reviewNote?.trim() ?? "";
     return {
-      issuerStatusLabel: "Ditolak",
-      issuerTone: "danger",
-      authorizationLabel: "Tidak Diotorisasi",
-      authorizationTone: "danger",
+      ...labels,
       summaryTitle: "Verifikasi perusahaan ditolak",
       summaryDescription:
         "Pengajuan verifikasi perusahaan Anda ditolak oleh Administrator. Fitur penerbitan bukti tidak tersedia untuk status ini.",
@@ -62,10 +99,7 @@ export function getHrStatusPresentation(membership: IssuerMembership): HrStatusP
 
   if (membership.authorizationStatus !== "AUTHORIZED") {
     return {
-      issuerStatusLabel: "Terverifikasi",
-      issuerTone: "positive",
-      authorizationLabel: "Menunggu Otorisasi",
-      authorizationTone: "warning",
+      ...labels,
       summaryTitle: "Perusahaan terverifikasi, akun HR belum diotorisasi",
       summaryDescription:
         "Perusahaan Anda sudah terverifikasi, tetapi akun HR Anda masih memerlukan otorisasi dari Administrator sebelum dapat menerbitkan bukti.",
@@ -77,10 +111,7 @@ export function getHrStatusPresentation(membership: IssuerMembership): HrStatusP
   }
 
   return {
-    issuerStatusLabel: "Terverifikasi",
-    issuerTone: "positive",
-    authorizationLabel: "Diotorisasi",
-    authorizationTone: "positive",
+    ...labels,
     summaryTitle: "Siap menerbitkan bukti",
     summaryDescription:
       "Perusahaan Anda telah terverifikasi dan akun HR Anda sudah diotorisasi. Anda dapat menerbitkan bukti baru serta memantau riwayat penerbitan.",
@@ -99,20 +130,4 @@ export function getProofLifecyclePresentation(status: ProofListItem["lifecycleSt
     return { label: "Aktif", tone: "positive" };
   }
   return { label: "Dicabut", tone: "warning" };
-}
-
-// Memformat stempel waktu ISO-8601 ke tampilan tanggal dan waktu yang mudah dibaca.
-export function formatProofTimestamp(isoValue: string): string {
-  const parsed = new Date(isoValue);
-  if (Number.isNaN(parsed.getTime())) {
-    return isoValue;
-  }
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-  }).format(parsed) + " UTC";
 }

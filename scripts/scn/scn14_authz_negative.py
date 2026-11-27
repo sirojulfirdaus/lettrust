@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+
 from common import ScenarioError, _read_env, load_settings, new_request_id, print_expected_actual, save_evidence
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -177,9 +178,9 @@ def json_object(response: httpx.Response) -> JsonObject:
 def request(
     client: httpx.Client, method: str, path: str, *, token: str | None = None, **kwargs: Any
 ) -> tuple[str, httpx.Response]:
-    """Mengirim satu request dengan ID lokal dan opsional Bearer."""
+    """Mengirim satu request dengan ID lokal, opsional Bearer, dan header tambahan (mis. Idempotency-Key)."""
     request_id = new_request_id()
-    headers = {"X-Request-ID": request_id}
+    headers = {**kwargs.pop("headers", {}), "X-Request-ID": request_id}
     if token is not None:
         headers["Authorization"] = f"Bearer {token}"
     return request_id, client.request(method, path, headers=headers, **kwargs)
@@ -191,6 +192,57 @@ def setup_request(client: httpx.Client, method: str, path: str, status: int, **k
     if response.status_code != status:
         raise ScenarioError(f"Setup {method} mendapat HTTP {response.status_code} ({request_id}).")
     return json_object(response)
+
+
+# Batas generasi kunci pengganti; setiap generasi hanya dipakai lagi bila bukti generasi sebelumnya sudah dicabut.
+MAX_SETUP_GENERATIONS = 20
+
+
+def setup_idempotency_key(issuer_id: str, digest: str, generation: int = 0) -> str:
+    """Kunci setup stabil per (penerbit, dokumen, generasi) agar run berikutnya memulihkan penerbitan yang timeout."""
+    suffix = "" if generation == 0 else f":{generation}"
+    return "scn14-setup-" + hashlib.sha256(f"{issuer_id}:{digest}{suffix}".encode()).hexdigest()[:24]
+
+
+def find_or_issue_active(client: httpx.Client, token: str, pdf: bytes, issuer_id: str) -> JsonObject:
+    """Memakai bukti ACTIVE FX-01 milik penerbit token ini bila ada; menerbitkan hanya bila belum ada.
+
+    Run berulang tidak menerbitkan FX-01 kedua yang akan ditolak DUPLICATE_ACTIVE_DOCUMENT (FR-03.06). Seluruh halaman
+    daftar dan detail diperiksa; kegagalan daftar atau detail menghentikan setup tanpa penerbitan baru.
+
+    Penerbitan memakai kunci stabil: bila receipt sebelumnya timeout (mirror PENDING, belum ada di daftar ACTIVE), run
+    berikutnya mengulang dengan kunci yang sama sehingga backend memulihkan bukti yang sama. Bila kunci itu ternyata
+    milik bukti yang sudah dicabut (status terkini dibaca lewat API-05), generasi kunci berikutnya yang juga stabil
+    dipakai sehingga penerbitan pengganti tetap dapat dipulihkan setelah timeout.
+    """
+    digest = hashlib.sha256(pdf).hexdigest()
+    offset = 0
+    while True:
+        page = setup_request(
+            client, "GET", PROOFS, 200, token=token, params={"status": "ACTIVE", "limit": 100, "offset": offset}
+        )
+        items, total = page.get("items"), page.get("total")
+        if not isinstance(items, list) or not isinstance(total, int):
+            raise ScenarioError("Daftar bukti penerbit tidak berformat benar; setup dihentikan.")
+        for item in items:
+            detail = setup_request(client, "GET", f"{PROOFS}/{item['proofId']}", 200, token=token)
+            if detail.get("documentHash") == digest and detail.get("lifecycleStatus") == "ACTIVE":
+                # Detail API-05 memuat field yang sama dengan respons API-04 (proofId, issuerId, ...); transaksi
+                # penerbitan dinamai issueTransaction sehingga disalin ke kunci `transaction`.
+                return {**detail, "transaction": detail["issueTransaction"]}
+        offset += len(items)
+        if not items or offset >= total:
+            break
+    upload = {"files": {"file": ("FX-01.pdf", pdf, "application/pdf")}}
+    for generation in range(MAX_SETUP_GENERATIONS):
+        headers = {"Idempotency-Key": setup_idempotency_key(issuer_id, digest, generation)}
+        issued = setup_request(client, "POST", PROOFS, 201, token=token, headers=headers, **upload)
+        # Replay API-04 mengembalikan hasil penerbitan historis (ACTIVE) walau bukti sudah dicabut; status terkini
+        # dibaca dari registry lewat API-05.
+        current = setup_request(client, "GET", f"{PROOFS}/{issued['proofId']}", 200, token=token)
+        if current.get("lifecycleStatus") == "ACTIVE":
+            return {**current, "transaction": current["issueTransaction"]}
+    raise ScenarioError("Seluruh generasi kunci setup FX-01 sudah dipakai bukti yang dicabut; setup dihentikan.")
 
 
 def login(client: httpx.Client, email: str, password: str) -> tuple[str, JsonObject]:
@@ -330,7 +382,7 @@ def run_scenario(
     if issuer_a == issuer_b or issuer_a != profiles["c"]["membership"]["issuerId"]:
         raise ScenarioError("Afiliasi seed A/B tidak sesuai prasyarat.")
     upload = {"files": {"file": ("FX-01.pdf", pdf, "application/pdf")}}
-    issued = setup_request(client, "POST", PROOFS, 201, token=tokens["owner-b"], **upload)
+    issued = find_or_issue_active(client, tokens["owner-b"], pdf, issuer_b)
     proof_id = issued["proofId"]
     transaction = issued["transaction"]
     if not isinstance(proof_id, str) or not re.fullmatch(WORD_PATTERN, proof_id):

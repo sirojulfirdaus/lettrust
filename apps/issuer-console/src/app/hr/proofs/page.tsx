@@ -107,12 +107,14 @@ export default function ProofListPage() {
           </p>
         </div>
 
-        <Button asChild size="lg" className="cursor-pointer">
-          <Link href="/hr/proofs/new">
-            <FilePlus2 className="size-4" aria-hidden="true" />
-            Terbitkan Bukti
-          </Link>
-        </Button>
+        {state.status !== "forbidden" ? (
+          <Button asChild size="lg" className="cursor-pointer">
+            <Link href="/hr/proofs/new">
+              <FilePlus2 className="size-4" aria-hidden="true" />
+              Terbitkan Bukti
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       {state.status === "forbidden" ? (

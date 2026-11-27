@@ -27,6 +27,16 @@ export const CONSOLE_ROUTES: readonly ConsoleRoute[] = [
   { path: "/admin/issuers/[issuerId]", title: "Detail Penerbit", access: "admin" },
 ];
 
+// Mendekode parameter route dinamis tanpa melempar URIError pada encoding rusak (mengembalikan nilai mentah).
+export function decodeRouteParam(raw: string | string[] | undefined): string {
+  const value = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 // Menentukan apakah route termasuk halaman publik yang tidak memerlukan sesi.
 export function isPublicRoute(pathname: string): boolean {
   return pathname === "/login" || pathname === "/register";

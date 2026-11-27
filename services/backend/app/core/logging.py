@@ -24,6 +24,10 @@ ALLOWED_FIELDS = (
     "riskState",
     "model",
     "component",
+    # Operasi registry (issueProof/revokeProof) dan hasil integritas untuk event registry.tx_* dan
+    # verification.completed (SA §17.4); hanya enum, tanpa konten.
+    "operation",
+    "integrity",
     # Diagnosis pelanggaran skema ai-service: penanda dan lokasi field saja, tanpa nilai.
     "reason",
     "fields",

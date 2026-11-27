@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ApiError, fetchSessionProfile } from "@/lib/api/client";
 import { resolveLandingRoute } from "@/lib/routes";
-import { readSession } from "@/lib/session";
+import { readSession, sessionRedirectPath } from "@/lib/session";
 
 // Halaman akar Console: mengarahkan pengguna ke area yang sesuai berdasarkan sesi dan profil S-03.
 export default function HomePage() {
@@ -20,7 +20,7 @@ export default function HomePage() {
   useEffect(() => {
     const session = readSession();
     if (!session) {
-      router.replace("/login");
+      router.replace(sessionRedirectPath());
       return;
     }
 

@@ -96,8 +96,29 @@ async def verify_offer(
         integrity_check=integrity,
         risk_analysis=risk_analysis,
     )
-    await _record_log(partner.id, response, round((time.monotonic() - started) * 1000))
+    duration_ms = round((time.monotonic() - started) * 1000)
+    await _record_log(partner.id, response, duration_ms)
+    _log_completed(response, duration_ms)
     return response
+
+
+# Event `verification.completed` (SA §17.4): mode, status dan reason per komponen, serta durasi; requestId dari
+# formatter. Tanpa kode referensi, hash, teks, kutipan, atau kategori risiko.
+def _log_completed(response: VerificationResponse, duration_ms: int) -> None:
+    proof, integrity, risk = response.proof_check, response.integrity_check, response.risk_analysis
+    reasons = {"proof": proof.reason, "integrity": integrity.reason, "risk": risk.reason}
+    logger.info(
+        "verification.completed",
+        extra={
+            "event": "verification.completed",
+            "mode": response.mode.value,
+            "lookup": proof.lookup.value,
+            "integrity": integrity.result.value,
+            "riskState": risk.state.value,
+            "reason": {name: value.value for name, value in reasons.items() if value is not None} or None,
+            "durationMs": duration_ms,
+        },
+    )
 
 
 # Log verifikasi minimal (FR-06.08, SA §9.2): hanya enum hasil, mode, durasi, partner, dan verificationId; tidak

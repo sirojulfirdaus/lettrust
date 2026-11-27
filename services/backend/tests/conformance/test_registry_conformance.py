@@ -6,6 +6,7 @@ Provider (Sat) menjalankan dengan stack hidup:
 """
 
 import re
+import secrets
 
 import pytest
 
@@ -203,3 +204,50 @@ def test_mock_input_validation_and_guard(monkeypatch):
     monkeypatch.setattr("app.modules.registry.mock.get_settings", lambda: type("S", (), {"app_env": "local"})())
     with pytest.raises(RuntimeError, match="APP_ENV=test"):
         MockRegistryAdapter()
+
+
+# Pelacakan transaksi (Protocol): transaksi terkonfirmasi tidak pernah dianggap gagal/hilang; hash yang tidak dikenal
+# node dan proofId tanpa transaksi di antrean dianggap hilang; tanpa hash dan tanpa proofId tidak ada bukti.
+def test_transaction_tracking(registry, new_proof):
+    proof = new_proof()
+    unknown_hash = "0x" + secrets.token_hex(32)
+    assert registry.is_issue_failed_or_dropped(None, proof.proof_id) is True
+    assert registry.is_issue_failed_or_dropped(unknown_hash, proof.proof_id) is True
+    issue_tx = registry.issue_proof(proof.proof_id, proof.document_hash, proof.issuer_ref)
+    assert registry.is_issue_failed_or_dropped(issue_tx.tx_hash, proof.proof_id) is False
+    assert registry.is_transaction_failed_or_dropped(issue_tx.tx_hash) is False
+    assert registry.is_transaction_failed_or_dropped(unknown_hash) is True
+    assert registry.is_transaction_failed_or_dropped(None, proof.proof_id) is True
+    assert registry.is_transaction_failed_or_dropped(None) is False
+    revoke_tx = registry.revoke_proof(proof.proof_id, proof.issuer_ref)
+    assert registry.is_transaction_failed_or_dropped(revoke_tx.tx_hash) is False
+
+
+# Mock saja: Pending tanpa commit tetap di antrean (belum pasti gagal) sampai drop_pending atau transaksi ditambang.
+@pytest.mark.parametrize("operation", ["issue_proof", "revoke_proof"])
+def test_mock_pending_stays_in_pool_until_dropped(new_proof, operation):
+    mock = MockRegistryAdapter()
+    proof = new_proof()
+    if operation == "revoke_proof":
+        mock.issue_proof(proof.proof_id, proof.document_hash, proof.issuer_ref)
+    tx_hash = "0x" + secrets.token_hex(32)
+    mock.fail_next(operation, RegistryTransactionPending(tx_hash=tx_hash))
+    with pytest.raises(RegistryTransactionPending):
+        if operation == "issue_proof":
+            mock.issue_proof(proof.proof_id, proof.document_hash, proof.issuer_ref)
+        else:
+            mock.revoke_proof(proof.proof_id, proof.issuer_ref)
+    check = mock.is_issue_failed_or_dropped if operation == "issue_proof" else mock.is_transaction_failed_or_dropped
+    assert check(tx_hash, proof.proof_id) is False
+    assert check(None, proof.proof_id) is False
+    mock.drop_pending(proof.proof_id)
+    assert check(tx_hash, proof.proof_id) is True
+    assert check(None, proof.proof_id) is True
+
+
+# Mock saja: kegagalan RPC saat memeriksa antrean dapat diinjeksi seperti operasi lain.
+def test_mock_tracking_failure_injection(new_proof):
+    mock = MockRegistryAdapter()
+    mock.fail_next("is_issue_failed_or_dropped", RegistryUnavailable())
+    with pytest.raises(RegistryUnavailable):
+        mock.is_issue_failed_or_dropped(None, new_proof().proof_id)

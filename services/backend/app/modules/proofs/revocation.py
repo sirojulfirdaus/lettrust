@@ -47,40 +47,18 @@ def revoke_proof(
             return _recover(db, registry, proof, record, payload, idempotency_key)
         if record.status != registry_adapter.OnChainStatus.ACTIVE or proof.status == "REVOKED":
             raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
-        retry_pending = proof.revoke_idempotency_key is not None
-        if retry_pending:
-            # Kapabilitas opsional menjaga mock bersama dan adapter tanpa pelacakan tetap konservatif.
-            check_transaction = getattr(registry, "is_transaction_failed_or_dropped", None)
-            if check_transaction is None and proof.revoke_tx_hash is not None:
-                raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
-            if check_transaction is not None:
-                try:
-                    retry_allowed = (
-                        check_transaction(proof.revoke_tx_hash)
-                        if proof.revoke_tx_hash is not None
-                        else check_transaction(None, proof_id)
-                    )
-                except registry_adapter.RegistryUnavailable:
-                    raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
-                record = _read_record(registry, proof, hr.issuer_ref)
-                if record.status == registry_adapter.OnChainStatus.REVOKED:
-                    return _recover(db, registry, proof, record, payload, idempotency_key)
-                if not retry_allowed or record.status != registry_adapter.OnChainStatus.ACTIVE:
-                    raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
-                _clear_pending(db, proof)
-                retry_pending = False
-        if retry_pending:
-            if idempotency_key is None or proof.revoke_idempotency_key != idempotency_key:
-                # Tanpa kunci yang cocok, tunggu konfirmasi; jangan kirim ulang atau timpa audit semula.
-                raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
-            if proof.revoke_reason_code != payload.reason_code:
+        if proof.revoke_idempotency_key is not None:
+            # Kunci sama dengan isi berbeda selalu konflik (SA §10.3), apa pun status transaksi tertunda.
+            if idempotency_key == proof.revoke_idempotency_key and proof.revoke_reason_code != payload.reason_code:
                 raise AppError(ErrorCode.IDEMPOTENCY_KEY_CONFLICT)
-        else:
-            proof.revoke_idempotency_key = uuid4().hex if idempotency_key is None else idempotency_key
-            proof.revoke_reason_code = payload.reason_code
-            proof.revoked_by = hr.user.id
-            proof.updated_at = datetime.now(UTC)
-            db.commit()
+            record = _release_dropped_pending(db, registry, proof, hr.issuer_ref)
+            if record.status == registry_adapter.OnChainStatus.REVOKED:
+                return _recover(db, registry, proof, record, payload, idempotency_key)
+        proof.revoke_idempotency_key = uuid4().hex if idempotency_key is None else idempotency_key
+        proof.revoke_reason_code = payload.reason_code
+        proof.revoked_by = hr.user.id
+        proof.updated_at = datetime.now(UTC)
+        db.commit()
         try:
             tx = registry.revoke_proof(proof_id, hr.issuer_ref)
         except registry_adapter.RegistryTransactionPending as exc:
@@ -95,13 +73,11 @@ def revoke_proof(
                 return _recover(db, registry, proof, record, payload, idempotency_key)
             raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED) from None
         except registry_adapter.IssuerMismatchOnChain:
-            if not retry_pending:
-                _clear_pending(db, proof)
+            _clear_pending(db, proof)
             raise AppError(ErrorCode.PROOF_NOT_FOUND) from None
         except (registry_adapter.RegistryUnavailable, registry_adapter.RegistryTransactionFailed) as exc:
-            # Gagal pasti pada retry tidak membuktikan transaksi percobaan sebelumnya juga gagal.
-            if not retry_pending:
-                _clear_pending(db, proof)
+            # Percobaan tertunda sebelumnya sudah dipastikan hilang (atau tidak ada), jadi gagal pasti ini final.
+            _clear_pending(db, proof)
             code = (
                 ErrorCode.REGISTRY_UNAVAILABLE
                 if isinstance(exc, registry_adapter.RegistryUnavailable)
@@ -109,6 +85,29 @@ def revoke_proof(
             )
             raise AppError(code) from None
         return _finalize(db, proof, tx)
+
+
+# Percobaan tertunda hanya boleh dilepas bila transaksinya pasti gagal/hilang (hash, atau antrean node untuk data lama
+# tanpa hash). Masih hidup → 503 tanpa transaksi baru; status tidak dapat dibaca (termasuk node tanpa txpool_content)
+# → 503 REGISTRY_UNAVAILABLE. Pengirim ulang tidak pernah menimpa audit transaksi yang masih dapat terkonfirmasi.
+def _release_dropped_pending(
+    db: Session, registry: registry_adapter.RegistryAdapter, proof: Proof, issuer_ref: str
+) -> registry_adapter.ProofRecord:
+    try:
+        if proof.revoke_tx_hash is not None:
+            dropped = registry.is_transaction_failed_or_dropped(proof.revoke_tx_hash)
+        else:
+            dropped = registry.is_transaction_failed_or_dropped(None, proof.proof_id)
+    except registry_adapter.RegistryUnavailable:
+        raise AppError(ErrorCode.REGISTRY_UNAVAILABLE) from None
+    record = _read_record(registry, proof, issuer_ref)
+    if record.status == registry_adapter.OnChainStatus.REVOKED:
+        # Receipt terdahulu terkonfirmasi; pemanggil merekonsiliasi tanpa melepas audit.
+        return record
+    if not dropped or record.status != registry_adapter.OnChainStatus.ACTIVE:
+        raise AppError(ErrorCode.REGISTRY_TRANSACTION_FAILED)
+    _clear_pending(db, proof)
+    return record
 
 
 # Membaca registry sebagai sumber status dan menolak pemetaan penerbit atau hash yang tidak konsisten.

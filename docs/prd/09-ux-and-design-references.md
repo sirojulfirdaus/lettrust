@@ -185,6 +185,7 @@ Panduan tidak boleh menyatakan surat asli, palsu, aman, atau penipuan.
 | `UNSUPPORTED_MEDIA_TYPE` | Berkas harus berformat PDF. |
 | `FILE_TOO_LARGE` | Ukuran berkas melebihi batas yang diizinkan. |
 | Berkas kosong | Berkas kosong tidak dapat diproses. |
+| `MULTIPLE_FILES` | Hanya satu berkas yang dapat diproses per permintaan. |
 | `RATE_LIMITED` | Terlalu banyak permintaan. Coba lagi beberapa saat lagi. |
 | Autentikasi partner gagal, 5xx, timeout portal | Layanan pemeriksaan sedang tidak tersedia. Coba lagi beberapa saat lagi. |
 | `EMAIL_ALREADY_REGISTERED` | Email sudah terdaftar. Silakan masuk. |
@@ -199,6 +200,7 @@ Panduan tidak boleh menyatakan surat asli, palsu, aman, atau penipuan.
 | `DUPLICATE_ACTIVE_DOCUMENT` | Berkas yang sama sudah memiliki bukti aktif. |
 | `IDEMPOTENCY_KEY_CONFLICT` | Permintaan bertentangan dengan permintaan sebelumnya. Mulai ulang proses penerbitan. |
 | `REGISTRY_UNAVAILABLE`, `REGISTRY_TRANSACTION_FAILED` | Pencatatan ke registry gagal. Tidak ada perubahan yang tersimpan. Coba lagi. |
+| `REGISTRY_UNAVAILABLE` saat membaca detail bukti (Console) | Data bukti dari registry belum dapat dimuat. Coba lagi beberapa saat lagi. |
 | 401 pada Console | Sesi Anda telah berakhir. Silakan masuk kembali. |
 | 403 pada Console | Anda tidak memiliki izin untuk tindakan ini. |
 

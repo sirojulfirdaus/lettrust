@@ -22,10 +22,18 @@ import {
 } from "@/components/proofs/proof-status-badge";
 import type { RevocationReasonCode, RevokeProofResponse } from "@/lib/api/client";
 import {
-  generateIdempotencyKey,
+  canRequestRevocation,
   isValidRevocationReasonCode,
   submitRevokeProof,
 } from "@/app/hr/proofs/proofs-flow";
+import {
+  applySubmitOutcome,
+  isAttemptInputLocked,
+  attemptErrorMessage,
+  UNCERTAIN_REVOKE_MESSAGE,
+  startAttempt,
+  type IdempotencyAttempt,
+} from "@/app/hr/proofs/idempotency-attempt";
 
 type RevokeDialogProps = {
   proofId: string;
@@ -37,6 +45,7 @@ type RevokeDialogProps = {
 };
 
 type RevokeErrorState = {
+  status: number;
   code: string;
   message: string;
   canRetrySameKey: boolean;
@@ -52,9 +61,8 @@ export function RevokeDialog({
   onAlreadyRevoked,
   onUnauthorized,
 }: RevokeDialogProps) {
-  const [reasonCode, setReasonCode] = useState<RevocationReasonCode>("OFFER_WITHDRAWN");
-  const [idempotencyKey, setIdempotencyKey] = useState<string>(() => generateIdempotencyKey());
-  const [isAttemptLocked, setIsAttemptLocked] = useState(false);
+  const [reasonCode, setReasonCode] = useState<RevocationReasonCode | null>(null);
+  const [attempt, setAttempt] = useState<IdempotencyAttempt>(() => startAttempt());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<RevokeErrorState | null>(null);
@@ -68,14 +76,16 @@ export function RevokeDialog({
     };
   }, []);
 
-  const isReasonLocked = isSubmitting || isAttemptLocked || disabled;
+  const isReasonLocked = isAttemptInputLocked(attempt, isSubmitting) || disabled;
   const isActionDisabled = isSubmitting || disabled;
+  const isRevokeDisabled = !canRequestRevocation(reasonCode, isActionDisabled);
 
   // Mengirim permintaan pencabutan API-06 dengan penjaga double-submit dan Idempotency-Key tetap saat retry.
   const executeRevoke = async () => {
-    if (disabled || isSubmittingRef.current || !isValidRevocationReasonCode(reasonCode)) {
+    if (disabled || isSubmittingRef.current || reasonCode === null || !isValidRevocationReasonCode(reasonCode)) {
       return;
     }
+    const activeKey = attempt.key;
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -88,7 +98,7 @@ export function RevokeDialog({
     const result = await submitRevokeProof({
       proofId,
       reasonCode,
-      idempotencyKey,
+      idempotencyKey: activeKey,
       signal: controller.signal,
       onUnauthorized,
     });
@@ -108,19 +118,20 @@ export function RevokeDialog({
     setConfirmOpen(false);
 
     if (result.kind === "success") {
-      setIsAttemptLocked(false);
+      setAttempt(applySubmitOutcome(activeKey, null));
       onRevoked(result.data);
       return;
     }
 
     if (result.kind === "already_revoked") {
-      setIsAttemptLocked(false);
+      setAttempt(applySubmitOutcome(activeKey, null));
       onAlreadyRevoked(result.message);
       return;
     }
 
-    setIsAttemptLocked(result.canRetrySameKey);
+    setAttempt(applySubmitOutcome(activeKey, result));
     setSubmitError({
+      status: result.status,
       code: result.code,
       message: result.message,
       canRetrySameKey: result.canRetrySameKey,
@@ -145,7 +156,7 @@ export function RevokeDialog({
         <fieldset className="space-y-3" disabled={isReasonLocked}>
           <legend className="text-sm font-medium text-foreground">Alasan Pencabutan</legend>
           <RadioGroup
-            value={reasonCode}
+            value={reasonCode ?? ""}
             disabled={isReasonLocked}
             onValueChange={(value) => {
               if (isReasonLocked) {
@@ -186,7 +197,12 @@ export function RevokeDialog({
               );
             })}
           </RadioGroup>
-          {isAttemptLocked ? (
+          {reasonCode === null ? (
+            <p className="text-xs text-muted-foreground">
+              Pilih salah satu alasan pencabutan untuk mengaktifkan tombol Cabut Bukti.
+            </p>
+          ) : null}
+          {attempt.locked ? (
             <p className="text-xs text-muted-foreground">
               Alasan pencabutan dikunci sementara agar percobaan ulang menggunakan kunci idempotensi
               yang sama tetap konsisten dengan permintaan sebelumnya.
@@ -199,7 +215,7 @@ export function RevokeDialog({
             <AlertCircle className="size-4" aria-hidden="true" />
             <AlertTitle>Pencabutan bukti gagal</AlertTitle>
             <AlertDescription className="space-y-3">
-              <p>{submitError.message}</p>
+              <p>{attemptErrorMessage(submitError, UNCERTAIN_REVOKE_MESSAGE)}</p>
               <div className="flex flex-wrap gap-2">
                 {submitError.canRetrySameKey ? (
                   <Button
@@ -221,8 +237,7 @@ export function RevokeDialog({
                     variant="outline"
                     disabled={isActionDisabled}
                     onClick={() => {
-                      setIsAttemptLocked(false);
-                      setIdempotencyKey(generateIdempotencyKey());
+                      setAttempt(startAttempt());
                       setSubmitError(null);
                     }}
                     className={isActionDisabled ? "cursor-not-allowed" : "cursor-pointer"}
@@ -239,13 +254,13 @@ export function RevokeDialog({
           <Button
             type="button"
             variant="destructive"
-            disabled={isActionDisabled}
+            disabled={isRevokeDisabled}
             onClick={() => {
-              if (!isActionDisabled) {
+              if (!isRevokeDisabled) {
                 setConfirmOpen(true);
               }
             }}
-            className={isActionDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+            className={isRevokeDisabled ? "cursor-not-allowed" : "cursor-pointer"}
           >
             {isSubmitting ? (
               <>
@@ -283,7 +298,10 @@ export function RevokeDialog({
               <p className="text-xs text-muted-foreground">Kode Referensi</p>
               <p className="font-mono font-semibold text-foreground">{referenceCode}</p>
               <p className="text-xs text-muted-foreground pt-1">
-                Alasan: <span className="font-medium text-foreground">{getRevocationReasonLabel(reasonCode)}</span>
+                Alasan:{" "}
+                <span className="font-medium text-foreground">
+                  {reasonCode ? getRevocationReasonLabel(reasonCode) : "-"}
+                </span>
               </p>
             </div>
             <p className="text-muted-foreground">

@@ -7,7 +7,7 @@ import {
   type ProofListResponse,
 } from "@/lib/api/client";
 import { canIssueProofs } from "@/lib/routes";
-import { readSession } from "@/lib/session";
+import { readSession, sessionRedirectPath, type LoginRedirectPath } from "@/lib/session";
 import {
   getHrStatusPresentation,
   type HrStatusPresentation,
@@ -16,7 +16,7 @@ import {
 
 // Hasil pemuatan profil sesi S-03 untuk halaman Beranda HR.
 export type HrProfileLoadResult =
-  | { kind: "redirect"; to: "/login" | "/admin/issuers" | "/onboarding/company" }
+  | { kind: "redirect"; to: LoginRedirectPath | "/admin/issuers" | "/onboarding/company" }
   | {
       kind: "ready";
       profile: MeResponse;
@@ -40,7 +40,7 @@ export type HrProofSummaryLoadResult =
 
 // Hasil gabungan pemuatan awal Beranda HR (profil S-03 dan opsional ringkasan bukti S-06).
 export type HrHomeLoadResult =
-  | { kind: "redirect"; to: "/login" | "/admin/issuers" | "/onboarding/company" }
+  | { kind: "redirect"; to: LoginRedirectPath | "/admin/issuers" | "/onboarding/company" }
   | { kind: "unauthorized" }
   | { kind: "aborted" }
   | { kind: "profile_error"; message: string }
@@ -60,7 +60,7 @@ export async function loadHrProfile(options?: {
 }): Promise<HrProfileLoadResult> {
   const session = readSession();
   if (!session) {
-    return { kind: "redirect", to: "/login" };
+    return { kind: "redirect", to: sessionRedirectPath() };
   }
 
   try {

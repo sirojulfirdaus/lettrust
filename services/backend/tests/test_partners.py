@@ -12,6 +12,7 @@ import pytest
 from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.cli import add_demo_seed
@@ -159,3 +160,37 @@ def test_token_never_logged(partner_env, caplog, capfd):
     for text in (caplog.text, captured.out, captured.err):
         assert token not in text
         assert wrong not in text
+
+
+# Basis data gagal saat autentikasi partner → 503 SERVICE_UNAVAILABLE (kontrak API-07), bukan 500; token tidak dicatat.
+def test_database_failure_is_service_unavailable(partner_env, caplog, capfd):
+    client, factory = partner_env
+    _, token = make_partner(factory)
+
+    # Session yang gagal pada query pertama, seperti SQLite terkunci atau berkas DB tidak terbaca.
+    class BrokenSession:
+        # Melempar error SQLAlchemy dengan pesan internal yang tidak boleh bocor ke log atau respons.
+        def scalars(self, *_args, **_kwargs):
+            raise OperationalError("SELECT partners", {}, Exception("database is locked"))
+
+    # Dependency pengganti get_db yang memberikan session rusak.
+    def broken_db() -> Iterator[BrokenSession]:
+        yield BrokenSession()
+
+    original = client.app.dependency_overrides[get_db]
+    client.app.dependency_overrides[get_db] = broken_db
+    try:
+        with caplog.at_level(logging.ERROR):
+            response = client.post("/test/partner", headers={"Authorization": f"Bearer {token}"})
+    finally:
+        client.app.dependency_overrides[get_db] = original
+    assert response.status_code == 503
+    body = response.json()
+    assert body["error"]["code"] == "SERVICE_UNAVAILABLE"
+    assert body["requestId"] == response.headers["X-Request-ID"]
+    [record] = [r for r in caplog.records if getattr(r, "event", None) == "partner.auth_db_failed"]
+    assert record.errorCode == "OperationalError"
+    captured = capfd.readouterr()
+    for text in (caplog.text, captured.out, captured.err):
+        assert token not in text
+        assert "database is locked" not in text

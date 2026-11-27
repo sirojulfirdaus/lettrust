@@ -68,10 +68,20 @@ export function proofCheckLabel(proofCheck: ProofCheck): StatusLabel {
   }
 }
 
+// Baris rincian bukti untuk REVOKED (FR-02.09 AC-02); ACTIVE sudah memuat status penerbit dan waktu terbit di penjelasan.
+export function proofDetailLines(proofCheck: ProofCheck): string[] {
+  if ((proofCheck.lookup as string) !== "FOUND" || proofCheck.lifecycleStatus !== "REVOKED") return [];
+  const lines: string[] = [];
+  if (proofCheck.issuerVerified === true) lines.push("Status verifikasi penerbit: terverifikasi");
+  if (proofCheck.issuerVerified === false) lines.push("Status verifikasi penerbit: belum/tidak berstatus terverifikasi");
+  if (proofCheck.issuedAt) lines.push(`Waktu penerbitan: ${formatTimestamp(proofCheck.issuedAt)}`);
+  return lines;
+}
+
 // Label panel Keutuhan Berkas (PRD §9.6.2).
 export function integrityCheckLabel(integrityCheck: IntegrityCheck): StatusLabel {
   const result = integrityCheck.result as string;
-  if (result === "MATCH") return { title: "Berkas identik dengan yang dicatat", explanation: "Berkas Anda sama persis dengan berkas yang dicatat penerbit. Pemeriksaan ini hanya membandingkan berkas.", icon: "✓", tone: "positive" };
+  if (result === "MATCH") return { title: "Berkas identik dengan yang dicatat", explanation: "Berkas Anda sama persis dengan berkas yang dicatat penerbit. Ini tidak menilai apakah isi surat aman.", icon: "✓", tone: "positive" };
   if (result === "MISMATCH") return { title: "Berkas berbeda dari yang dicatat", explanation: "Berkas Anda tidak sama dengan berkas yang dicatat penerbit untuk kode ini. Berkas mungkin telah diubah atau disimpan ulang. Mintalah salinan asli melalui kanal resmi perusahaan.", icon: "✕", tone: "warning" };
   if (result !== "NOT_CHECKED") return UNKNOWN_LABEL;
   switch (integrityCheck.reason as string | null) {
